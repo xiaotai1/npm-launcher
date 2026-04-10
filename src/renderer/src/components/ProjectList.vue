@@ -1,0 +1,939 @@
+<script setup lang="ts">
+import { ref, computed, toRaw, onMounted, onUnmounted } from 'vue'
+import type { Project, Folder, ProcessStatus } from '../types'
+import ConfirmDialog from './ConfirmDialog.vue'
+
+const props = defineProps<{
+  projects: Project[]
+  folders: Folder[]
+  selectedId: string | null
+  statuses: Record<string, ProcessStatus>
+}>()
+
+const emit = defineEmits<{
+  select: [id: string]
+  add: [project: Project]
+  reorder: [ids: string[]]
+  edit: [id: string]
+  delete: [id: string]
+  'toggle-favorite': [id: string]
+  'add-folder': [folder: Folder]
+  'delete-folder': [id: string]
+  'rename-folder': [folder: Folder]
+  'move-to-folder': [projectId: string, folderId: string | null]
+}>()
+
+const showForm = ref(false)
+const form = ref({ name: '', path: '', command: '', minNodeVersion: '16.0.0' })
+const availableScripts = ref<string[]>([])
+const loadingScripts = ref(false)
+
+// 文件夹相关
+const showFolderInput = ref(false)
+const newFolderName = ref('')
+const renamingFolder = ref<Folder | null>(null)
+const renameInput = ref('')
+
+// 拖拽状态
+const dragProjectId = ref<string | null>(null)
+const dropTarget = ref<{ type: 'project' | 'folder' | 'root'; id?: string } | null>(null)
+
+// 右键菜单
+const contextMenu = ref<{ visible: boolean; x: number; y: number; target: Project | Folder | null; type: 'project' | 'folder' | null }>({
+  visible: false, x: 0, y: 0, target: null, type: null
+})
+
+// 删除确认
+const confirmState = ref<{ visible: boolean; type: 'project' | 'folder'; id: string; name: string }>({ visible: false, type: 'project', id: '', name: '' })
+
+// 折叠状态
+const collapsedFolders = ref<Set<string>>(new Set())
+
+// 计算分组后的列表
+const rootFavorites = computed(() =>
+  props.projects.filter(p => p.favorite && !p.folderId)
+)
+
+const rootNormal = computed(() =>
+  props.projects.filter(p => !p.favorite && !p.folderId)
+)
+
+function folderProjects(folderId: string) {
+  return props.projects.filter(p => p.folderId === folderId)
+}
+
+function isCollapsed(folderId: string) {
+  return collapsedFolders.value.has(folderId)
+}
+
+function toggleCollapse(folderId: string) {
+  if (collapsedFolders.value.has(folderId)) {
+    collapsedFolders.value.delete(folderId)
+  } else {
+    collapsedFolders.value.add(folderId)
+  }
+}
+
+function getStatusInfo(projectId: string) {
+  const status = props.statuses[projectId]
+  if (status?.status === 'running') return { text: '运行中', color: 'var(--success)' }
+  if (status?.status === 'error') return { text: '错误', color: 'var(--error)' }
+  return { text: '未启动', color: 'var(--text-tertiary)' }
+}
+
+// 新建项目
+async function selectFolder() {
+  const result = await window.electronAPI.selectFolder()
+  if (result.canceled || !result.path) return
+  form.value.path = result.path
+  if (!form.value.name) {
+    const parts = result.path.replace(/\\/g, '/').split('/')
+    form.value.name = parts[parts.length - 1] || ''
+  }
+  await loadScripts(result.path)
+}
+
+async function loadScripts(dir: string) {
+  loadingScripts.value = true
+  availableScripts.value = []
+  form.value.command = ''
+  const result = await window.electronAPI.getPackageScripts(dir)
+  loadingScripts.value = false
+  if (result.scripts.length > 0) {
+    availableScripts.value = result.scripts
+    form.value.command = result.scripts[0]
+  }
+}
+
+function resetForm() {
+  form.value = { name: '', path: '', command: '', minNodeVersion: '16.0.0' }
+  availableScripts.value = []
+  showForm.value = false
+}
+
+function handleAdd() {
+  if (!form.value.name || !form.value.path || !form.value.command) return
+  emit('add', { id: Date.now().toString(36), ...toRaw(form.value) })
+  resetForm()
+}
+
+// 新建文件夹
+function handleAddFolder() {
+  if (!newFolderName.value.trim()) return
+  emit('add-folder', { id: Date.now().toString(36), name: newFolderName.value.trim() })
+  newFolderName.value = ''
+  showFolderInput.value = false
+}
+
+// 收藏
+function onToggleFavorite(projectId: string, e: Event) {
+  e.stopPropagation()
+  emit('toggle-favorite', projectId)
+}
+
+// 拖拽
+function onProjectDragStart(e: DragEvent, projectId: string) {
+  dragProjectId.value = projectId
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', projectId)
+  }
+}
+
+function onProjectDragOver(e: DragEvent) {
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+}
+
+function onFolderDragOver(e: DragEvent, folderId: string) {
+  e.preventDefault()
+  if (dragProjectId.value) {
+    dropTarget.value = { type: 'folder', id: folderId }
+  }
+}
+
+function onFolderDrop(e: DragEvent, folderId: string) {
+  e.preventDefault()
+  if (dragProjectId.value) {
+    emit('move-to-folder', dragProjectId.value, folderId)
+  }
+  dragProjectId.value = null
+  dropTarget.value = null
+}
+
+function onRootDragOver(e: DragEvent) {
+  e.preventDefault()
+  if (dragProjectId.value) {
+    dropTarget.value = { type: 'root' }
+  }
+}
+
+function onRootDrop(e: DragEvent) {
+  e.preventDefault()
+  if (dragProjectId.value) {
+    // 拖到根区域，移出文件夹
+    const project = props.projects.find(p => p.id === dragProjectId.value)
+    if (project?.folderId) {
+      emit('move-to-folder', dragProjectId.value, null)
+    }
+  }
+  dragProjectId.value = null
+  dropTarget.value = null
+}
+
+function onDragEnd() {
+  dragProjectId.value = null
+  dropTarget.value = null
+}
+
+// 右键菜单
+function onProjectContextMenu(e: MouseEvent, project: Project) {
+  e.preventDefault()
+  emit('select', project.id)
+  contextMenu.value = { visible: true, x: e.clientX, y: e.clientY, target: project, type: 'project' }
+}
+
+function onFolderContextMenu(e: MouseEvent, folder: Folder) {
+  e.preventDefault()
+  contextMenu.value = { visible: true, x: e.clientX, y: e.clientY, target: folder, type: 'folder' }
+}
+
+function closeContextMenu() {
+  contextMenu.value.visible = false
+}
+
+function handleEdit() {
+  if (contextMenu.value.type === 'project' && contextMenu.value.target) {
+    emit('edit', (contextMenu.value.target as Project).id)
+  }
+  closeContextMenu()
+}
+
+function handleDelete() {
+  if (contextMenu.value.type === 'project' && contextMenu.value.target) {
+    const p = contextMenu.value.target as Project
+    confirmState.value = { visible: true, type: 'project', id: p.id, name: p.name }
+  } else if (contextMenu.value.type === 'folder' && contextMenu.value.target) {
+    const f = contextMenu.value.target as Folder
+    confirmState.value = { visible: true, type: 'folder', id: f.id, name: f.name }
+  }
+  closeContextMenu()
+}
+
+function handleRenameFolder() {
+  if (contextMenu.value.type === 'folder' && contextMenu.value.target) {
+    renamingFolder.value = contextMenu.value.target as Folder
+    renameInput.value = (contextMenu.value.target as Folder).name
+  }
+  closeContextMenu()
+}
+
+function confirmRename() {
+  if (renamingFolder.value && renameInput.value.trim()) {
+    emit('rename-folder', { ...renamingFolder.value, name: renameInput.value.trim() })
+  }
+  renamingFolder.value = null
+  renameInput.value = ''
+}
+
+function cancelRename() {
+  renamingFolder.value = null
+  renameInput.value = ''
+}
+
+function onConfirmDelete() {
+  if (confirmState.value.type === 'project') {
+    emit('delete', confirmState.value.id)
+  } else {
+    emit('delete-folder', confirmState.value.id)
+  }
+  confirmState.value = { visible: false, type: 'project', id: '', name: '' }
+}
+
+function onCancelDelete() {
+  confirmState.value = { visible: false, type: 'project', id: '', name: '' }
+}
+
+function onClickOutside() {
+  if (contextMenu.value.visible) closeContextMenu()
+}
+
+onMounted(() => document.addEventListener('click', onClickOutside))
+onUnmounted(() => document.removeEventListener('click', onClickOutside))
+</script>
+
+<template>
+  <div class="project-list">
+    <div class="list-header">
+      <span class="list-title">项目</span>
+      <div class="header-btns">
+        <button class="add-btn" @click="showFolderInput = !showFolderInput" title="新建文件夹">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+        </button>
+        <button class="add-btn" @click="showForm = !showForm">
+          <span class="add-icon">+</span> 新建
+        </button>
+      </div>
+    </div>
+
+    <!-- 新建文件夹 -->
+    <div v-if="showFolderInput" class="folder-input-bar">
+      <input
+        v-model="newFolderName"
+        placeholder="文件夹名称"
+        @keyup.enter="handleAddFolder"
+        @keyup.escape="showFolderInput = false"
+        autofocus
+      />
+      <button class="btn-sm" @click="handleAddFolder">确认</button>
+      <button class="btn-sm btn-ghost" @click="showFolderInput = false; newFolderName = ''">取消</button>
+    </div>
+
+    <!-- 新建项目表单 -->
+    <div v-if="showForm" class="add-form">
+      <input v-model="form.name" placeholder="项目名称" />
+      <div class="path-field">
+        <input v-model="form.path" placeholder="项目路径" readonly class="path-input" />
+        <button class="btn-browse" @click="selectFolder">浏览</button>
+      </div>
+      <div class="command-field">
+        <select v-model="form.command" class="command-select" :disabled="availableScripts.length === 0">
+          <option value="" disabled>
+            {{ loadingScripts ? '加载中...' : availableScripts.length === 0 ? '请先选择项目路径' : '选择命令' }}
+          </option>
+          <option v-for="script in availableScripts" :key="script" :value="script">{{ script }}</option>
+        </select>
+        <span v-if="availableScripts.length > 0" class="command-hint">npm run {{ form.command }}</span>
+      </div>
+      <div class="form-actions">
+        <button class="btn-cancel" @click="resetForm">取消</button>
+        <button class="btn-primary" @click="handleAdd" :disabled="!form.name || !form.path || !form.command">确认</button>
+      </div>
+    </div>
+
+    <!-- 项目列表 -->
+    <div class="list-items" @dragover="onRootDragOver" @drop="onRootDrop">
+
+      <!-- 根级别收藏项目 -->
+      <template v-if="rootFavorites.length">
+        <div class="section-label">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+          收藏
+        </div>
+        <div
+          v-for="project in rootFavorites"
+          :key="project.id"
+          :class="['project-card', { active: selectedId === project.id }]"
+          draggable="true"
+          @click="emit('select', project.id)"
+          @contextmenu="onProjectContextMenu($event, project)"
+          @dragstart="onProjectDragStart($event, project.id)"
+          @dragover="onProjectDragOver"
+          @dragend="onDragEnd"
+        >
+          <div class="card-drag-handle" title="拖拽排序">
+            <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+              <circle cx="3" cy="2" r="1.2"/><circle cx="7" cy="2" r="1.2"/>
+              <circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/>
+              <circle cx="3" cy="12" r="1.2"/><circle cx="7" cy="12" r="1.2"/>
+            </svg>
+          </div>
+          <div class="card-body">
+            <div class="card-top">
+              <span class="card-name">{{ project.name }}</span>
+              <span class="card-status-dot" :style="{ background: getStatusInfo(project.id).color }"></span>
+            </div>
+            <div class="card-bottom">
+              <span class="card-command">npm run {{ project.command }}</span>
+              <span class="card-status-text" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
+            </div>
+          </div>
+          <button class="star-btn active" @click="onToggleFavorite(project.id, $event)" title="取消收藏">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+          </button>
+        </div>
+        <div v-if="folders.length || rootNormal.length" class="section-divider"></div>
+      </template>
+
+      <!-- 文件夹 -->
+      <template v-for="folder in folders" :key="folder.id">
+        <div
+          :class="['folder-row', { 'drop-highlight': dropTarget?.type === 'folder' && dropTarget?.id === folder.id }]"
+          @dragover="onFolderDragOver($event, folder.id)"
+          @drop="onFolderDrop($event, folder.id)"
+          @contextmenu="onFolderContextMenu($event, folder)"
+        >
+          <!-- 重命名模式 -->
+          <template v-if="renamingFolder?.id === folder.id">
+            <input
+              v-model="renameInput"
+              class="rename-input"
+              @keyup.enter="confirmRename"
+              @keyup.escape="cancelRename"
+              @blur="confirmRename"
+              autofocus
+            />
+          </template>
+          <template v-else>
+            <button class="folder-toggle" @click="toggleCollapse(folder.id)">
+              <svg :class="['chevron', { collapsed: isCollapsed(folder.id) }]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="folder-icon">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span class="folder-name">{{ folder.name }}</span>
+            <span class="folder-count">{{ folderProjects(folder.id).length }}</span>
+          </template>
+        </div>
+        <!-- 文件夹内的项目 -->
+        <div v-if="!isCollapsed(folder.id)" class="folder-projects">
+          <div
+            v-for="project in folderProjects(folder.id)"
+            :key="project.id"
+            :class="['project-card', { active: selectedId === project.id }]"
+            draggable="true"
+            @click="emit('select', project.id)"
+            @contextmenu="onProjectContextMenu($event, project)"
+            @dragstart="onProjectDragStart($event, project.id)"
+            @dragover="onProjectDragOver"
+            @dragend="onDragEnd"
+          >
+            <div class="card-drag-handle" title="拖拽排序">
+              <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+                <circle cx="3" cy="2" r="1.2"/><circle cx="7" cy="2" r="1.2"/>
+                <circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/>
+                <circle cx="3" cy="12" r="1.2"/><circle cx="7" cy="12" r="1.2"/>
+              </svg>
+            </div>
+            <div class="card-body">
+              <div class="card-top">
+                <span class="card-name">{{ project.name }}</span>
+                <span class="card-status-dot" :style="{ background: getStatusInfo(project.id).color }"></span>
+              </div>
+              <div class="card-bottom">
+                <span class="card-command">npm run {{ project.command }}</span>
+                <span class="card-status-text" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
+              </div>
+            </div>
+            <button :class="['star-btn', { active: project.favorite }]" @click="onToggleFavorite(project.id, $event)" :title="project.favorite ? '取消收藏' : '收藏'">
+              <svg v-if="project.favorite" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+            </button>
+          </div>
+          <div v-if="folderProjects(folder.id).length === 0" class="folder-empty">
+            拖拽项目到此处
+          </div>
+        </div>
+      </template>
+
+      <!-- 根级别普通项目 -->
+      <div
+        v-for="project in rootNormal"
+        :key="project.id"
+        :class="['project-card', { active: selectedId === project.id }]"
+        draggable="true"
+        @click="emit('select', project.id)"
+        @contextmenu="onProjectContextMenu($event, project)"
+        @dragstart="onProjectDragStart($event, project.id)"
+        @dragover="onProjectDragOver"
+        @dragend="onDragEnd"
+      >
+        <div class="card-drag-handle" title="拖拽排序">
+          <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+            <circle cx="3" cy="2" r="1.2"/><circle cx="7" cy="2" r="1.2"/>
+            <circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/>
+            <circle cx="3" cy="12" r="1.2"/><circle cx="7" cy="12" r="1.2"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <div class="card-top">
+            <span class="card-name">{{ project.name }}</span>
+            <span class="card-status-dot" :style="{ background: getStatusInfo(project.id).color }"></span>
+          </div>
+          <div class="card-bottom">
+            <span class="card-command">npm run {{ project.command }}</span>
+            <span class="card-status-text" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
+          </div>
+        </div>
+        <button :class="['star-btn', { active: project.favorite }]" @click="onToggleFavorite(project.id, $event)" :title="project.favorite ? '取消收藏' : '收藏'">
+            <svg v-if="project.favorite" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+            <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+          </button>
+      </div>
+
+      <div v-if="projects.length === 0" class="empty-list">
+        <p>暂无项目</p>
+        <p class="hint">点击"新建"添加</p>
+      </div>
+    </div>
+
+    <!-- 右键菜单 -->
+    <Teleport to="body">
+      <div
+        v-if="contextMenu.visible"
+        class="context-menu"
+        :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
+      >
+        <template v-if="contextMenu.type === 'project'">
+          <button class="context-item" @click="handleEdit">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            <span>编辑</span>
+          </button>
+          <div class="context-divider"></div>
+          <button class="context-item danger" @click="handleDelete">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            <span>删除</span>
+          </button>
+        </template>
+        <template v-if="contextMenu.type === 'folder'">
+          <button class="context-item" @click="handleRenameFolder">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            <span>重命名</span>
+          </button>
+          <div class="context-divider"></div>
+          <button class="context-item danger" @click="handleDelete">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            <span>删除文件夹</span>
+          </button>
+        </template>
+      </div>
+    </Teleport>
+
+    <!-- 确认弹窗 -->
+    <ConfirmDialog
+      :visible="confirmState.visible"
+      :title="confirmState.type === 'project' ? '删除项目' : '删除文件夹'"
+      :message="confirmState.type === 'project'
+        ? `确定要删除项目「${confirmState.name}」吗？此操作不可撤销。`
+        : `确定要删除文件夹「${confirmState.name}」吗？其下项目将移回根级别。`"
+      confirm-text="删除"
+      :danger="true"
+      @confirm="onConfirmDelete"
+      @cancel="onCancelDelete"
+    />
+  </div>
+</template>
+
+<style scoped>
+.project-list{
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.list-header{
+  padding: 18px 18px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-btns{
+  display: flex;
+  gap: 6px;
+}
+
+.list-title{
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.add-btn{
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.add-icon{ font-size: 13px; line-height: 1; }
+
+.add-btn:hover{
+  color: var(--text-primary);
+  border-color: var(--text-tertiary);
+  background: var(--bg-hover);
+}
+
+/* 文件夹输入栏 */
+.folder-input-bar{
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-base);
+  animation: slideIn 0.2s ease;
+}
+
+.folder-input-bar input{
+  flex: 1;
+  padding: 5px 8px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.btn-sm{
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--accent-primary);
+  border-radius: 5px;
+}
+
+.btn-ghost{
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+}
+
+/* 新建表单 */
+.add-form{
+  padding: 16px 18px;
+  border-top: 1px solid var(--border-default);
+  border-bottom: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg-base);
+  animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.add-form input, .add-form select{
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+
+.path-field{ display: flex; gap: 6px; }
+
+.path-input{ flex: 1; cursor: pointer; color: var(--text-secondary); }
+
+.btn-browse{
+  flex-shrink: 0;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  border-radius: 6px;
+  background: transparent;
+  transition: all 200ms ease;
+}
+
+.btn-browse:hover{ background: var(--accent-glow); }
+
+.command-field{ display: flex; flex-direction: column; gap: 3px; }
+
+.command-select{ cursor: pointer; appearance: auto; }
+
+.command-hint{
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.form-actions{ display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+
+.btn-cancel{
+  padding: 7px 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+}
+
+.btn-cancel:hover{ background: var(--bg-hover); }
+
+.btn-primary{
+  padding: 7px 18px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--accent-primary);
+  border-radius: 6px;
+}
+
+.btn-primary:hover:not(:disabled){ background: var(--accent-primary-hover); }
+.btn-primary:disabled{ opacity: 0.4; cursor: not-allowed; }
+
+/* 列表 */
+.list-items{ flex: 1; overflow-y: auto; padding: 6px 10px; }
+
+.section-label{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.section-divider{
+  height: 1px;
+  background: var(--border-default);
+  margin: 6px 6px;
+}
+
+/* 文件夹 */
+.folder-row{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px;
+  margin-bottom: 2px;
+  border-radius: 8px;
+  cursor: default;
+  transition: background 150ms ease;
+}
+
+.folder-row:hover{ background: var(--bg-hover); }
+.folder-row.drop-highlight{ background: var(--accent-glow); border: 1px dashed var(--accent-primary); }
+
+.folder-toggle{
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--text-tertiary);
+}
+
+.folder-toggle:hover{ background: var(--bg-active); }
+
+.chevron{
+  transition: transform 150ms ease;
+}
+
+.chevron.collapsed{
+  transform: rotate(0deg);
+}
+
+.chevron:not(.collapsed){
+  transform: rotate(90deg);
+}
+
+.folder-icon{ color: var(--accent-primary); flex-shrink: 0; }
+
+.folder-name{
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.folder-count{
+  font-size: 11px;
+  color: var(--text-tertiary);
+  background: var(--bg-elevated);
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 22px;
+  text-align: center;
+}
+
+.rename-input{
+  flex: 1;
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.folder-projects{
+  padding-left: 18px;
+  border-left: 2px solid var(--border-default);
+  margin-left: 20px;
+  margin-bottom: 4px;
+}
+
+.folder-empty{
+  padding: 12px 12px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  opacity: 0.5;
+  text-align: center;
+}
+
+/* 项目卡片 */
+.project-card{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px;
+  margin-bottom: 2px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  border: 1px solid transparent;
+}
+
+.project-card:hover{ background: var(--bg-hover); }
+
+.project-card.active{
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-primary);
+  padding: 9px 9px;
+}
+
+.project-card.dragging{ opacity: 0.35; transform: scale(0.97); }
+
+.card-drag-handle{
+  flex-shrink: 0;
+  width: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  opacity: 0;
+  transition: opacity 200ms ease;
+  cursor: grab;
+}
+
+.card-drag-handle:active{ cursor: grabbing; }
+.project-card:hover .card-drag-handle{ opacity: 0.4; }
+.card-drag-handle:hover{ opacity: 0.7 !important; }
+
+.card-body{ flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+
+.card-top{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-name{
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-status-dot{
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.card-bottom{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-command{
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-status-text{
+  font-size: 11px;
+  font-weight: 500;
+  flex-shrink: 0;
+  letter-spacing: 0.2px;
+}
+
+/* 星标 */
+.star-btn{
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  opacity: 0;
+  transition: all 150ms ease;
+  border-radius: 6px;
+}
+
+.project-card:hover .star-btn{ opacity: 0.5; }
+.star-btn:hover{ opacity: 1 !important; background: var(--bg-hover); }
+
+.star-btn.active{
+  opacity: 1 !important;
+  color: #f59e0b;
+}
+
+/* 空状态 */
+.empty-list{
+  text-align: center;
+  padding: 48px 18px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+.empty-list .hint{ font-size: 12px; margin-top: 6px; opacity: 0.6; }
+
+/* 右键菜单 */
+.context-menu{
+  position: fixed;
+  z-index: 1000;
+  min-width: 150px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  animation: scaleIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.context-item{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-primary);
+  border-radius: 6px;
+  text-align: left;
+  transition: all 150ms ease;
+}
+
+.context-item:hover{ background: var(--bg-hover); }
+.context-item.danger{ color: var(--error); }
+.context-item.danger:hover{ background: var(--error-bg); }
+.context-divider{ height: 1px; background: var(--border-default); margin: 4px 8px; }
+</style>

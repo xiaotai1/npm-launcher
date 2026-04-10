@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"try { const e = require\\('electron'\\); console.log\\('electron keys:', Object.keys\\(e\\)\\); console.log\\('app:', typeof e.app\\); } catch\\(err\\) { console.log\\('Error:', err.message\\); }\")",
+      "Bash(./node_modules/.bin/electron out/test.js)",
+      "Bash(mkdir -p /tmp/electron-test)",
+      "Read(//tmp/**)",
+      "Bash(NODE_PATH=e:/Gitee/main-start/npm-launcher/node_modules e:/Gitee/main-start/npm-launcher/node_modules/.bin/electron .)",
+      "Bash(e:/Gitee/main-start/npm-launcher/node_modules/.bin/electron /tmp/electron-test/)",
+      "Bash(ELECTRON_RUN_AS_NODE= ./node_modules/.bin/electron test-main.js)",
+      "Bash(npm run:*)",
+      "Bash(node -e \"const https = require\\('https'\\); https.get\\('https://nodejs.org/dist/v22.14.0/', r => console.log\\(r.statusCode\\)\\).on\\('error', e => console.log\\('err:', e.message\\)\\)\")",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "WebSearch",
+      "Bash(npm install:*)",
+      "Bash(npx @electron/rebuild)",
+      "Bash(npx electron-builder:*)",
+      "Bash(node -e \"const pty = require\\('node-pty'\\); console.log\\('node-pty loaded OK, spawn exists:', typeof pty.spawn\\)\")"
+    ]
+  }
+}
