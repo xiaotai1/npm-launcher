@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateProject: (project: Project): Promise<boolean> => ipcRenderer.invoke('update-project', project),
   deleteProject: (projectId: string): Promise<boolean> => ipcRenderer.invoke('delete-project', projectId),
   reorderProjects: (projectIds: string[]): Promise<boolean> => ipcRenderer.invoke('reorder-projects', projectIds),
+  reorderFolders: (folderIds: string[]): Promise<boolean> => ipcRenderer.invoke('reorder-folders', folderIds),
   addFolder: (folder: Folder): Promise<boolean> => ipcRenderer.invoke('add-folder', folder),
   updateFolder: (folder: Folder): Promise<boolean> => ipcRenderer.invoke('update-folder', folder),
   deleteFolder: (folderId: string): Promise<boolean> => ipcRenderer.invoke('delete-folder', folderId),
@@ -28,6 +29,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('get-available-node-versions'),
   installNodeVersion: (version: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('install-node-version', version),
+
+  // 原生主题
+  setNativeTheme: (theme: 'light' | 'dark' | 'system'): Promise<void> =>
+    ipcRenderer.invoke('set-native-theme', theme),
+  setTitlebarOverlay: (theme: 'light' | 'dark'): Promise<void> =>
+    ipcRenderer.invoke('set-titlebar-overlay', theme),
 
   // 文件对话框
   selectFolder: (): Promise<{ canceled: boolean; path: string | null }> =>

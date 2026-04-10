@@ -18,6 +18,56 @@ let cleanupExit: (() => void) | null = null
 let resizeObserver: ResizeObserver | null = null
 let contextMenuHandler: ((e: MouseEvent) => void) | null = null
 
+function getTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light'
+  if (isDark) {
+    return {
+      background: '#080e1a',
+      foreground: '#94a3b8',
+      cursor: '#60a5fa',
+      selectionBackground: 'rgba(59, 130, 246, 0.25)',
+      black: '#1e293b',
+      red: '#f87171',
+      green: '#34d399',
+      yellow: '#fbbf24',
+      blue: '#60a5fa',
+      magenta: '#c084fc',
+      cyan: '#60a5fa',
+      white: '#e2e8f0',
+      brightBlack: '#475569',
+      brightRed: '#f87171',
+      brightGreen: '#34d399',
+      brightYellow: '#fbbf24',
+      brightBlue: '#60a5fa',
+      brightMagenta: '#c084fc',
+      brightCyan: '#60a5fa',
+      brightWhite: '#f1f5f9'
+    }
+  }
+  return {
+    background: '#f6f8fa',
+    foreground: '#24292f',
+    cursor: '#0969da',
+    selectionBackground: 'rgba(9, 105, 218, 0.15)',
+    black: '#24292f',
+    red: '#cf222e',
+    green: '#1a7f37',
+    yellow: '#9a6700',
+    blue: '#0969da',
+    magenta: '#953800',
+    cyan: '#0969da',
+    white: '#6e7781',
+    brightBlack: '#57606a',
+    brightRed: '#cf222e',
+    brightGreen: '#1a7f37',
+    brightYellow: '#9a6700',
+    brightBlue: '#0969da',
+    brightMagenta: '#953800',
+    brightCyan: '#0969da',
+    brightWhite: '#8c959f'
+  }
+}
+
 function initTerminal() {
   if (!terminalContainer.value || terminal) return
 
@@ -26,28 +76,7 @@ function initTerminal() {
     fontSize: 13,
     lineHeight: 1.4,
     fontFamily: "'Consolas', 'JetBrains Mono', 'Fira Code', monospace",
-    theme: {
-      background: '#0a0a0b',
-      foreground: '#c8c8cd',
-      cursor: '#7c6cf0',
-      selectionBackground: 'rgba(124, 108, 240, 0.3)',
-      black: '#1a1a1d',
-      red: '#f87171',
-      green: '#34d399',
-      yellow: '#fbbf24',
-      blue: '#818cf8',
-      magenta: '#c084fc',
-      cyan: '#22d3ee',
-      white: '#e4e4e7',
-      brightBlack: '#55555e',
-      brightRed: '#f87171',
-      brightGreen: '#34d399',
-      brightYellow: '#fbbf24',
-      brightBlue: '#818cf8',
-      brightMagenta: '#c084fc',
-      brightCyan: '#22d3ee',
-      brightWhite: '#ededf0'
-    }
+    theme: getTheme()
   })
 
   fitAddon = new FitAddon()
@@ -193,6 +222,19 @@ watch(() => props.cwd, (newCwd, oldCwd) => {
   }
 })
 
+// 主题切换时更新终端配色
+const themeObserver = new MutationObserver(() => {
+  if (terminal) {
+    terminal.options.theme = getTheme()
+  }
+})
+onMounted(() => {
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme']
+  })
+})
+
 onMounted(() => {
   if (props.visible) {
     nextTick(() => initTerminal())
@@ -200,6 +242,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  themeObserver.disconnect()
   dispose()
 })
 </script>
@@ -212,11 +255,27 @@ onBeforeUnmount(() => {
 .terminal-container {
   width: 100%;
   height: 100%;
-  background: #0a0a0b;
+  background: var(--console-bg);
+  border: none;
+  outline: none;
+}
+
+.terminal-container :deep(.xterm),
+.terminal-container :deep(.xterm-screen),
+.terminal-container :deep(.xterm-viewport),
+.terminal-container :deep(.xterm-rows) {
+  background: var(--console-bg) !important;
+  border: none;
+  outline: none;
 }
 
 .terminal-container :deep(.xterm) {
   padding: 4px 8px;
+  height: 100%;
+}
+
+.terminal-container :deep(.xterm-screen) {
+  height: 100%;
 }
 
 .terminal-container :deep(.xterm-viewport::-webkit-scrollbar) {

@@ -50,6 +50,7 @@ declare global {
       updateProject: (project: Project) => Promise<boolean>
       deleteProject: (projectId: string) => Promise<boolean>
       reorderProjects: (projectIds: string[]) => Promise<boolean>
+      reorderFolders: (folderIds: string[]) => Promise<boolean>
       addFolder: (folder: Folder) => Promise<boolean>
       updateFolder: (folder: Folder) => Promise<boolean>
       deleteFolder: (folderId: string) => Promise<boolean>
@@ -73,6 +74,8 @@ declare global {
       ptyKill: (id: string) => void
       onPtyData: (callback: (data: { id: string; data: string }) => void) => () => void
       onPtyExit: (callback: (data: { id: string; exitCode: number }) => void) => () => void
+      setNativeTheme: (theme: 'light' | 'dark' | 'system') => Promise<void>
+      setTitlebarOverlay: (theme: 'light' | 'dark') => Promise<void>
     }
   }
 }

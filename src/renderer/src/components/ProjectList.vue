@@ -18,6 +18,7 @@ const emit = defineEmits<{
   delete: [id: string]
   'toggle-favorite': [id: string]
   'add-folder': [folder: Folder]
+  'reorder-folders': [ids: string[]]
   'delete-folder': [id: string]
   'rename-folder': [folder: Folder]
   'move-to-folder': [projectId: string, folderId: string | null]
@@ -36,6 +37,7 @@ const renameInput = ref('')
 
 // 拖拽状态
 const dragProjectId = ref<string | null>(null)
+const dragFolderId = ref<string | null>(null)
 const dropTarget = ref<{ type: 'project' | 'folder' | 'root'; id?: string } | null>(null)
 
 // 右键菜单
@@ -183,6 +185,40 @@ function onRootDrop(e: DragEvent) {
 
 function onDragEnd() {
   dragProjectId.value = null
+  dragFolderId.value = null
+  dropTarget.value = null
+}
+
+// 文件夹拖拽排序
+function onFolderDragStart(e: DragEvent, folderId: string) {
+  dragFolderId.value = folderId
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', 'folder:' + folderId)
+  }
+}
+
+function onFolderDragOverForSort(e: DragEvent, folderId: string) {
+  e.preventDefault()
+  if (dragFolderId.value && dragFolderId.value !== folderId) {
+    dropTarget.value = { type: 'folder', id: folderId }
+  }
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+}
+
+function onFolderDropForSort(e: DragEvent, targetFolderId: string) {
+  e.preventDefault()
+  if (dragFolderId.value && dragFolderId.value !== targetFolderId) {
+    const currentIds = props.folders.map(f => f.id)
+    const fromIdx = currentIds.indexOf(dragFolderId.value)
+    const toIdx = currentIds.indexOf(targetFolderId)
+    if (fromIdx !== -1 && toIdx !== -1) {
+      currentIds.splice(fromIdx, 1)
+      currentIds.splice(toIdx, 0, dragFolderId.value)
+      emit('reorder-folders', currentIds)
+    }
+  }
+  dragFolderId.value = null
   dropTarget.value = null
 }
 
@@ -360,9 +396,12 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       <!-- 文件夹 -->
       <template v-for="folder in folders" :key="folder.id">
         <div
-          :class="['folder-row', { 'drop-highlight': dropTarget?.type === 'folder' && dropTarget?.id === folder.id }]"
-          @dragover="onFolderDragOver($event, folder.id)"
-          @drop="onFolderDrop($event, folder.id)"
+          :class="['folder-row', { 'drop-highlight': dropTarget?.type === 'folder' && dropTarget?.id === folder.id, dragging: dragFolderId === folder.id }]"
+          draggable="true"
+          @dragstart="onFolderDragStart($event, folder.id)"
+          @dragover="dragFolderId ? onFolderDragOverForSort($event, folder.id) : onFolderDragOver($event, folder.id)"
+          @drop="dragFolderId ? onFolderDropForSort($event, folder.id) : onFolderDrop($event, folder.id)"
+          @dragend="onDragEnd"
           @contextmenu="onFolderContextMenu($event, folder)"
         >
           <!-- 重命名模式 -->
@@ -538,7 +577,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .list-header{
-  padding: 18px 18px 14px;
+  padding: 16px 16px 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -546,37 +585,42 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 .header-btns{
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 
 .list-title{
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 600;
   color: var(--text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 1.2px;
 }
 
 .add-btn{
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 12px;
-  font-size: 12px;
+  padding: 4px 8px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--text-tertiary);
-  border: 1px solid var(--border-default);
-  border-radius: 6px;
-  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 5px;
+  transition: all 150ms ease;
 }
-
-.add-icon{ font-size: 13px; line-height: 1; }
 
 .add-btn:hover{
   color: var(--text-primary);
-  border-color: var(--text-tertiary);
   background: var(--bg-hover);
 }
+
+.add-btn:first-child{
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  justify-content: center;
+}
+
+.add-icon{ font-size: 13px; line-height: 1; }
 
 /* 文件夹输入栏 */
 .folder-input-bar{
@@ -612,7 +656,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 /* 新建表单 */
 .add-form{
-  padding: 16px 18px;
+  padding: 16px 14px;
   border-top: 1px solid var(--border-default);
   border-bottom: 1px solid var(--border-default);
   display: flex;
@@ -639,13 +683,13 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   font-size: 12px;
   font-weight: 500;
   color: var(--accent-primary);
-  border: 1px solid var(--accent-primary);
+  border: 1px solid var(--accent-border);
   border-radius: 6px;
   background: transparent;
   transition: all 200ms ease;
 }
 
-.btn-browse:hover{ background: var(--accent-glow); }
+.btn-browse:hover{ background: var(--accent-glow); border-color: var(--accent-primary); }
 
 .command-field{ display: flex; flex-direction: column; gap: 3px; }
 
@@ -672,46 +716,54 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .btn-primary{
   padding: 7px 18px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: #fff;
-  background: var(--accent-primary);
-  border-radius: 6px;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover));
+  border-radius: 7px;
+  box-shadow: 0 2px 8px var(--accent-glow);
 }
 
-.btn-primary:hover:not(:disabled){ background: var(--accent-primary-hover); }
+.btn-primary:hover:not(:disabled){ box-shadow: 0 4px 16px var(--accent-glow); transform: translateY(-1px); }
 .btn-primary:disabled{ opacity: 0.4; cursor: not-allowed; }
 
 /* 列表 */
-.list-items{ flex: 1; overflow-y: auto; padding: 6px 10px; }
+.list-items{ flex: 1; overflow-y: auto; padding: 4px 8px; }
 
 .section-label{
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 8px 6px;
-  font-size: 11px;
+  padding: 6px 8px 4px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
+}
+
+.section-label::after{
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), transparent);
 }
 
 .section-divider{
   height: 1px;
-  background: var(--border-default);
-  margin: 6px 6px;
+  background: var(--divider);
+  margin: 6px 4px;
 }
 
 /* 文件夹 */
 .folder-row{
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 10px;
+  gap: 7px;
+  padding: 7px 8px;
   margin-bottom: 2px;
   border-radius: 8px;
   cursor: default;
-  transition: background 150ms ease;
+  transition: all 150ms ease;
 }
 
 .folder-row:hover{ background: var(--bg-hover); }
@@ -730,7 +782,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .folder-toggle:hover{ background: var(--bg-active); }
 
 .chevron{
-  transition: transform 150ms ease;
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-block;
 }
 
 .chevron.collapsed{
@@ -741,26 +794,46 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   transform: rotate(90deg);
 }
 
-.folder-icon{ color: var(--accent-primary); flex-shrink: 0; }
+.folder-icon{
+  color: var(--accent-primary);
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 3px var(--accent-glow));
+  transition: filter 200ms ease;
+}
+
+.folder-row:hover .folder-icon{
+  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.35));
+}
 
 .folder-name{
   flex: 1;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color 150ms ease;
+}
+
+.folder-row:hover .folder-name{
+  color: var(--text-primary);
 }
 
 .folder-count{
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-tertiary);
   background: var(--bg-elevated);
   padding: 2px 8px;
   border-radius: 10px;
   min-width: 22px;
   text-align: center;
+  transition: all 200ms ease;
+}
+
+.folder-row:hover .folder-count{
+  background: var(--accent-glow);
+  color: var(--text-secondary);
 }
 
 .rename-input{
@@ -771,10 +844,21 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .folder-projects{
-  padding-left: 18px;
-  border-left: 2px solid var(--border-default);
-  margin-left: 20px;
+  padding-left: 14px;
+  margin-left: 18px;
   margin-bottom: 4px;
+  position: relative;
+  animation: slideIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.folder-projects::before{
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 8px;
+  width: 1px;
+  background: linear-gradient(180deg, var(--accent-border), transparent);
 }
 
 .folder-empty{
@@ -790,22 +874,42 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 10px;
+  padding: 7px 8px;
   margin-bottom: 2px;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
-  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   border: 1px solid transparent;
 }
 
-.project-card:hover{ background: var(--bg-hover); }
+.project-card:hover{
+  background: var(--bg-hover);
+}
+
+.project-card:active{
+  transform: scale(0.98);
+}
 
 .project-card.active{
-  background: var(--accent-glow);
-  border: 1px solid var(--accent-primary);
-  padding: 9px 9px;
+  background: var(--card-active-bg);
+  border-color: var(--card-active-border);
+  box-shadow: 0 0 16px var(--accent-glow), inset 0 1px 0 var(--accent-glow);
+  padding: 6px 7px;
+}
+
+.project-card.active::before{
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--indicator);
+  box-shadow: 0 0 8px var(--accent-glow);
+  animation: barGrow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .project-card.dragging{ opacity: 0.35; transform: scale(0.97); }
@@ -826,7 +930,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .project-card:hover .card-drag-handle{ opacity: 0.4; }
 .card-drag-handle:hover{ opacity: 0.7 !important; }
 
-.card-body{ flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.card-body{ flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 
 .card-top{
   display: flex;
@@ -836,12 +940,22 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .card-name{
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color 150ms ease;
+}
+
+.project-card.active .card-name{
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.project-card:hover .card-name{
+  color: var(--text-primary);
 }
 
 .card-status-dot{
@@ -849,6 +963,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
+  transition: all 300ms ease;
 }
 
 .card-bottom{
@@ -859,41 +974,49 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .card-command{
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-tertiary);
   font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color 150ms ease;
+}
+
+.project-card:hover .card-command{
+  color: var(--text-secondary);
 }
 
 .card-status-text{
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 9px;
+  font-weight: 600;
   flex-shrink: 0;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
 }
 
 /* 星标 */
 .star-btn{
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-tertiary);
   opacity: 0;
   transition: all 150ms ease;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .project-card:hover .star-btn{ opacity: 0.5; }
-.star-btn:hover{ opacity: 1 !important; background: var(--bg-hover); }
+.star-btn:hover{ opacity: 1 !important; background: var(--bg-hover); transform: scale(1.1); }
 
 .star-btn.active{
   opacity: 1 !important;
   color: #f59e0b;
+  filter: drop-shadow(0 0 3px rgba(245, 158, 11, 0.4));
 }
 
 /* 空状态 */
@@ -916,7 +1039,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   border-radius: 10px;
   box-shadow: var(--shadow-lg);
   padding: 4px;
-  animation: scaleIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: scaleIn 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: top left;
 }
 
 .context-item{
@@ -925,7 +1049,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   gap: 8px;
   width: 100%;
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-primary);
   border-radius: 6px;
   text-align: left;
@@ -933,7 +1057,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .context-item:hover{ background: var(--bg-hover); }
-.context-item.danger{ color: var(--error); }
-.context-item.danger:hover{ background: var(--error-bg); }
-.context-divider{ height: 1px; background: var(--border-default); margin: 4px 8px; }
+.context-item.danger{ color: var(--text-tertiary); }
+.context-item.danger:hover{ color: var(--error); background: var(--error-bg); }
+.context-divider{ height: 1px; background: var(--divider); margin: 3px 8px; }
 </style>

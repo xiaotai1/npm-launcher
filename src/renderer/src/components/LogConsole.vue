@@ -68,7 +68,7 @@ function lineClass(type: LogEntry['type']): string {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 20px;
+  padding: 8px 16px;
   border-bottom: 1px solid var(--border-muted);
   background: var(--bg-surface);
 }
@@ -80,19 +80,19 @@ function lineClass(type: LogEntry['type']): string {
 }
 
 .console-title{
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 600;
   color: var(--text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.8px;
 }
 
 .running-badge{
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 600;
   color: var(--success);
 }
 
@@ -101,15 +101,15 @@ function lineClass(type: LogEntry['type']): string {
   height: 5px;
   border-radius: 50%;
   background: var(--success);
-  animation: pulse 1.5s ease-in-out infinite;
-  box-shadow: 0 0 8px var(--success);
+  animation: dotPulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 6px var(--success);
 }
 
 .auto-scroll-label{
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-tertiary);
   cursor: pointer;
   user-select: none;
@@ -125,12 +125,21 @@ function lineClass(type: LogEntry['type']): string {
 .console-body{
   flex: 1;
   overflow-y: auto;
-  padding: 14px 20px;
+  padding: 12px 16px;
   font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
   font-size: 12px;
   line-height: 1.8;
   background: var(--console-bg);
   color: var(--console-text);
+  position: relative;
+}
+
+.console-body::before{
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(59, 130, 246, 0.006) 2px, rgba(59, 130, 246, 0.006) 4px);
+  pointer-events: none;
 }
 
 .console-empty{
@@ -141,12 +150,13 @@ function lineClass(type: LogEntry['type']): string {
   color: var(--text-tertiary);
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
   font-size: 13px;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .log-line{
   white-space: pre-wrap;
   word-break: break-all;
+  animation: logIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .log-stdout{
@@ -159,6 +169,7 @@ function lineClass(type: LogEntry['type']): string {
 
 .log-info{
   color: var(--console-info);
+  text-shadow: 0 0 6px rgba(34, 211, 238, 0.15);
 }
 
 .log-error{

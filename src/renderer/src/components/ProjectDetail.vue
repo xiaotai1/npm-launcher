@@ -168,27 +168,39 @@ function onConfirmDelete() {
 
 <style scoped>
 .detail{
-  padding: 24px 28px;
+  padding: 18px 22px;
   border-bottom: 1px solid var(--border-default);
   background: var(--bg-surface);
+  position: relative;
+}
+
+.detail::after{
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--header-glow);
+  pointer-events: none;
 }
 
 .detail-header{
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .detail-title-row{
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .detail-name{
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.3px;
 }
@@ -203,20 +215,23 @@ function onConfirmDelete() {
   align-items: center;
   gap: 6px;
   padding: 3px 10px;
-  border-radius: 6px;
-  font-size: 12px;
+  border-radius: 12px;
+  font-size: 11px;
   font-weight: 500;
+  transition: all 300ms ease;
 }
 
 .status-badge.running{
   background: var(--success-bg);
   color: var(--success);
+  border: 1px solid var(--success-border);
+  box-shadow: 0 0 12px var(--success-bg);
 }
 
 .status-badge.running .status-dot{
   background: var(--success);
-  animation: pulse 1.5s ease-in-out infinite;
-  box-shadow: 0 0 8px var(--success);
+  animation: dotPulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 6px var(--success);
 }
 
 .status-badge.stopped{
@@ -246,27 +261,27 @@ function onConfirmDelete() {
 .pid{
   opacity: 0.5;
   font-weight: 400;
-  font-size: 11px;
+  font-size: 10px;
   font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
 }
 
 .detail-info{
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 14px;
 }
 
 .info-item{
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .info-label{
-  width: 72px;
+  width: 50px;
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 500;
   color: var(--text-tertiary);
   text-transform: uppercase;
@@ -274,59 +289,77 @@ function onConfirmDelete() {
 }
 
 .info-value{
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-primary);
 }
 
 .info-value.mono{
   font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
   word-break: break-all;
 }
 
 .info-value.code{
   font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 12px;
-  background: var(--bg-elevated);
-  padding: 3px 10px;
-  border-radius: 5px;
+  font-size: 11px;
+  background: var(--accent-glow);
+  padding: 2px 8px;
+  border-radius: 4px;
   color: var(--accent-primary);
+  border: 1px solid var(--accent-border);
+  transition: all 200ms ease;
+}
+
+.info-value.code:hover{
+  background: rgba(59, 130, 246, 0.12);
+  border-color: var(--accent-primary);
 }
 
 .detail-toolbar{
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .btn-start, .btn-stop{
-  padding: 8px 20px;
-  font-size: 13px;
-  font-weight: 500;
+  padding: 7px 20px;
+  font-size: 12px;
+  font-weight: 600;
   border-radius: 7px;
   display: flex;
   align-items: center;
   gap: 6px;
   color: #fff;
-  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-start{
-  background: var(--accent-primary);
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.25);
 }
 
 .btn-start:hover:not(:disabled){
-  background: var(--accent-primary-hover);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.35);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+.btn-start:active:not(:disabled){
+  transform: translateY(0);
+  box-shadow: 0 1px 6px rgba(59, 130, 246, 0.2);
 }
 
 .btn-stop{
-  background: var(--error);
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  box-shadow: 0 2px 12px rgba(239, 68, 68, 0.2);
 }
 
 .btn-stop:hover:not(:disabled){
-  opacity: 0.85;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-stop:active:not(:disabled){
+  transform: translateY(0);
 }
 
 .btn-icon{
@@ -334,8 +367,8 @@ function onConfirmDelete() {
 }
 
 .btn-ghost{
-  padding: 8px 14px;
-  font-size: 13px;
+  padding: 7px 14px;
+  font-size: 12px;
   color: var(--text-secondary);
   border: 1px solid var(--border-default);
   border-radius: 7px;
@@ -345,11 +378,12 @@ function onConfirmDelete() {
 .btn-ghost:hover{
   background: var(--bg-hover);
   color: var(--text-primary);
+  border-color: var(--text-tertiary);
 }
 
 .btn-danger-ghost{
-  padding: 8px 14px;
-  font-size: 13px;
+  padding: 7px 14px;
+  font-size: 12px;
   color: var(--text-tertiary);
   border: 1px solid transparent;
   border-radius: 7px;
@@ -362,17 +396,19 @@ function onConfirmDelete() {
 }
 
 .btn-primary{
-  padding: 8px 20px;
-  font-size: 13px;
-  font-weight: 500;
+  padding: 7px 20px;
+  font-size: 12px;
+  font-weight: 600;
   color: #fff;
-  background: var(--accent-primary);
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover));
   border-radius: 7px;
-  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px var(--accent-glow);
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-primary:hover{
-  background: var(--accent-primary-hover);
+  box-shadow: 0 4px 16px var(--accent-glow);
+  transform: translateY(-1px);
 }
 
 .edit-form{
@@ -410,7 +446,7 @@ function onConfirmDelete() {
   font-size: 12px;
   font-weight: 500;
   color: var(--accent-primary);
-  border: 1px solid var(--accent-primary);
+  border: 1px solid var(--accent-border);
   border-radius: 6px;
   background: transparent;
   transition: all 200ms ease;
@@ -418,6 +454,7 @@ function onConfirmDelete() {
 
 .btn-browse:hover{
   background: var(--accent-glow);
+  border-color: var(--accent-primary);
 }
 
 .command-select{

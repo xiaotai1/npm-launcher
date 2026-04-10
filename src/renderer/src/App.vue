@@ -104,6 +104,11 @@ async function addFolder(folder: Folder) {
   await loadConfig()
 }
 
+async function reorderFolders(ids: string[]) {
+  await window.electronAPI.reorderFolders(ids)
+  await loadConfig()
+}
+
 async function deleteFolder(id: string) {
   await window.electronAPI.deleteFolder(id)
   await loadConfig()
@@ -194,6 +199,8 @@ function applyTheme(theme: 'light' | 'dark' | 'system') {
     effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   }
   document.documentElement.setAttribute('data-theme', effectiveTheme)
+  window.electronAPI.setNativeTheme(theme)
+  window.electronAPI.setTitlebarOverlay(effectiveTheme as 'light' | 'dark')
 }
 
 // 生命周期
@@ -232,7 +239,6 @@ watch(() => config.value?.theme, (theme) => {
       @toggle-theme="toggleTheme"
       @switch-version="switchNodeVersion"
       @refresh-versions="refreshVersions"
-      @open-terminal="openTerminalWithCommand"
     />
     <main class="main-content">
       <aside class="sidebar">
@@ -248,6 +254,7 @@ watch(() => config.value?.theme, (theme) => {
           @delete="deleteProject"
           @toggle-favorite="toggleFavorite"
           @add-folder="addFolder"
+          @reorder-folders="reorderFolders"
           @delete-folder="deleteFolder"
           @rename-folder="renameFolder"
           @move-to-folder="moveToFolder"
@@ -322,12 +329,24 @@ watch(() => config.value?.theme, (theme) => {
 }
 
 .sidebar{
-  width: 280px;
+  width: 260px;
   border-right: 1px solid var(--border-default);
-  background: var(--bg-surface);
+  background: var(--sidebar-bg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+}
+
+.sidebar::after{
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--sidebar-border);
+  pointer-events: none;
 }
 
 .content{
@@ -353,6 +372,7 @@ watch(() => config.value?.theme, (theme) => {
   height: 48px;
   margin-bottom: 14px;
   opacity: 0.3;
+  color: var(--accent-primary);
 }
 
 .empty-icon svg {
@@ -379,17 +399,29 @@ watch(() => config.value?.theme, (theme) => {
   gap: 0;
   border-bottom: 1px solid var(--border-default);
   background: var(--bg-surface);
-  padding: 0 16px;
+  padding: 0 14px;
+  position: relative;
+}
+
+.panel-tabs::after{
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--header-glow);
+  pointer-events: none;
 }
 
 .panel-tab{
   padding: 8px 16px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--text-tertiary);
   border-bottom: 2px solid transparent;
   transition: all 200ms ease;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.3px;
 }
 
 .panel-tab:hover{
@@ -397,8 +429,9 @@ watch(() => config.value?.theme, (theme) => {
 }
 
 .panel-tab.active{
-  color: var(--text-primary);
+  color: var(--accent-primary);
   border-bottom-color: var(--accent-primary);
+  text-shadow: 0 0 8px var(--accent-glow);
 }
 
 .panel-content{

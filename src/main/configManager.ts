@@ -118,6 +118,16 @@ export function reorderProjects(projectIds: string[]): boolean {
   return saveConfig(config)
 }
 
+export function reorderFolders(folderIds: string[]): boolean {
+  const config = getConfig()
+  const idSet = new Set(folderIds)
+  if (idSet.size !== folderIds.length) return false
+  if (config.folders.some(f => !idSet.has(f.id))) return false
+  const map = new Map(config.folders.map(f => [f.id, f]))
+  config.folders = folderIds.map(id => map.get(id)!)
+  return saveConfig(config)
+}
+
 export function addFolder(folder: Folder): boolean {
   const config = getConfig()
   if (config.folders.some(f => f.id === folder.id)) return false

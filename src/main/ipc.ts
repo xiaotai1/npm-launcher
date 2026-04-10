@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron'
+import { ipcMain, dialog, BrowserWindow, nativeTheme } from 'electron'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import { readdirSync, readFileSync, readlinkSync, existsSync } from 'fs'
@@ -12,6 +12,7 @@ import {
   updateProject as updateProjectInConfig,
   deleteProject as deleteProjectFromConfig,
   reorderProjects as reorderProjectsInConfig,
+  reorderFolders as reorderFoldersInConfig,
   addFolder as addFolderToConfig,
   updateFolder as updateFolderInConfig,
   deleteFolder as deleteFolderFromConfig,
@@ -68,6 +69,11 @@ export function setupIpc(): void {
   // 排序项目
   ipcMain.handle('reorder-projects', (_event, projectIds: string[]): boolean => {
     return reorderProjectsInConfig(projectIds)
+  })
+
+  // 排序文件夹
+  ipcMain.handle('reorder-folders', (_event, folderIds: string[]): boolean => {
+    return reorderFoldersInConfig(folderIds)
   })
 
   // 文件夹管理
@@ -249,6 +255,21 @@ export function setupIpc(): void {
       return { scripts }
     } catch (error: any) {
       return { scripts: [], error: error.message }
+    }
+  })
+
+  // ===== 原生主题 =====
+  ipcMain.handle('set-native-theme', (_event, theme: 'light' | 'dark' | 'system') => {
+    nativeTheme.themeSource = theme
+  })
+
+  ipcMain.handle('set-titlebar-overlay', (_event, theme: 'light' | 'dark') => {
+    const win = getMainWindow()
+    if (!win) return
+    if (theme === 'dark') {
+      win.setTitleBarOverlay({ color: '#0f172a', symbolColor: '#94a3b8' })
+    } else {
+      win.setTitleBarOverlay({ color: '#ffffff', symbolColor: '#475569' })
     }
   })
 

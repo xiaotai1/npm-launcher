@@ -49,8 +49,13 @@ function createWindow() {
     minHeight: 700,
     show: false,
     frame: true,
-    titleBarStyle: 'default',
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0d0d0d' : '#ffffff',
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#0f172a',
+      symbolColor: '#94a3b8',
+      height: 48
+    },
+    backgroundColor: '#0f172a',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
