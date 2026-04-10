@@ -8,7 +8,6 @@ export interface Project {
   name: string
   path: string
   command: string
-  minNodeVersion?: string
   favorite?: boolean
   folderId?: string | null
 }
@@ -25,14 +24,12 @@ export interface AppConfig {
   projects: Project[]
   folders: Folder[]
   theme: 'light' | 'dark' | 'system'
-  minNodeVersion: string
 }
 
 const defaultConfig: AppConfig = {
   projects: [],
   folders: [],
-  theme: 'system',
-  minNodeVersion: '16.0.0'
+  theme: 'system'
 }
 
 function getConfigPath(): string {

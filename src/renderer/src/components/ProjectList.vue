@@ -25,7 +25,7 @@ const emit = defineEmits<{
 }>()
 
 const showForm = ref(false)
-const form = ref({ name: '', path: '', command: '', minNodeVersion: '16.0.0' })
+const form = ref({ name: '', path: '', command: '' })
 const availableScripts = ref<string[]>([])
 const loadingScripts = ref(false)
 
@@ -108,21 +108,21 @@ async function loadScripts(dir: string) {
 }
 
 function resetForm() {
-  form.value = { name: '', path: '', command: '', minNodeVersion: '16.0.0' }
+  form.value = { name: '', path: '', command: '' }
   availableScripts.value = []
   showForm.value = false
 }
 
 function handleAdd() {
   if (!form.value.name || !form.value.path || !form.value.command) return
-  emit('add', { id: Date.now().toString(36), ...toRaw(form.value) })
+  emit('add', { id: crypto.randomUUID(), ...toRaw(form.value) })
   resetForm()
 }
 
 // 新建文件夹
 function handleAddFolder() {
   if (!newFolderName.value.trim()) return
-  emit('add-folder', { id: Date.now().toString(36), name: newFolderName.value.trim() })
+  emit('add-folder', { id: crypto.randomUUID(), name: newFolderName.value.trim() })
   newFolderName.value = ''
   showFolderInput.value = false
 }
@@ -315,16 +315,24 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
     </div>
 
     <!-- 新建文件夹 -->
-    <div v-if="showFolderInput" class="folder-input-bar">
+    <div v-if="showFolderInput" class="folder-input-card">
+      <div class="folder-input-header">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span>新建文件夹</span>
+      </div>
       <input
         v-model="newFolderName"
-        placeholder="文件夹名称"
+        placeholder="输入文件夹名称"
         @keyup.enter="handleAddFolder"
         @keyup.escape="showFolderInput = false"
         autofocus
       />
-      <button class="btn-sm" @click="handleAddFolder">确认</button>
-      <button class="btn-sm btn-ghost" @click="showFolderInput = false; newFolderName = ''">取消</button>
+      <div class="folder-input-actions">
+        <button class="btn-cancel" @click="showFolderInput = false; newFolderName = ''">取消</button>
+        <button class="btn-primary" @click="handleAddFolder" :disabled="!newFolderName.trim()">确认</button>
+      </div>
     </div>
 
     <!-- 新建项目表单 -->
@@ -622,36 +630,45 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 .add-icon{ font-size: 13px; line-height: 1; }
 
-/* 文件夹输入栏 */
-.folder-input-bar{
+/* 文件夹输入卡片 */
+.folder-input-card{
+  margin: 6px 10px;
+  padding: 12px;
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  background: var(--bg-surface);
   display: flex;
-  gap: 6px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-default);
-  background: var(--bg-base);
-  animation: slideIn 0.2s ease;
+  flex-direction: column;
+  gap: 10px;
+  animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.folder-input-bar input{
-  flex: 1;
-  padding: 5px 8px;
+.folder-input-header{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.folder-input-header svg{
+  color: var(--accent-primary);
+  filter: drop-shadow(0 0 3px var(--accent-glow));
+}
+
+.folder-input-card input{
+  width: 100%;
+  padding: 8px 10px;
   font-size: 12px;
   border-radius: 6px;
 }
 
-.btn-sm{
-  padding: 5px 10px;
-  font-size: 11px;
-  font-weight: 500;
-  color: #fff;
-  background: var(--accent-primary);
-  border-radius: 5px;
-}
-
-.btn-ghost{
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-default);
+.folder-input-actions{
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 /* 新建表单 */

@@ -5,6 +5,7 @@ import ProjectDetail from './components/ProjectDetail.vue'
 import LogConsole from './components/LogConsole.vue'
 import Terminal from './components/Terminal.vue'
 import Header from './components/Header.vue'
+import Toast from './components/Toast.vue'
 import type { Project, AppConfig, Folder, ProcessStatus, LogEntry } from './types'
 
 // 状态
@@ -16,8 +17,9 @@ const switchingVersion = ref(false)
 const selectedProjectId = ref<string | null>(null)
 const processStatuses = ref<Record<string, ProcessStatus>>({})
 const projectLogs = ref<Record<string, LogEntry[]>>({})
-const showTerminal = ref(false)
 const activeTab = ref<'logs' | 'terminal'>('logs')
+const toastMessage = ref('')
+const toastType = ref<'success' | 'error' | 'warning'>('error')
 
 // 清理函数
 let cleanupLog: (() => void) | null = null
@@ -166,20 +168,13 @@ async function switchNodeVersion(version: string) {
   if (result.success) {
     await Promise.all([loadNodeVersion(), loadNodeVersions()])
   } else {
-    alert('切换失败: ' + (result.error || '未知错误'))
+    toastType.value = 'error'
+    toastMessage.value = '切换失败: ' + (result.error || '未知错误')
   }
 }
 
 async function refreshVersions() {
   await Promise.all([loadNodeVersion(), loadNodeVersions()])
-}
-
-function openTerminalWithCommand(command: string) {
-  activeTab.value = 'terminal'
-  // 等终端可见后发送命令
-  setTimeout(() => {
-    window.electronAPI.ptyWrite('pty-' + (selectedProjectId.value || ''), command + '\r')
-  }, 300)
 }
 
 // 主题切换
@@ -230,6 +225,7 @@ watch(() => config.value?.theme, (theme) => {
 
 <template>
   <div class="app-container">
+    <Toast :message="toastMessage" :type="toastType" />
     <Header
       :node-version="nodeVersion"
       :available-versions="nodeVersions"
@@ -290,7 +286,7 @@ watch(() => config.value?.theme, (theme) => {
                   :is-running="currentStatus?.status === 'running'"
                 />
               </div>
-              <div v-if="activeTab === 'terminal' && selectedProject" class="panel-layer">
+              <div class="panel-layer" :class="{ 'layer-hidden': activeTab !== 'terminal' }">
                 <Terminal
                   :id="'pty-' + selectedProject.id"
                   :cwd="selectedProject.path"
@@ -447,5 +443,10 @@ watch(() => config.value?.theme, (theme) => {
   inset: 0;
   display: flex;
   flex-direction: column;
+}
+
+.panel-layer.layer-hidden{
+  visibility: hidden;
+  pointer-events: none;
 }
 </style>

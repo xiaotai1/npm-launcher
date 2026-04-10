@@ -4,7 +4,6 @@ export interface Project {
   name: string
   path: string
   command: string
-  minNodeVersion?: string
   favorite?: boolean
   folderId?: string | null
 }
@@ -21,7 +20,6 @@ export interface AppConfig {
   projects: Project[]
   folders: Folder[]
   theme: 'light' | 'dark' | 'system'
-  minNodeVersion: string
 }
 
 // 进程状态
@@ -59,8 +57,6 @@ declare global {
       getNodeVersion: () => Promise<{ version: string | null; error?: string }>
       getNodeVersions: () => Promise<{ versions: string[]; current: string | null; error?: string }>
       switchNodeVersion: (version: string) => Promise<{ success: boolean; error?: string }>
-      getAvailableNodeVersions: () => Promise<{ versions: string[]; error?: string }>
-      installNodeVersion: (version: string) => Promise<{ success: boolean; error?: string }>
       selectFolder: () => Promise<{ canceled: boolean; path: string | null }>
       getPackageScripts: (dir: string) => Promise<{ scripts: string[]; error?: string }>
       startProject: (projectId: string, projectPath: string, command: string) => Promise<boolean>

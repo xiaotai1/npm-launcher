@@ -16,7 +16,9 @@
       "Bash(npm install:*)",
       "Bash(npx @electron/rebuild)",
       "Bash(npx electron-builder:*)",
-      "Bash(node -e \"const pty = require\\('node-pty'\\); console.log\\('node-pty loaded OK, spawn exists:', typeof pty.spawn\\)\")"
+      "Bash(node -e \"const pty = require\\('node-pty'\\); console.log\\('node-pty loaded OK, spawn exists:', typeof pty.spawn\\)\")",
+      "Skill(glm-plan-usage:usage-query-skill)",
+      "Skill(glm-plan-usage:usage-query-skill:*)"
     ],
     "additionalDirectories": [
       "C:\\Users\\xiaotai\\Desktop"

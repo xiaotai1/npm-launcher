@@ -204,13 +204,20 @@ function dispose() {
   contextMenuHandler = null
 }
 
-// 当可见性变化时初始化/销毁终端
+// 当可见性变化时：首次可见则初始化，之后只做 fit，不销毁
 watch(() => props.visible, async (val) => {
   if (val) {
     await nextTick()
-    initTerminal()
-  } else {
-    dispose()
+    if (!terminal) {
+      initTerminal()
+    } else if (fitAddon) {
+      try {
+        fitAddon.fit()
+        window.electronAPI.ptyResize(props.id, terminal.cols, terminal.rows)
+      } catch {
+        // 容器尺寸未就绪
+      }
+    }
   }
 })
 

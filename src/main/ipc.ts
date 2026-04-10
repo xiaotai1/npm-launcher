@@ -3,8 +3,6 @@ import { exec } from 'child_process'
 import { promisify } from 'util'
 import { readdirSync, readFileSync, readlinkSync, existsSync } from 'fs'
 import { join, basename } from 'path'
-import https from 'https'
-import http from 'http'
 import {
   getConfig,
   saveConfig,
@@ -181,49 +179,6 @@ export function setupIpc(): void {
       return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
-    }
-  })
-
-  // 获取可安装的远程 Node 版本列表（从 nvm 镜像源获取，与 nvm install 用同一个源）
-  ipcMain.handle('get-available-node-versions', async (): Promise<{ versions: string[]; error?: string }> => {
-    try {
-      // 读取 nvm 镜像源配置
-      const nvmHome = process.env.NVM_HOME
-      let mirrorUrl = 'https://nodejs.org/dist/'
-      if (nvmHome && existsSync(join(nvmHome, 'settings.txt'))) {
-        const settings = readFileSync(join(nvmHome, 'settings.txt'), 'utf-8')
-        const match = settings.match(/^node_mirror:\s*(.+)$/m)
-        if (match && match[1].trim()) {
-          mirrorUrl = match[1].trim()
-        }
-      }
-
-      const url = mirrorUrl + 'index.json'
-      const mod = url.startsWith('https') ? https : http
-
-      const versions = await new Promise<string[]>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('请求超时，请检查网络连接')), 15000)
-        const request = mod.get(url, (res) => {
-          clearTimeout(timeout)
-          let data = ''
-          res.on('data', (chunk) => { data += chunk })
-          res.on('end', () => {
-            try {
-              const list = JSON.parse(data) as Array<{ version: string }>
-              resolve(list.map((item) => item.version))
-            } catch {
-              reject(new Error('解析版本数据失败'))
-            }
-          })
-        })
-        request.on('error', (err) => {
-          clearTimeout(timeout)
-          reject(err)
-        })
-      })
-      return { versions }
-    } catch (error: any) {
-      return { versions: [], error: error.message }
     }
   })
 

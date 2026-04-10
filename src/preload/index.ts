@@ -25,10 +25,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('get-node-versions'),
   switchNodeVersion: (version: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('switch-node-version', version),
-  getAvailableNodeVersions: (): Promise<{ versions: string[]; error?: string }> =>
-    ipcRenderer.invoke('get-available-node-versions'),
-  installNodeVersion: (version: string): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke('install-node-version', version),
 
   // 原生主题
   setNativeTheme: (theme: 'light' | 'dark' | 'system'): Promise<void> =>
