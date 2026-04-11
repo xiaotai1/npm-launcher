@@ -59,6 +59,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('process-status', handler)
   },
 
+  // 平台信息
+  platform: process.platform,
+
   // PTY 终端
   ptySpawn: (id: string, cols: number, rows: number, cwd: string) => {
     ipcRenderer.send('pty-spawn', { id, cols, rows, cwd })

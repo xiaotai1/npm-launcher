@@ -1,11 +1,12 @@
 import { BrowserWindow, ipcMain } from 'electron'
 import * as os from 'os'
 import * as pty from 'node-pty'
+import { getShellEnv } from './platform'
 
 const ptyProcesses = new Map<string, pty.IPty>()
 
 export function setupPtyIpc(): void {
-  ipcMain.on('pty-spawn', (event, { id, cols = 80, rows = 24, cwd }: {
+  ipcMain.on('pty-spawn', async (event, { id, cols = 80, rows = 24, cwd }: {
     id: string
     cols: number
     rows: number
@@ -13,32 +14,47 @@ export function setupPtyIpc(): void {
   }) => {
     if (ptyProcesses.has(id)) return
 
-    const shell = process.env[os.platform() === 'win32' ? 'COMSPEC' : 'SHELL'] || 'cmd.exe'
-
-    const ptyProcess = pty.spawn(shell, [], {
-      name: 'xterm-256color',
-      cols,
-      rows,
-      cwd,
-      env: process.env as Record<string, string>
-    })
-
-    ptyProcesses.set(id, ptyProcess)
-
-    ptyProcess.onData((data) => {
+    const sendError = (msg: string) => {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (win && !win.isDestroyed()) {
-        win.webContents.send('pty-data', { id, data })
+        win.webContents.send('pty-data', { id, data: `\r\n\x1b[31m${msg}\x1b[0m\r\n` })
+        win.webContents.send('pty-exit', { id, exitCode: 1 })
       }
-    })
+    }
 
-    ptyProcess.onExit(({ exitCode }) => {
-      ptyProcesses.delete(id)
-      const win = BrowserWindow.fromWebContents(event.sender)
-      if (win && !win.isDestroyed()) {
-        win.webContents.send('pty-exit', { id, exitCode })
-      }
-    })
+    try {
+      const shell = process.env[os.platform() === 'win32' ? 'COMSPEC' : 'SHELL'] || 'cmd.exe'
+
+      // macOS: 使用完整 shell 环境（含 nvm PATH）
+      const env = await getShellEnv()
+
+      const ptyProcess = pty.spawn(shell, [], {
+        name: 'xterm-256color',
+        cols,
+        rows,
+        cwd,
+        env: env as Record<string, string>
+      })
+
+      ptyProcesses.set(id, ptyProcess)
+
+      ptyProcess.onData((data) => {
+        const win = BrowserWindow.fromWebContents(event.sender)
+        if (win && !win.isDestroyed()) {
+          win.webContents.send('pty-data', { id, data })
+        }
+      })
+
+      ptyProcess.onExit(({ exitCode }) => {
+        ptyProcesses.delete(id)
+        const win = BrowserWindow.fromWebContents(event.sender)
+        if (win && !win.isDestroyed()) {
+          win.webContents.send('pty-exit', { id, exitCode })
+        }
+      })
+    } catch (error: any) {
+      sendError(`[终端启动失败: ${error.message || error}]`)
+    }
   })
 
   ipcMain.on('pty-write', (_event, { id, data }: { id: string; data: string }) => {

@@ -15,6 +15,9 @@ const emit = defineEmits<{
   'refresh-versions': []
 }>()
 
+const isMac = window.electronAPI.platform === 'darwin'
+const nvmListCommand = isMac ? 'nvm ls-remote' : 'nvm list available'
+
 const themeIcon: Record<string, string> = { light: '☀', dark: '☾', system: '⊞' }
 const themeLabel: Record<string, string> = { light: '浅色', dark: '深色', system: '系统' }
 
@@ -51,7 +54,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 <template>
   <header class="app-header">
-    <div class="header-left">
+    <div class="header-left" :class="{ 'mac-traffic-light': isMac }">
       <div class="logo">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/>
@@ -62,7 +65,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       </div>
       <h1 class="app-title">NPM Launcher</h1>
     </div>
-    <div class="header-right">
+    <div class="header-right" :class="{ 'mac-header-right': isMac }">
       <div class="version-wrapper" ref="dropdownRef">
         <button
           class="node-badge"
@@ -101,7 +104,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
                 暂无已安装版本
               </div>
             </div>
-            <div class="dropdown-hint">使用终端输入 <code>nvm list available</code> 查看更多版本</div>
+            <div class="dropdown-hint">使用终端输入 <code>{{ nvmListCommand }}</code> 查看更多版本</div>
           </div>
         </Transition>
       </div>
@@ -144,6 +147,10 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   -webkit-app-region: no-drag;
 }
 
+.header-left.mac-traffic-light{
+  padding-left: 78px;
+}
+
 .logo{
   width: 22px;
   height: 22px;
@@ -169,6 +176,10 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   gap: 6px;
   padding-right: 148px;
   -webkit-app-region: no-drag;
+}
+
+.header-right.mac-header-right{
+  padding-right: 20px;
 }
 
 /* 版本选择器 */

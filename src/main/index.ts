@@ -5,6 +5,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { setupIpc } from './ipc'
 import { stopAllProcesses } from './processManager'
 import { killAllPty } from './ptyManager'
+import { getShellEnv, isMac } from './platform'
 
 // 国内镜像源
 const NODE_MIRROR = 'https://npmmirror.com/mirrors/node/'
@@ -81,7 +82,7 @@ function createWindow() {
 }
 
 // 应用就绪
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // 设置 App 用户模型 ID
   electronApp.setAppUserModelId('com.npm-launcher.app')
 
@@ -89,6 +90,11 @@ app.whenReady().then(() => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
+
+  // macOS: 预加载 shell 环境变量（含 nvm PATH）
+  if (isMac) {
+    await getShellEnv()
+  }
 
   createWindow()
   ensureNvmMirror()

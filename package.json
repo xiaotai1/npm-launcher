@@ -46,7 +46,6 @@
     "electronDownload": {
       "mirror": "https://npmmirror.com/mirrors/electron/"
     },
-    "icon": "build/icon.ico",
     "appId": "com.npm-launcher.app",
     "productName": "NPM Launcher",
     "directories": {
@@ -73,6 +72,7 @@
       ]
     },
     "mac": {
+      "icon": "build/icon.png",
       "target": [
         {
           "target": "dmg",

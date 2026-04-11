@@ -18,7 +18,9 @@
       "Bash(npx electron-builder:*)",
       "Bash(node -e \"const pty = require\\('node-pty'\\); console.log\\('node-pty loaded OK, spawn exists:', typeof pty.spawn\\)\")",
       "Skill(glm-plan-usage:usage-query-skill)",
-      "Skill(glm-plan-usage:usage-query-skill:*)"
+      "Skill(glm-plan-usage:usage-query-skill:*)",
+      "Bash(python3)",
+      "Bash(sips -s format png -z 512 512 favicon.ico --out icon.png)"
     ],
     "additionalDirectories": [
       "C:\\Users\\xiaotai\\Desktop"

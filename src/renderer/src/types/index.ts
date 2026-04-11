@@ -64,6 +64,7 @@ declare global {
       getProcessStatus: (projectId: string) => Promise<ProcessStatus>
       onLogData: (callback: (log: LogEntry) => void) => () => void
       onProcessStatus: (callback: (status: ProcessStatus) => void) => () => void
+      platform: string
       ptySpawn: (id: string, cols: number, rows: number, cwd: string) => void
       ptyWrite: (id: string, data: string) => void
       ptyResize: (id: string, cols: number, rows: number) => void

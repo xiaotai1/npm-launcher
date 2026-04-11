@@ -2,6 +2,7 @@ import { spawn, ChildProcess } from 'child_process'
 import { BrowserWindow } from 'electron'
 import * as iconv from 'iconv-lite'
 import { deleteProject } from './configManager'
+import { getShellEnv } from './platform'
 
 // 运行中的进程
 const runningProcesses: Map<string, ChildProcess> = new Map()
@@ -145,12 +146,12 @@ function sendStatus(
 /**
  * 启动项目
  */
-export function startProject(
+export async function startProject(
   mainWindow: BrowserWindow | null,
   projectId: string,
   projectPath: string,
   command: string
-): boolean {
+): Promise<boolean> {
   // 先停止已运行的进程
   if (runningProcesses.has(projectId)) {
     stopProject(projectId)
@@ -168,17 +169,19 @@ export function startProject(
           FORCE_COLOR: '0',
           NPM_CONFIG_COLOR: 'never',
           TERM: 'dumb'
-        }
+        } as Record<string, string>
       })
     } else {
-      // Unix
+      // Unix/macOS: 使用完整 shell 环境
+      const shellEnv = await getShellEnv()
       child = spawn('npm', ['run', command], {
         cwd: projectPath,
         shell: true,
+        detached: true,
         env: {
-          ...process.env,
+          ...shellEnv,
           FORCE_COLOR: '1'
-        }
+        } as Record<string, string>
       })
     }
 
@@ -259,7 +262,14 @@ export function stopProject(projectId: string): boolean {
       // Windows: 强制终止进程树
       spawn('taskkill', ['/pid', String(child.pid), '/f', '/t'])
     } else {
-      child.kill('SIGTERM')
+      // macOS/Linux: 杀整个进程组（detached 创建的进程组）
+      try {
+        if (child.pid) {
+          process.kill(-child.pid, 'SIGTERM')
+        }
+      } catch {
+        child.kill('SIGTERM')
+      }
     }
     runningProcesses.delete(projectId)
     return true
