@@ -39,17 +39,25 @@ export function setupPtyIpc(): void {
       ptyProcesses.set(id, ptyProcess)
 
       ptyProcess.onData((data) => {
-        const win = BrowserWindow.fromWebContents(event.sender)
-        if (win && !win.isDestroyed()) {
-          win.webContents.send('pty-data', { id, data })
+        try {
+          const win = BrowserWindow.fromWebContents(event.sender)
+          if (win && !win.isDestroyed()) {
+            win.webContents.send('pty-data', { id, data })
+          }
+        } catch {
+          // 窗口已销毁，忽略
         }
       })
 
       ptyProcess.onExit(({ exitCode }) => {
         ptyProcesses.delete(id)
-        const win = BrowserWindow.fromWebContents(event.sender)
-        if (win && !win.isDestroyed()) {
-          win.webContents.send('pty-exit', { id, exitCode })
+        try {
+          const win = BrowserWindow.fromWebContents(event.sender)
+          if (win && !win.isDestroyed()) {
+            win.webContents.send('pty-exit', { id, exitCode })
+          }
+        } catch {
+          // 窗口已销毁，忽略
         }
       })
     } catch (error: any) {
@@ -72,6 +80,19 @@ export function setupPtyIpc(): void {
   ipcMain.on('pty-kill', (_event, { id }: { id: string }) => {
     ptyProcesses.get(id)?.kill()
     ptyProcesses.delete(id)
+  })
+}
+
+/**
+ * 向所有运行中的 PTY 发送命令字符串（用于切换 Node 版本后同步终端环境）
+ */
+export function broadcastToAllPty(command: string): void {
+  ptyProcesses.forEach((proc) => {
+    try {
+      proc.write(command + '\n')
+    } catch {
+      // PTY 可能已退出
+    }
   })
 }
 

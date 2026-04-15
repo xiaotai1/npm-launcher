@@ -27,7 +27,7 @@ import {
 } from './processManager'
 import { getMainWindow } from './index'
 import { execWithSudo } from './sudoExecutor'
-import { setupPtyIpc } from './ptyManager'
+import { setupPtyIpc, broadcastToAllPty } from './ptyManager'
 import { isWindows, getShellEnv, getNvmPaths, clearShellEnvCache } from './platform'
 import type { Project, AppConfig } from './configManager'
 
@@ -267,6 +267,10 @@ export function setupIpc(): void {
 
       // 切换后刷新环境缓存
       clearShellEnvCache()
+
+      // 向所有运行中的终端发送 nvm use，同步 Node 版本
+      broadcastToAllPty(`source '${nvmDir}/nvm.sh' && nvm use ${version}`)
+
       return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
