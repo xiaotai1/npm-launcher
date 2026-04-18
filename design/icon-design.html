@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NPM Launcher - 图标设计方案 v3</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    background: #0a0a0f;
+    color: #e2e8f0;
+    padding: 60px 40px;
+    min-height: 100vh;
+  }
+  h1 {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #60a5fa, #818cf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    text-align: center;
+    color: #64748b;
+    font-size: 14px;
+    margin-bottom: 60px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 48px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .card {
+    background: #12121a;
+    border-radius: 24px;
+    padding: 40px;
+    border: 1px solid #1e1e2e;
+    transition: all 0.3s ease;
+  }
+  .card:hover {
+    border-color: #334155;
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .card-number {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
+  }
+  .card-title { font-size: 16px; font-weight: 600; }
+  .card-desc {
+    color: #94a3b8;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 32px;
+  }
+  .icon-showcase {
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+  }
+  .icon-row { display: flex; align-items: center; gap: 16px; }
+  .icon-box {
+    display: flex; align-items: center; justify-content: center;
+    background: #1a1a2e; border-radius: 16px; border: 1px solid #252535;
+  }
+  .icon-box.size-512 { width: 200px; height: 200px; border-radius: 20px; }
+  .icon-box.size-128 { width: 72px; height: 72px; border-radius: 10px; }
+  .icon-box.size-64 { width: 48px; height: 48px; border-radius: 8px; }
+  .icon-box.size-32 { width: 36px; height: 36px; border-radius: 6px; }
+  .icon-box svg { width: 80%; height: 80%; }
+  .size-label { font-size: 11px; color: #475569; text-align: center; margin-top: 4px; }
+  .palette { display: flex; gap: 8px; margin-top: 12px; justify-content: center; }
+  .swatch { width: 24px; height: 24px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); }
+  .tag { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; margin-top: 8px; }
+  .tag-rec { background: rgba(34,197,94,0.15); color: #4ade80; }
+  .dock-preview { margin-top: 48px; text-align: center; }
+  .dock-preview h2 { font-size: 20px; margin-bottom: 24px; color: #94a3b8; }
+  .dock-bar {
+    display: inline-flex; align-items: flex-end; gap: 8px;
+    background: rgba(255,255,255,0.1); backdrop-filter: blur(20px);
+    padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15);
+  }
+  .dock-icon { width: 64px; height: 64px; border-radius: 14px; overflow: hidden; position: relative; }
+  .dock-icon svg { width: 100%; height: 100%; }
+  .dock-other { width: 64px; height: 64px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+</style>
+</head>
+<body>
+
+<h1>NPM Launcher 图标设计 v3</h1>
+<p class="subtitle">渐变文字型 — NL 字母几何变形</p>
+
+<div class="grid">
+
+<!-- ===== 方案 A: NL 融合 + 上冲箭头 ===== -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-number" style="background:rgba(59,130,246,0.15);color:#60a5fa;">A</div>
+    <div class="card-title">NL Arrow</div>
+  </div>
+  <p class="card-desc">
+    N 和 L 字母融合为一体，N 的斜线延伸为向上发射的箭头，蓝紫渐变。整体既是文字又是符号，极具辨识度。
+    <span class="tag tag-rec">推荐</span>
+  </p>
+  <div class="icon-showcase">
+    <div class="icon-box size-512">
+      <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="a-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0f172a"/>
+            <stop offset="100%" stop-color="#020617"/>
+          </linearGradient>
+          <linearGradient id="a-nl" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#3b82f6"/>
+            <stop offset="50%" stop-color="#6366f1"/>
+            <stop offset="100%" stop-color="#a78bfa"/>
+          </linearGradient>
+        </defs>
+        <!-- Dark rounded background -->
+        <rect width="1024" height="1024" rx="220" fill="url(#a-bg)"/>
+        <!-- N letter: vertical left bar + diagonal + vertical right bar -->
+        <!-- Left bar of N -->
+        <rect x="220" y="240" width="88" height="544" rx="20" fill="url(#a-nl)"/>
+        <!-- Diagonal of N going up-right -->
+        <polygon points="220,700 308,660 660,240 660,340" fill="url(#a-nl)"/>
+        <!-- Right bar of N, extended upward into arrow -->
+        <rect x="572" y="140" width="88" height="644" rx="20" fill="url(#a-nl)"/>
+        <!-- Arrow head on top of right bar -->
+        <polygon points="616,100 530,240 702,240" fill="#a78bfa"/>
+        <!-- L letter: shares the right bar of N as the vertical -->
+        <!-- Bottom bar of L -->
+        <rect x="572" y="700" width="240" height="88" rx="20" fill="url(#a-nl)"/>
+        <!-- Glow effect -->
+        <rect x="220" y="240" width="88" height="544" rx="20" fill="none"
+          stroke="rgba(96,165,250,0.3)" stroke-width="4" filter="url(#a-glow)"/>
+      </svg>
+    </div>
+    <div class="icon-row">
+      <div style="text-align:center">
+        <div class="icon-box size-128">
+          <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="220" fill="#0f172a"/><rect x="220" y="240" width="88" height="544" rx="20" fill="#3b82f6"/><polygon points="220,700 308,660 660,240 660,340" fill="#6366f1"/><rect x="572" y="140" width="88" height="644" rx="20" fill="#3b82f6"/><polygon points="616,100 530,240 702,240" fill="#a78bfa"/><rect x="572" y="700" width="240" height="88" rx="20" fill="#3b82f6"/></svg>
+        </div>
+        <div class="size-label">128</div>
+      </div>
+      <div style="text-align:center">
+        <div class="icon-box size-64">
+          <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="220" fill="#0f172a"/><rect x="220" y="240" width="88" height="544" rx="20" fill="#3b82f6"/><polygon points="220,700 308,660 660,240 660,340" fill="#6366f1"/><rect x="572" y="140" width="88" height="644" rx="20" fill="#3b82f6"/><polygon points="616,100 530,240 702,240" fill="#a78bfa"/><rect x="572" y="700" width="240" height="88" rx="20" fill="#3b82f6"/></svg>
+        </div>
+        <div class="size-label">64</div>
+      </div>
+      <div style="text-align:center">
+        <div class="icon-box size-32">
+          <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="220" fill="#0f172a"/><rect x="220" y="240" width="88" height="544" rx="16" fill="#3b82f6"/><polygon points="220,700 308,660 660,240 660,340" fill="#6366f1"/><rect x="572" y="140" width="88" height="644" rx="16" fill="#3b82f6"/><polygon points="616,100 530,240 702,240" fill="#a78bfa"/><rect x="572" y="700" width="240" height="88" rx="16" fill="#3b82f6"/></svg>
+        </div>
+        <div class="size-label">32</div>
+      </div>
+    </div>
+    <div class="palette">
+      <div class="swatch" style="background:#3b82f6"></div>
+      <div class="swatch" style="background:#6366f1"></div>
+      <div class="swatch" style="background:#a78bfa"></div>
+      <div class="swatch" style="background:#0f172a"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 方案 B: 大写 N + 终端光标 ===== -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-number" style="background:rgba(99,102,241,0.15);color:#818cf8;">B</div>
+    <div class="card-title">N Cursor</div>
+  </div>
+  <p class="card-desc">
+    一个大写 N 字母，斜线变成终端光标 > 符号，底部有 npm 三色横线。科技感十足，一眼就能联想到终端和 npm。
+  </p>
+  <div class="icon-showcase">
+    <div class="icon-box size-512">
+      <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="b-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#111827"/>
+            <stop offset="100%" stop-color="#030712"/>
+          </linearGradient>
+          <linearGradient id="b-n" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#60a5fa"/>
+            <stop offset="100%" stop-color="#818cf8"/>
+          </linearGradient>
+        </defs>
+        <rect width="1024" height="1024" rx="220" fill="url(#b-bg)"/>
+        <!-- Left bar -->
+        <rect x="220" y="200" width="100" height="624" rx="22" fill="url(#b-n)"/>
+        <!-- Right bar -->
+        <rect x="700" y="200" width="100" height="624" rx="22" fill="url(#b-n)"/>
+        <!-- Diagonal replaced by terminal cursor > -->
+        <path d="M380,420 L380,340 L650,512 L380,684 L380,604 L520,512 Z"
+          fill="url(#b-n)" opacity="0.9"/>
+        <!-- Bottom npm-style indicator bars -->
+        <rect x="220" y="860" width="200" height="12" rx="6" fill="#3b82f6" opacity="0.6"/>
+        <rect x="440" y="860" width="140" height="12" rx="6" fill="#6366f1" opacity="0.5"/>
+        <rect x="600" y="860" width="200" height="12" rx="6" fill="#818cf8" opacity="0.4"/>
+      </svg>
+    </div>
+    <div class="icon-row">
+      <div style="text-align:center">
+        <div class="icon-box size-128">
+          <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="220" fill="#111827"/><rect x="220" y="200" width="100" height="624" rx="22" fill="#60a5fa"/><rect x="700" y="200" width="100" height="624" rx="22" fill="#818cf8"/><path d="M380,420 L380,340 L650,512 L380,684 L380,604 L520,512 Z" fill="#6366f1" opacity="0.9"/></svg>
+        </div>
+        <div class="size-label">128</div>
+      </div>
+      <div style="text-align:center">
+        <div class="icon-box size-64">
+          <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="220" fill="#111827"/><rect x="220" y="200" width="100" height="624" rx="22" fill="#60a5fa"/><rect x="700" y="200" width="100" height="624" rx="22" fill="#818cf8"/><path d="M380,420 L380,340 L650,512 L380,684 L380,604 L520,512 Z" fill="#6366f1" opacity="0.9"/></svg>
+        </div>
+        <div class="size-label">64</div>
+      </div>
+      <div style="text-align:center">
+        <div class="icon-box size-32">
+          <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="220" fill="#111827"/><rect x="220" y="200" width="100" height="624" rx="22" fill="#60a5fa"/><rect x="700" y="200" width="100" height="624" rx="22" fill="#818cf8"/><path d="M380,420 L380,340 L650,512 L380,684 L380,604 L520,512 Z" fill="#6366f1"/></svg>
+        </div>
+        <div class="size-label">32</div>
+      </div>
+    </div>
+    <div class="palette">
+      <div class="swatch" style="background:#60a5fa"></div>
+      <div class="swatch" style="background:#6366f1"></div>
+      <div class="swatch" style="background:#818cf8"></div>
+      <div class="swatch" style="background:#111827"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 方案 C: 纯渐变 N 字母 ===== -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-number" style="background:rgba(148,163,184,0.15);color:#94a3b8;">C</div>
+    <div class="card-title">Neo N</div>
+  </div>
+  <p class="card-desc">
+    极简风：深色圆角方块上一个巨大的渐变 N 字母，笔画末端带圆角。干净利落，类似 Notion 的文字标志风格。
+  </p>
+  <div class="icon-showcase">
+    <div class="icon-box size-512">
+      <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="c-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#09090b"/>
+            <stop offset="100%" stop-color="#18181b"/>
+          </linearGradient>
+          <linearGradient id="c-text" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#2563eb"/>
+            <stop offset="50%" stop-color="#7c3aed"/>
+            <stop offset="100%" stop-color="#a78bfa"/>
+          </linearGradient>
+        </defs>
+        <rect width="1024" height="1024" rx="220" fill="url(#c-bg)"/>
+        <!-- Subtle inner border -->
+        <rect x="12" y="12" width="1000" height="1000" rx="210" fill="none"
+          stroke="rgba(255,255,255,0.04)" stroke-width="4"/>
+        <!-- Giant N letter with rounded strokes -->
+        <!-- Left vertical -->
+        <path d="M240,780 L240,244 Q240,220 264,220 L304,220 Q328,220 328,244 L328,580 L696,244 Q712,220 736,220 L760,220 Q784,220 784,244 L784,780 Q784,804 760,804 L720,804 Q696,804 696,780 L696,444 L328,780 Q312,804 288,804 L264,804 Q240,804 240,780 Z"
+          fill="url(#c-text)"/>
+      </svg>
+    </div>
+    <div class="icon-row">
+      <div style="text-align:center">
+        <div class="icon-box size-128">
+          <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="220" fill="#09090b"/><path d="M240,780 L240,244 Q240,220 264,220 L304,220 Q328,220 328,244 L328,580 L696,244 Q712,220 736,220 L760,220 Q784,220 784,244 L784,780 Q784,804 760,804 L720,804 Q696,804 696,780 L696,444 L328,780 Q312,804 288,804 L264,804 Q240,804 240,780 Z" fill="url(#ct)"/><defs><linearGradient id="ct" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#2563eb"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient></defs></svg>
+        </div>
+        <div class="size-label">128</div>
+      </div>
+      <div style="text-align:center">
+        <div class="icon-box size-64">
+          <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="220" fill="#09090b"/><path d="M240,780 L240,244 Q240,220 264,220 L304,220 Q328,220 328,244 L328,580 L696,244 Q712,220 736,220 L760,220 Q784,220 784,244 L784,780 Q784,804 760,804 L720,804 Q696,804 696,780 L696,444 L328,780 Q312,804 288,804 L264,804 Q240,804 240,780 Z" fill="url(#ct2)"/><defs><linearGradient id="ct2" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#2563eb"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient></defs></svg>
+        </div>
+        <div class="size-label">64</div>
+      </div>
+      <div style="text-align:center">
+        <div class="icon-box size-32">
+          <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="220" fill="#09090b"/><path d="M240,780 L240,244 Q240,220 264,220 L304,220 Q328,220 328,244 L328,580 L696,244 Q712,220 736,220 L760,220 Q784,220 784,244 L784,780 Q784,804 760,804 L720,804 Q696,804 696,780 L696,444 L328,780 Q312,804 288,804 L264,804 Q240,804 240,780 Z" fill="url(#ct3)"/><defs><linearGradient id="ct3" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#2563eb"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient></defs></svg>
+        </div>
+        <div class="size-label">32</div>
+      </div>
+    </div>
+    <div class="palette">
+      <div class="swatch" style="background:#2563eb"></div>
+      <div class="swatch" style="background:#7c3aed"></div>
+      <div class="swatch" style="background:#a78bfa"></div>
+      <div class="swatch" style="background:#09090b"></div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- Dock 预览 -->
+<div class="dock-preview">
+  <h2>macOS Dock 预览效果</h2>
+  <div class="dock-bar">
+    <div class="dock-other" style="background:#1e40af;">🌐</div>
+    <div class="dock-other" style="background:#0078d4;">📁</div>
+    <!-- A -->
+    <div class="dock-icon">
+      <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="220" fill="#0f172a"/><rect x="220" y="240" width="88" height="544" rx="20" fill="#3b82f6"/><polygon points="220,700 308,660 660,240 660,340" fill="#6366f1"/><rect x="572" y="140" width="88" height="644" rx="20" fill="#3b82f6"/><polygon points="616,100 530,240 702,240" fill="#a78bfa"/><rect x="572" y="700" width="240" height="88" rx="20" fill="#3b82f6"/></svg>
+    </div>
+    <!-- B -->
+    <div class="dock-icon">
+      <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="220" fill="#111827"/><rect x="220" y="200" width="100" height="624" rx="22" fill="#60a5fa"/><rect x="700" y="200" width="100" height="624" rx="22" fill="#818cf8"/><path d="M380,420 L380,340 L650,512 L380,684 L380,604 L520,512 Z" fill="#6366f1" opacity="0.9"/></svg>
+    </div>
+    <!-- C -->
+    <div class="dock-icon">
+      <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="220" fill="#09090b"/><path d="M240,780 L240,244 Q240,220 264,220 L304,220 Q328,220 328,244 L328,580 L696,244 Q712,220 736,220 L760,220 Q784,220 784,244 L784,780 Q784,804 760,804 L720,804 Q696,804 696,780 L696,444 L328,780 Q312,804 288,804 L264,804 Q240,804 240,780 Z" fill="url(#dt)"/><defs><linearGradient id="dt" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#2563eb"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient></defs></svg>
+    </div>
+    <div class="dock-other" style="background:#5865f2;">💬</div>
+    <div class="dock-other" style="background:#333;">⚙️</div>
+  </div>
+  <div style="display:flex; justify-content:center; gap:64px; margin-top: 12px;">
+    <span style="color:#64748b;font-size:12px;">← A &nbsp;NL Arrow</span>
+    <span style="color:#64748b;font-size:12px;">← B &nbsp;N Cursor</span>
+    <span style="color:#64748b;font-size:12px;">← C &nbsp;Neo N</span>
+  </div>
+</div>
+
+</body>
+</html>

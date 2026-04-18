@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow, nativeTheme } from 'electron'
+import { ipcMain, dialog, BrowserWindow, nativeTheme, shell } from 'electron'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import { readdirSync, readFileSync, readlinkSync, existsSync } from 'fs'
@@ -22,6 +22,7 @@ import type { Folder } from './configManager'
 import {
   startProject,
   stopProject,
+  stopAllProcesses,
   getProcessStatus,
   isProcessRunning
 } from './processManager'
@@ -101,39 +102,7 @@ export function setupIpc(): void {
 
   ipcMain.handle('get-node-version', async (): Promise<{ version: string | null; error?: string }> => {
     try {
-      if (isWindows) {
-        const env = await getShellEnv()
-        const { stdout } = await execAsync('node --version', { env })
-        return { version: stdout.trim() }
-      }
-
-      // macOS: 从 nvm default alias 解析当前版本
-      const { nvmDir } = getNvmPaths()
-      if (nvmDir) {
-        const defaultAliasPath = join(nvmDir, 'alias', 'default')
-        if (existsSync(defaultAliasPath)) {
-          const alias = readFileSync(defaultAliasPath, 'utf-8').trim()
-          // alias 可能是简写如 "20.19"，需要在已安装版本中找到完整匹配
-          const versionsDir = join(nvmDir, 'versions', 'node')
-          if (existsSync(versionsDir)) {
-            const entries = readdirSync(versionsDir, { withFileTypes: true })
-            for (const entry of entries) {
-              if (entry.isDirectory()) {
-                const fullVer = entry.name.startsWith('v') ? entry.name : 'v' + entry.name
-                // 精确匹配或前缀匹配（alias=v14.18.1 匹配 v14.18.1，alias=20.19 匹配 v20.19.x）
-                const aliasWithV = alias.startsWith('v') ? alias : 'v' + alias
-                if (fullVer === aliasWithV || fullVer.startsWith(aliasWithV + '.')) {
-                  return { version: fullVer }
-                }
-              }
-            }
-          }
-          // 没匹配到，直接返回 alias 值
-          return { version: alias.startsWith('v') ? alias : 'v' + alias }
-        }
-      }
-
-      // fallback
+      // 统一通过 login shell 执行 node --version，确保与终端行为一致
       const env = await getShellEnv()
       const { stdout } = await execAsync('node --version', { env })
       return { version: stdout.trim() }
@@ -178,7 +147,7 @@ export function setupIpc(): void {
       }
 
       // === macOS / Linux: nvm-sh ===
-      const { nvmDir, versionsDir } = getNvmPaths()
+      const { versionsDir } = getNvmPaths()
       if (!versionsDir || !existsSync(versionsDir)) {
         return { versions: [], current: null, error: '未找到 NVM 安装目录' }
       }
@@ -192,23 +161,13 @@ export function setupIpc(): void {
       }
       versions.sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
 
-      // 当前版本：从 default alias 解析完整版本号
+      // 当前版本：通过 login shell 执行 node --version 获取实际版本
       let current: string | null = null
-      const defaultAliasPath = join(nvmDir!, 'alias', 'default')
-      if (existsSync(defaultAliasPath)) {
-        const alias = readFileSync(defaultAliasPath, 'utf-8').trim()
-        const aliasWithV = alias.startsWith('v') ? alias : 'v' + alias
-        // 在已安装版本中找到完整匹配
-        for (const ver of versions) {
-          if (ver === aliasWithV || ver.startsWith(aliasWithV + '.')) {
-            current = ver
-            break
-          }
-        }
-        if (!current && alias) {
-          current = aliasWithV
-        }
-      }
+      try {
+        const env = await getShellEnv()
+        const { stdout } = await execAsync('node --version', { env })
+        current = stdout.trim()
+      } catch { /* ignore */ }
       if (!current && versions.length > 0) {
         current = versions[0]
       }
@@ -308,6 +267,27 @@ export function setupIpc(): void {
     }
   })
 
+  // 在系统文件管理器中打开文件夹
+  ipcMain.handle('open-in-file-manager', async (_event, folderPath: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await shell.openPath(folderPath)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // 在 VS Code 中打开项目
+  ipcMain.handle('open-in-vscode', async (_event, folderPath: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const env = await getShellEnv()
+      await execAsync('code "' + folderPath + '"', { env })
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: '未找到 VS Code，请确保已安装且 "code" 命令在 PATH 中' }
+    }
+  })
+
   // ===== 原生主题 =====
   ipcMain.handle('set-native-theme', (_event, theme: 'light' | 'dark' | 'system') => {
     nativeTheme.themeSource = theme
@@ -339,5 +319,26 @@ export function setupIpc(): void {
   // 获取状态
   ipcMain.handle('get-process-status', (_event, projectId: string) => {
     return getProcessStatus(projectId)
+  })
+
+  // 批量启动所有项目
+  ipcMain.handle('start-all-projects', async (_event, projects: Array<{ id: string; path: string; command: string }>): Promise<{ success: number; failed: number }> => {
+    let success = 0
+    let failed = 0
+    for (const project of projects) {
+      const result = await startProject(getMainWindow(), project.id, project.path, project.command)
+      if (result) {
+        success++
+      } else {
+        failed++
+      }
+    }
+    return { success, failed }
+  })
+
+  // 批量停止所有项目
+  ipcMain.handle('stop-all-projects', (): boolean => {
+    stopAllProcesses()
+    return true
   })
 }

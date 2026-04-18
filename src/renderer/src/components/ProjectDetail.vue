@@ -15,6 +15,7 @@ const emit = defineEmits<{
   start: []
   stop: []
   'clear-logs': []
+  toast: [message: string, type: 'success' | 'error' | 'warning']
 }>()
 
 const isEditing = ref(false)
@@ -81,6 +82,20 @@ function onConfirmDelete() {
   emit('delete', props.project.id)
   showDeleteConfirm.value = false
 }
+
+async function openFolder() {
+  const result = await window.electronAPI.openInFileManager(props.project.path)
+  if (!result.success) {
+    emit('toast', result.error || '打开文件夹失败', 'error')
+  }
+}
+
+async function openInVscode() {
+  const result = await window.electronAPI.openInVscode(props.project.path)
+  if (!result.success) {
+    emit('toast', result.error || '未找到 VS Code', 'warning')
+  }
+}
 </script>
 
 <template>
@@ -104,7 +119,20 @@ function onConfirmDelete() {
       <div class="detail-info">
         <div class="info-item">
           <span class="info-label">路径</span>
-          <span class="info-value mono">{{ project.path }}</span>
+          <span class="info-value mono" :title="project.path">{{ project.path }}</span>
+          <div class="info-actions">
+            <button class="btn-icon-action" @click="openFolder" title="在文件管理器中打开">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+            </button>
+            <button class="btn-icon-action" @click="openInVscode" title="在 VS Code 中打开">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="16 18 22 12 16 6"/>
+                <polyline points="8 6 2 12 8 18"/>
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="info-item">
           <span class="info-label">命令</span>
@@ -113,12 +141,14 @@ function onConfirmDelete() {
       </div>
 
       <div class="detail-toolbar">
-        <button v-if="!isRunning()" class="btn-start" @click="emit('start')">
-          <span class="btn-icon">▶</span> 启动
-        </button>
-        <button v-else class="btn-stop" @click="emit('stop')">
-          <span class="btn-icon">■</span> 停止
-        </button>
+        <div class="toolbar-primary">
+          <button v-if="!isRunning()" class="btn-start" @click="emit('start')">
+            <span class="btn-icon">▶</span> 启动
+          </button>
+          <button v-else class="btn-stop" @click="emit('stop')">
+            <span class="btn-icon">■</span> 停止
+          </button>
+        </div>
         <button class="btn-ghost" @click="emit('clear-logs')">清空日志</button>
       </div>
     </template>
@@ -276,6 +306,7 @@ function onConfirmDelete() {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
 .info-label{
@@ -297,7 +328,9 @@ function onConfirmDelete() {
   font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
   font-size: 11px;
   color: var(--text-secondary);
-  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .info-value.code{
@@ -318,7 +351,41 @@ function onConfirmDelete() {
 
 .detail-toolbar{
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 6px;
+}
+
+.toolbar-primary{
+  display: flex;
+  gap: 6px;
+}
+
+.info-actions{
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.btn-icon-action{
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--text-tertiary);
+  transition: all 200ms ease;
+}
+
+.btn-icon-action:hover{
+  background: var(--bg-hover);
+  color: var(--accent-primary);
+}
+
+.btn-icon-action:active{
+  transform: scale(0.95);
 }
 
 .btn-start, .btn-stop{

@@ -22,12 +22,32 @@ const emit = defineEmits<{
   'delete-folder': [id: string]
   'rename-folder': [folder: Folder]
   'move-to-folder': [projectId: string, folderId: string | null]
+  'start-all': []
+  'stop-all': []
 }>()
 
 const showForm = ref(false)
 const form = ref({ name: '', path: '', command: '' })
 const availableScripts = ref<string[]>([])
 const loadingScripts = ref(false)
+
+// 搜索
+const searchQuery = ref('')
+
+// 计算搜索过滤后的列表
+const filteredProjects = computed(() => {
+  const q = searchQuery.value.toLowerCase().trim()
+  if (!q) return props.projects
+  return props.projects.filter(p =>
+    p.name.toLowerCase().includes(q) ||
+    p.path.toLowerCase().includes(q) ||
+    p.command.toLowerCase().includes(q)
+  )
+})
+
+const hasRunningProject = computed(() =>
+  Object.values(props.statuses).some(s => s.status === 'running')
+)
 
 // 文件夹相关
 const showFolderInput = ref(false)
@@ -51,18 +71,24 @@ const confirmState = ref<{ visible: boolean; type: 'project' | 'folder'; id: str
 // 折叠状态
 const collapsedFolders = ref<Set<string>>(new Set())
 
-// 计算分组后的列表
+// 计算分组后的列表（使用搜索过滤）
 const rootFavorites = computed(() =>
-  props.projects.filter(p => p.favorite && !p.folderId)
+  filteredProjects.value.filter(p => p.favorite && !p.folderId)
 )
 
 const rootNormal = computed(() =>
-  props.projects.filter(p => !p.favorite && !p.folderId)
+  filteredProjects.value.filter(p => !p.favorite && !p.folderId)
 )
 
 function folderProjects(folderId: string) {
-  return props.projects.filter(p => p.folderId === folderId)
+  return filteredProjects.value.filter(p => p.folderId === folderId)
 }
+
+// 搜索时只显示有匹配项目的文件夹
+const visibleFolders = computed(() => {
+  if (!searchQuery.value.trim()) return props.folders
+  return props.folders.filter(f => folderProjects(f.id).length > 0)
+})
 
 function isCollapsed(folderId: string) {
   return collapsedFolders.value.has(folderId)
@@ -245,6 +271,22 @@ function handleEdit() {
   closeContextMenu()
 }
 
+async function handleOpenFolder() {
+  if (contextMenu.value.type === 'project' && contextMenu.value.target) {
+    const p = contextMenu.value.target as Project
+    await window.electronAPI.openInFileManager(p.path)
+  }
+  closeContextMenu()
+}
+
+async function handleOpenInVscode() {
+  if (contextMenu.value.type === 'project' && contextMenu.value.target) {
+    const p = contextMenu.value.target as Project
+    await window.electronAPI.openInVscode(p.path)
+  }
+  closeContextMenu()
+}
+
 function handleDelete() {
   if (contextMenu.value.type === 'project' && contextMenu.value.target) {
     const p = contextMenu.value.target as Project
@@ -312,6 +354,36 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
           <span class="add-icon">+</span> 新建
         </button>
       </div>
+    </div>
+
+    <!-- 搜索框 -->
+    <div class="search-bar">
+      <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input
+        v-model="searchQuery"
+        placeholder="搜索项目..."
+        class="search-input"
+      />
+      <button v-if="searchQuery" class="search-clear" @click="searchQuery = ''">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- 批量操作栏 -->
+    <div class="batch-actions">
+      <button class="batch-btn" @click="emit('start-all')" :disabled="projects.length === 0" title="启动所有项目">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+        全部启动
+      </button>
+      <button :class="['batch-btn', { active: hasRunningProject }]" @click="emit('stop-all')" :disabled="!hasRunningProject" title="停止所有项目">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+        全部停止
+      </button>
     </div>
 
     <!-- 新建文件夹 -->
@@ -402,7 +474,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       </template>
 
       <!-- 文件夹 -->
-      <template v-for="folder in folders" :key="folder.id">
+      <template v-for="folder in visibleFolders" :key="folder.id">
         <div
           :class="['folder-row', { 'drop-highlight': dropTarget?.type === 'folder' && dropTarget?.id === folder.id, dragging: dragFolderId === folder.id }]"
           draggable="true"
@@ -512,9 +584,9 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
           </button>
       </div>
 
-      <div v-if="projects.length === 0" class="empty-list">
-        <p>暂无项目</p>
-        <p class="hint">点击"新建"添加</p>
+      <div v-if="filteredProjects.length === 0" class="empty-list">
+        <p>{{ searchQuery ? '未找到匹配项目' : '暂无项目' }}</p>
+        <p class="hint">{{ searchQuery ? '尝试其他关键词' : '点击"新建"添加' }}</p>
       </div>
     </div>
 
@@ -532,6 +604,19 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
             </svg>
             <span>编辑</span>
+          </button>
+          <button class="context-item" @click="handleOpenFolder">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span>打开文件夹</span>
+          </button>
+          <button class="context-item" @click="handleOpenInVscode">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="16 18 22 12 16 6"/>
+              <polyline points="8 6 2 12 8 18"/>
+            </svg>
+            <span>在 VS Code 中打开</span>
           </button>
           <div class="context-divider"></div>
           <button class="context-item danger" @click="handleDelete">
@@ -629,6 +714,98 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .add-icon{ font-size: 13px; line-height: 1; }
+
+/* 搜索框 */
+.search-bar{
+  position: relative;
+  padding: 0 10px 8px;
+}
+
+.search-icon{
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.search-input{
+  width: 100%;
+  padding: 6px 28px 6px 30px;
+  font-size: 11px;
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  transition: all 200ms ease;
+}
+
+.search-input::placeholder{
+  color: var(--text-tertiary);
+}
+
+.search-input:focus{
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+  outline: none;
+}
+
+.search-clear{
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--text-tertiary);
+}
+
+.search-clear:hover{
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* 批量操作 */
+.batch-actions{
+  display: flex;
+  gap: 4px;
+  padding: 0 10px 6px;
+}
+
+.batch-btn{
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  border-radius: 5px;
+  transition: all 150ms ease;
+}
+
+.batch-btn:hover:not(:disabled){
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.batch-btn:disabled{
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.batch-btn.active{
+  color: var(--error);
+}
+
+.batch-btn.active:hover:not(:disabled){
+  background: var(--error-bg);
+}
 
 /* 文件夹输入卡片 */
 .folder-input-card{

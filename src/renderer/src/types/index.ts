@@ -59,9 +59,13 @@ declare global {
       switchNodeVersion: (version: string) => Promise<{ success: boolean; error?: string }>
       selectFolder: () => Promise<{ canceled: boolean; path: string | null }>
       getPackageScripts: (dir: string) => Promise<{ scripts: string[]; error?: string }>
+      openInFileManager: (folderPath: string) => Promise<{ success: boolean; error?: string }>
+      openInVscode: (folderPath: string) => Promise<{ success: boolean; error?: string }>
       startProject: (projectId: string, projectPath: string, command: string) => Promise<boolean>
       stopProject: (projectId: string) => Promise<boolean>
       getProcessStatus: (projectId: string) => Promise<ProcessStatus>
+      startAllProjects: (projects: Array<{ id: string; path: string; command: string }>) => Promise<{ success: number; failed: number }>
+      stopAllProjects: () => Promise<boolean>
       onLogData: (callback: (log: LogEntry) => void) => () => void
       onProcessStatus: (callback: (status: ProcessStatus) => void) => () => void
       platform: string

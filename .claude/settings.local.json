@@ -20,7 +20,9 @@
       "Skill(glm-plan-usage:usage-query-skill)",
       "Skill(glm-plan-usage:usage-query-skill:*)",
       "Bash(python3)",
-      "Bash(sips -s format png -z 512 512 favicon.ico --out icon.png)"
+      "Bash(sips -s format png -z 512 512 favicon.ico --out icon.png)",
+      "Bash(file /Users/xiaotai/gitee_space/npm-launcher/build/*)",
+      "Bash(du -sh /Users/xiaotai/gitee_space/npm-launcher/build/*)"
     ],
     "additionalDirectories": [
       "C:\\Users\\xiaotai\\Desktop"

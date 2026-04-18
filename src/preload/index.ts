@@ -37,6 +37,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('select-folder'),
   getPackageScripts: (dir: string): Promise<{ scripts: string[]; error?: string }> =>
     ipcRenderer.invoke('get-package-scripts', dir),
+  openInFileManager: (folderPath: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('open-in-file-manager', folderPath),
+  openInVscode: (folderPath: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('open-in-vscode', folderPath),
 
   // 进程管理
   startProject: (projectId: string, projectPath: string, command: string): Promise<boolean> =>
@@ -45,6 +49,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('stop-project', projectId),
   getProcessStatus: (projectId: string): Promise<ProcessStatus> =>
     ipcRenderer.invoke('get-process-status', projectId),
+  startAllProjects: (projects: Array<{ id: string; path: string; command: string }>): Promise<{ success: number; failed: number }> =>
+    ipcRenderer.invoke('start-all-projects', projects),
+  stopAllProjects: (): Promise<boolean> =>
+    ipcRenderer.invoke('stop-all-projects'),
 
   // 事件监听
   onLogData: (callback: (log: LogEntry) => void) => {

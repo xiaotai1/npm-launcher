@@ -173,6 +173,32 @@ async function switchNodeVersion(version: string) {
   }
 }
 
+// 批量操作
+async function startAllProjects() {
+  if (!config.value) return
+  const projects = config.value.projects.map(p => ({ id: p.id, path: p.path, command: p.command }))
+  const result = await window.electronAPI.startAllProjects(projects)
+  if (result.failed > 0) {
+    toastType.value = 'warning'
+    toastMessage.value = `已启动 ${result.success} 个项目，${result.failed} 个失败`
+  } else {
+    toastType.value = 'success'
+    toastMessage.value = `已启动 ${result.success} 个项目`
+  }
+}
+
+async function stopAllProjects() {
+  await window.electronAPI.stopAllProjects()
+  toastType.value = 'success'
+  toastMessage.value = '已停止所有项目'
+}
+
+// Toast 显示
+function showToast(message: string, type: 'success' | 'error' | 'warning') {
+  toastMessage.value = message
+  toastType.value = type
+}
+
 async function refreshVersions() {
   await Promise.all([loadNodeVersion(), loadNodeVersions()])
 }
@@ -254,6 +280,8 @@ watch(() => config.value?.theme, (theme) => {
           @delete-folder="deleteFolder"
           @rename-folder="renameFolder"
           @move-to-folder="moveToFolder"
+          @start-all="startAllProjects"
+          @stop-all="stopAllProjects"
         />
       </aside>
       <section class="content">
@@ -267,6 +295,7 @@ watch(() => config.value?.theme, (theme) => {
             @start="startProject"
             @stop="stopProject"
             @clear-logs="clearLogs"
+            @toast="showToast"
           />
           <div class="bottom-panel">
             <div class="panel-tabs">
