@@ -48,8 +48,8 @@ function lineClass(type: LogEntry['type']): string {
       <div v-if="logs.length === 0" class="console-empty">
         <p>等待输出...</p>
       </div>
-      <div v-for="(log, i) in logs" :key="i" :class="['log-line', lineClass(log.type)]">
-        {{ log.data }}
+      <div v-for="(log, i) in logs" :key="i" :class="['log-block', lineClass(log.type)]">
+        <span class="log-text">{{ log.data }}</span>
       </div>
     </div>
   </div>
@@ -153,26 +153,67 @@ function lineClass(type: LogEntry['type']): string {
   opacity: 0.5;
 }
 
-.log-line{
+.log-block{
+  position: relative;
+  padding: 4px 8px 4px 12px;
+  margin-bottom: 1px;
+  border-radius: 4px;
   white-space: pre-wrap;
   word-break: break-all;
   animation: logIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.log-block::before{
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 1px;
+}
+
+.log-text{
+  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.7;
 }
 
 .log-stdout{
   color: var(--console-text);
 }
 
+.log-stdout::before{
+  background: var(--console-text);
+  opacity: 0.15;
+}
+
 .log-stderr{
   color: var(--console-warn);
 }
 
+.log-stderr::before{
+  background: var(--console-warn);
+  opacity: 0.4;
+}
+
 .log-info{
   color: var(--console-info);
-  text-shadow: 0 0 6px rgba(34, 211, 238, 0.15);
+}
+
+.log-info::before{
+  background: var(--console-info);
+  opacity: 0.5;
 }
 
 .log-error{
   color: var(--console-error);
+  background: var(--error-bg);
+  border-radius: 6px;
+}
+
+.log-error::before{
+  background: var(--console-error);
+  opacity: 0.7;
 }
 </style>

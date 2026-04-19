@@ -813,13 +813,13 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   margin: 6px 10px;
   padding: 12px;
   border: 1px solid var(--border-default);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--bg-surface);
   display: flex;
   flex-direction: column;
   gap: 10px;
   animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
 }
 
 .folder-input-header{
@@ -914,7 +914,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   font-weight: 600;
   color: #fff;
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover));
-  border-radius: 7px;
+  border-radius: 8px;
   box-shadow: 0 2px 8px var(--accent-glow);
 }
 
@@ -1071,7 +1071,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   gap: 8px;
   padding: 7px 8px;
   margin-bottom: 2px;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
   animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1120,6 +1120,10 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   transition: opacity 200ms ease;
   cursor: grab;
 }
+
+.card-drag-handle:active{ cursor: grabbing; }
+.project-card:hover .card-drag-handle{ opacity: 0.4; }
+.card-drag-handle:hover{ opacity: 0.7 !important; }
 
 .card-drag-handle:active{ cursor: grabbing; }
 .project-card:hover .card-drag-handle{ opacity: 0.4; }
@@ -1187,8 +1191,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   font-weight: 600;
   flex-shrink: 0;
   letter-spacing: 0.5px;
-  padding: 1px 5px;
-  border-radius: 3px;
+  padding: 1px 6px;
+  border-radius: 9999px;
 }
 
 /* 星标 */
@@ -1202,7 +1206,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   color: var(--text-tertiary);
   opacity: 0;
   transition: all 150ms ease;
-  border-radius: 5px;
+  border-radius: 6px;
 }
 
 .project-card:hover .star-btn{ opacity: 0.5; }
@@ -1231,7 +1235,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   min-width: 150px;
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: var(--shadow-lg);
   padding: 4px;
   animation: scaleIn 0.15s cubic-bezier(0.4, 0, 0.2, 1);

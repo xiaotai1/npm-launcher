@@ -256,7 +256,7 @@ function selectNodeVersion(version: string | null) {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .detail-title-row{
@@ -282,7 +282,7 @@ function selectNodeVersion(version: string | null) {
   align-items: center;
   gap: 6px;
   padding: 3px 10px;
-  border-radius: 12px;
+  border-radius: 9999px;
   font-size: 11px;
   font-weight: 500;
   transition: all 300ms ease;
@@ -335,8 +335,8 @@ function selectNodeVersion(version: string | null) {
 .detail-info{
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 12px;
+  margin-bottom: 18px;
 }
 
 .info-item{
@@ -347,7 +347,7 @@ function selectNodeVersion(version: string | null) {
 }
 
 .info-label{
-  width: 50px;
+  width: 56px;
   flex-shrink: 0;
   font-size: 9px;
   font-weight: 500;
@@ -414,7 +414,7 @@ function selectNodeVersion(version: string | null) {
   font-weight: 500;
   color: var(--text-tertiary);
   border: 1px solid var(--border-default);
-  border-radius: 6px;
+  border-radius: 8px;
   transition: all 200ms ease;
   white-space: nowrap;
 }
@@ -433,7 +433,7 @@ function selectNodeVersion(version: string | null) {
   padding: 7px 20px;
   font-size: 12px;
   font-weight: 600;
-  border-radius: 7px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -479,7 +479,7 @@ function selectNodeVersion(version: string | null) {
   font-size: 12px;
   color: var(--text-secondary);
   border: 1px solid var(--border-default);
-  border-radius: 7px;
+  border-radius: 8px;
   transition: all 200ms ease;
 }
 
@@ -494,7 +494,7 @@ function selectNodeVersion(version: string | null) {
   font-size: 12px;
   color: var(--text-tertiary);
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: 8px;
   transition: all 200ms ease;
 }
 
@@ -509,7 +509,7 @@ function selectNodeVersion(version: string | null) {
   font-weight: 600;
   color: #fff;
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover));
-  border-radius: 7px;
+  border-radius: 8px;
   box-shadow: 0 2px 8px var(--accent-glow);
   transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -622,7 +622,7 @@ function selectNodeVersion(version: string | null) {
   min-width: 180px;
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
-  border-radius: 8px;
+  border-radius: 12px;
   box-shadow: var(--shadow-lg);
   padding: 4px;
   z-index: 100;

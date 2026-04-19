@@ -166,12 +166,12 @@ async function switchNodeVersion(version: string) {
   const result = await window.electronAPI.switchNodeVersion(version)
   switchingVersion.value = false
   if (result.success) {
-    // 立即更新 UI 显示
+    // 信任切换结果，直接更新 UI
     const v = version.startsWith('v') ? version : 'v' + version
     nodeVersion.value = v
     currentNodeVersion.value = v
-    // 后台刷新确认
-    await Promise.all([loadNodeVersion(), loadNodeVersions()])
+    toastType.value = 'success'
+    toastMessage.value = `已切换到 Node ${v}`
   } else {
     toastType.value = 'error'
     toastMessage.value = '切换失败: ' + (result.error || '未知错误')
@@ -380,6 +380,8 @@ watch(() => config.value?.theme, (theme) => {
   width: 260px;
   border-right: 1px solid var(--border-default);
   background: var(--sidebar-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -500,5 +502,10 @@ watch(() => config.value?.theme, (theme) => {
 .panel-layer.layer-hidden{
   visibility: hidden;
   pointer-events: none;
+}
+
+/* 搜索框样式覆盖 */
+.sidebar :deep(.search-input){
+  border-radius: 8px;
 }
 </style>

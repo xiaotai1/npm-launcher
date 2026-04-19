@@ -12,6 +12,8 @@
 
   --border-default: #e2e8f0;
   --border-muted: #f1f5f9;
+  --border-subtle: rgba(0, 0, 0, 0.04);
+  --border-strong: rgba(0, 0, 0, 0.10);
 
   --accent-primary: #3b82f6;
   --accent-primary-hover: #2563eb;
@@ -19,12 +21,12 @@
   --accent-border: rgba(59, 130, 246, 0.18);
 
   --success: #10b981;
-  --success-bg: rgba(16, 185, 129, 0.06);
+  --success-bg: rgba(16, 185, 129, 0.08);
   --success-border: rgba(16, 185, 129, 0.12);
   --warning: #f59e0b;
   --warning-bg: rgba(245, 158, 11, 0.08);
   --error: #ef4444;
-  --error-bg: rgba(239, 68, 68, 0.06);
+  --error-bg: rgba(239, 68, 68, 0.08);
 
   --console-bg: #f6f8fa;
   --console-text: #24292f;
@@ -38,13 +40,15 @@
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.1);
 
   --panel-bg: #f6f8fa;
-  --sidebar-bg: #ffffff;
+  --sidebar-bg: rgba(255, 255, 255, 0.72);
   --sidebar-border: linear-gradient(180deg, transparent, rgba(59, 130, 246, 0.1), transparent);
   --header-glow: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.15), transparent);
-  --divider: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.1), transparent);
+  --divider: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.15), transparent);
   --card-active-bg: linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(59, 130, 246, 0.02));
   --card-active-border: rgba(59, 130, 246, 0.15);
   --indicator: linear-gradient(180deg, #3b82f6, #2563eb);
+
+  --glass-blur: 20px;
 }
 
 /* ===== 深色主题 ===== */
@@ -59,8 +63,10 @@
   --text-secondary: #a0aec0;
   --text-tertiary: #718096;
 
-  --border-default: rgba(59, 130, 246, 0.1);
-  --border-muted: rgba(59, 130, 246, 0.06);
+  --border-default: rgba(148, 163, 184, 0.1);
+  --border-muted: rgba(148, 163, 184, 0.06);
+  --border-subtle: rgba(255, 255, 255, 0.03);
+  --border-strong: rgba(148, 163, 184, 0.18);
 
   --accent-primary: #60a5fa;
   --accent-primary-hover: #3b82f6;
@@ -87,7 +93,8 @@
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
 
   --panel-bg: #080e1a;
-  --sidebar-bg: linear-gradient(180deg, #0d1526, #0b1120);
+  --sidebar-bg: rgba(15, 23, 42, 0.72);
+  --glass-blur: 20px;
   --sidebar-border: linear-gradient(180deg, transparent, rgba(59, 130, 246, 0.15), transparent);
   --header-glow: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), transparent);
   --divider: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.06), transparent);
