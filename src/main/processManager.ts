@@ -2,7 +2,7 @@ import { spawn, ChildProcess } from 'child_process'
 import { BrowserWindow } from 'electron'
 import * as iconv from 'iconv-lite'
 import { deleteProject } from './configManager'
-import { getShellEnv } from './platform'
+import { getProjectEnv } from './platform'
 
 // 运行中的进程
 const runningProcesses: Map<string, ChildProcess> = new Map()
@@ -150,7 +150,8 @@ export async function startProject(
   mainWindow: BrowserWindow | null,
   projectId: string,
   projectPath: string,
-  command: string
+  command: string,
+  nodeVersion?: string
 ): Promise<boolean> {
   // 先停止已运行的进程
   if (runningProcesses.has(projectId)) {
@@ -161,25 +162,26 @@ export async function startProject(
     let child: ChildProcess
 
     if (process.platform === 'win32') {
-      // Windows: 使用 cmd，合并 stderr 到 stdout
+      // Windows: 使用项目级环境
+      const projectEnv = await getProjectEnv(nodeVersion)
       child = spawn('cmd.exe', ['/c', `npm run ${command} 2>&1`], {
         cwd: projectPath,
         env: {
-          ...process.env,
+          ...projectEnv,
           FORCE_COLOR: '0',
           NPM_CONFIG_COLOR: 'never',
           TERM: 'dumb'
         } as Record<string, string>
       })
     } else {
-      // Unix/macOS: 使用完整 shell 环境
-      const shellEnv = await getShellEnv()
+      // Unix/macOS: 使用项目级环境
+      const projectEnv = await getProjectEnv(nodeVersion)
       child = spawn('npm', ['run', command], {
         cwd: projectPath,
         shell: true,
         detached: true,
         env: {
-          ...shellEnv,
+          ...projectEnv,
           FORCE_COLOR: '1'
         } as Record<string, string>
       })

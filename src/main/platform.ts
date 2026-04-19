@@ -1,6 +1,7 @@
 import { execSync } from 'child_process'
 import * as os from 'os'
 import * as path from 'path'
+import { existsSync } from 'fs'
 
 export const isMac = process.platform === 'darwin'
 export const isWindows = process.platform === 'win32'
@@ -72,6 +73,57 @@ export async function getShellEnv(): Promise<Record<string, string>> {
  */
 export function clearShellEnvCache(): void {
   cachedShellEnv = null
+}
+
+/**
+ * 获取项目级环境变量，将指定 Node 版本的 bin 目录 prepend 到 PATH
+ * macOS/Linux: ~/.nvm/versions/node/<version>/bin
+ * Windows: NVM_HOME\<version>
+ */
+export async function getProjectEnv(nodeVersion?: string): Promise<Record<string, string>> {
+  const baseEnv = await getShellEnv()
+
+  if (!nodeVersion) {
+    return baseEnv
+  }
+
+  // 查找版本目录
+  let versionBinDir: string | null = null
+
+  if (isWindows) {
+    const nvmHome = process.env.NVM_HOME
+    if (nvmHome) {
+      const ver = nodeVersion.replace(/^v/, '')
+      const verWithV = 'v' + ver
+      const dir = existsSync(path.join(nvmHome, verWithV))
+        ? path.join(nvmHome, verWithV)
+        : existsSync(path.join(nvmHome, ver))
+          ? path.join(nvmHome, ver)
+          : null
+      if (dir) {
+        versionBinDir = dir
+      }
+    }
+  } else {
+    const { versionsDir } = getNvmPaths()
+    if (versionsDir) {
+      const dir = path.join(versionsDir, nodeVersion, 'bin')
+      if (existsSync(dir)) {
+        versionBinDir = dir
+      }
+    }
+  }
+
+  if (!versionBinDir) {
+    return baseEnv
+  }
+
+  // prepend 版本目录到 PATH
+  const env = { ...baseEnv }
+  const pathKey = Object.keys(env).find(k => k.toUpperCase() === 'PATH') || 'PATH'
+  env[pathKey] = versionBinDir + (isWindows ? ';' : ':') + (env[pathKey] || '')
+
+  return env
 }
 
 /**

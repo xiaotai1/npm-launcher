@@ -718,12 +718,12 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 /* 搜索框 */
 .search-bar{
   position: relative;
-  padding: 0 10px 8px;
+  margin: 0 10px 6px;
 }
 
 .search-icon{
   position: absolute;
-  left: 18px;
+  left: 8px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--text-tertiary);
@@ -732,13 +732,14 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 .search-input{
   width: 100%;
-  padding: 6px 28px 6px 30px;
-  font-size: 11px;
-  border-radius: 6px;
+  padding: 7px 28px 7px 28px;
+  font-size: 12px;
+  border-radius: 7px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-default);
   color: var(--text-primary);
   transition: all 200ms ease;
+  box-sizing: border-box;
 }
 
 .search-input::placeholder{
@@ -753,11 +754,11 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 .search-clear{
   position: absolute;
-  right: 16px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;

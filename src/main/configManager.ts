@@ -10,6 +10,7 @@ export interface Project {
   command: string
   favorite?: boolean
   folderId?: string | null
+  nodeVersion?: string
 }
 
 // 文件夹

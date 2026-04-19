@@ -1,16 +1,17 @@
 import { BrowserWindow, ipcMain } from 'electron'
 import * as os from 'os'
 import * as pty from 'node-pty'
-import { getShellEnv } from './platform'
+import { getProjectEnv } from './platform'
 
 const ptyProcesses = new Map<string, pty.IPty>()
 
 export function setupPtyIpc(): void {
-  ipcMain.on('pty-spawn', async (event, { id, cols = 80, rows = 24, cwd }: {
+  ipcMain.on('pty-spawn', async (event, { id, cols = 80, rows = 24, cwd, nodeVersion }: {
     id: string
     cols: number
     rows: number
     cwd: string
+    nodeVersion?: string
   }) => {
     if (ptyProcesses.has(id)) return
 
@@ -25,8 +26,8 @@ export function setupPtyIpc(): void {
     try {
       const shell = process.env[os.platform() === 'win32' ? 'COMSPEC' : 'SHELL'] || 'cmd.exe'
 
-      // macOS: 使用完整 shell 环境（含 nvm PATH）
-      const env = await getShellEnv()
+      // 使用项目级环境（含指定 Node 版本的 PATH）
+      const env = await getProjectEnv(nodeVersion)
 
       const ptyProcess = pty.spawn(shell, [], {
         name: 'xterm-256color',

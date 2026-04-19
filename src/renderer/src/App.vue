@@ -130,7 +130,7 @@ async function startProject() {
   const project = selectedProject.value
   if (!project) return
   projectLogs.value[project.id] = []
-  await window.electronAPI.startProject(project.id, project.path, project.command)
+  await window.electronAPI.startProject(project.id, project.path, project.command, project.nodeVersion)
 }
 
 async function stopProject() {
@@ -166,6 +166,11 @@ async function switchNodeVersion(version: string) {
   const result = await window.electronAPI.switchNodeVersion(version)
   switchingVersion.value = false
   if (result.success) {
+    // 立即更新 UI 显示
+    const v = version.startsWith('v') ? version : 'v' + version
+    nodeVersion.value = v
+    currentNodeVersion.value = v
+    // 后台刷新确认
     await Promise.all([loadNodeVersion(), loadNodeVersions()])
   } else {
     toastType.value = 'error'
@@ -176,7 +181,7 @@ async function switchNodeVersion(version: string) {
 // 批量操作
 async function startAllProjects() {
   if (!config.value) return
-  const projects = config.value.projects.map(p => ({ id: p.id, path: p.path, command: p.command }))
+  const projects = config.value.projects.map(p => ({ id: p.id, path: p.path, command: p.command, nodeVersion: p.nodeVersion }))
   const result = await window.electronAPI.startAllProjects(projects)
   if (result.failed > 0) {
     toastType.value = 'warning'
@@ -197,6 +202,20 @@ async function stopAllProjects() {
 function showToast(message: string, type: 'success' | 'error' | 'warning') {
   toastMessage.value = message
   toastType.value = type
+}
+
+// 设置项目 Node 版本
+async function setProjectNodeVersion(projectId: string, version: string | null) {
+  if (!config.value) return
+  const project = config.value.projects.find(p => p.id === projectId)
+  if (!project) return
+  if (version) {
+    project.nodeVersion = version
+  } else {
+    delete project.nodeVersion
+  }
+  await window.electronAPI.updateProject(toRaw(project))
+  await loadConfig()
 }
 
 async function refreshVersions() {
@@ -290,12 +309,15 @@ watch(() => config.value?.theme, (theme) => {
             :project="selectedProject"
             :status="currentStatus"
             :edit-trigger="editTrigger"
+            :node-versions="nodeVersions"
+            :global-node-version="nodeVersion"
             @update="updateProject"
             @delete="deleteProject"
             @start="startProject"
             @stop="stopProject"
             @clear-logs="clearLogs"
             @toast="showToast"
+            @set-node-version="setProjectNodeVersion"
           />
           <div class="bottom-panel">
             <div class="panel-tabs">
@@ -320,6 +342,7 @@ watch(() => config.value?.theme, (theme) => {
                   :id="'pty-' + selectedProject.id"
                   :cwd="selectedProject.path"
                   :visible="activeTab === 'terminal'"
+                  :node-version="selectedProject.nodeVersion"
                 />
               </div>
             </div>

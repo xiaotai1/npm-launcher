@@ -7,6 +7,8 @@ const props = defineProps<{
   project: Project
   status: ProcessStatus | null
   editTrigger?: number
+  nodeVersions: string[]
+  globalNodeVersion: string | null
 }>()
 
 const emit = defineEmits<{
@@ -16,6 +18,7 @@ const emit = defineEmits<{
   stop: []
   'clear-logs': []
   toast: [message: string, type: 'success' | 'error' | 'warning']
+  'set-node-version': [projectId: string, version: string | null]
 }>()
 
 const isEditing = ref(false)
@@ -96,6 +99,13 @@ async function openInVscode() {
     emit('toast', result.error || '未找到 VS Code', 'warning')
   }
 }
+
+const showVersionDropdown = ref(false)
+
+function selectNodeVersion(version: string | null) {
+  emit('set-node-version', props.project.id, version)
+  showVersionDropdown.value = false
+}
 </script>
 
 <template>
@@ -121,22 +131,49 @@ async function openInVscode() {
           <span class="info-label">路径</span>
           <span class="info-value mono" :title="project.path">{{ project.path }}</span>
           <div class="info-actions">
-            <button class="btn-icon-action" @click="openFolder" title="在文件管理器中打开">
+            <button class="btn-quick-action" @click="openFolder" title="在文件管理器中打开">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
               </svg>
+              <span>打开</span>
             </button>
-            <button class="btn-icon-action" @click="openInVscode" title="在 VS Code 中打开">
+            <button class="btn-quick-action" @click="openInVscode" title="在 VS Code 中打开">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="16 18 22 12 16 6"/>
                 <polyline points="8 6 2 12 8 18"/>
               </svg>
+              <span>VS Code</span>
             </button>
           </div>
         </div>
         <div class="info-item">
           <span class="info-label">命令</span>
           <span class="info-value code">npm run {{ project.command }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Node</span>
+          <div class="version-selector">
+            <button class="version-btn" @click="showVersionDropdown = !showVersionDropdown">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+              <span :class="['version-text', { custom: project.nodeVersion }]">{{ project.nodeVersion || '跟随系统 (' + (globalNodeVersion || '--') + ')' }}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div v-if="showVersionDropdown" class="version-dropdown">
+              <button :class="['version-option', { active: !project.nodeVersion }]" @click="selectNodeVersion(null)">
+                跟随系统{{ globalNodeVersion ? ' (' + globalNodeVersion + ')' : '' }}
+              </button>
+              <div v-if="nodeVersions.length" class="version-divider"></div>
+              <button
+                v-for="v in nodeVersions" :key="v"
+                :class="['version-option', { active: project.nodeVersion === v }]"
+                @click="selectNodeVersion(v)"
+              >
+                <svg v-if="project.nodeVersion === v" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                <span v-else class="version-check-placeholder"></span>
+                {{ v }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -368,24 +405,28 @@ async function openInVscode() {
   margin-left: auto;
 }
 
-.btn-icon-action{
-  width: 28px;
-  height: 28px;
+.btn-quick-action{
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 6px;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
   color: var(--text-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
   transition: all 200ms ease;
+  white-space: nowrap;
 }
 
-.btn-icon-action:hover{
+.btn-quick-action:hover{
   background: var(--bg-hover);
   color: var(--accent-primary);
+  border-color: var(--accent-border);
 }
 
-.btn-icon-action:active{
-  transform: scale(0.95);
+.btn-quick-action:active{
+  transform: scale(0.97);
 }
 
 .btn-start, .btn-stop{
@@ -539,5 +580,87 @@ async function openInVscode() {
   gap: 8px;
   justify-content: flex-end;
   margin-top: 8px;
+}
+
+/* 版本选择器 */
+.version-selector{
+  position: relative;
+}
+
+.version-btn{
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  font-size: 11px;
+  border-radius: 5px;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  transition: all 200ms ease;
+}
+
+.version-btn:hover{
+  background: var(--bg-hover);
+  border-color: var(--accent-border);
+}
+
+.version-text{
+  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 11px;
+}
+
+.version-text.custom{
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.version-dropdown{
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin-top: 4px;
+  min-width: 180px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  z-index: 100;
+  animation: scaleIn 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: top left;
+}
+
+.version-option{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-primary);
+  border-radius: 5px;
+  text-align: left;
+  transition: all 150ms ease;
+  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.version-option:hover{
+  background: var(--bg-hover);
+}
+
+.version-option.active{
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.version-check-placeholder{
+  width: 12px;
+  height: 12px;
+}
+
+.version-divider{
+  height: 1px;
+  background: var(--divider);
+  margin: 3px 6px;
 }
 </style>

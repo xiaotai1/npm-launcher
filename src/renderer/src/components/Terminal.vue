@@ -8,6 +8,7 @@ const props = defineProps<{
   id: string
   cwd: string
   visible: boolean
+  nodeVersion?: string
 }>()
 
 const terminalContainer = ref<HTMLDivElement>()
@@ -87,7 +88,7 @@ function initTerminal() {
     if (fitAddon && terminal) {
       fitAddon.fit()
       // spawn PTY
-      window.electronAPI.ptySpawn(props.id, terminal.cols, terminal.rows, props.cwd)
+      window.electronAPI.ptySpawn(props.id, terminal.cols, terminal.rows, props.cwd, props.nodeVersion)
     }
   })
 

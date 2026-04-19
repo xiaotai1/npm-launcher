@@ -6,6 +6,7 @@ export interface Project {
   command: string
   favorite?: boolean
   folderId?: string | null
+  nodeVersion?: string
 }
 
 // 文件夹
@@ -61,15 +62,15 @@ declare global {
       getPackageScripts: (dir: string) => Promise<{ scripts: string[]; error?: string }>
       openInFileManager: (folderPath: string) => Promise<{ success: boolean; error?: string }>
       openInVscode: (folderPath: string) => Promise<{ success: boolean; error?: string }>
-      startProject: (projectId: string, projectPath: string, command: string) => Promise<boolean>
+      startProject: (projectId: string, projectPath: string, command: string, nodeVersion?: string) => Promise<boolean>
       stopProject: (projectId: string) => Promise<boolean>
       getProcessStatus: (projectId: string) => Promise<ProcessStatus>
-      startAllProjects: (projects: Array<{ id: string; path: string; command: string }>) => Promise<{ success: number; failed: number }>
+      startAllProjects: (projects: Array<{ id: string; path: string; command: string; nodeVersion?: string }>) => Promise<{ success: number; failed: number }>
       stopAllProjects: () => Promise<boolean>
       onLogData: (callback: (log: LogEntry) => void) => () => void
       onProcessStatus: (callback: (status: ProcessStatus) => void) => () => void
       platform: string
-      ptySpawn: (id: string, cols: number, rows: number, cwd: string) => void
+      ptySpawn: (id: string, cols: number, rows: number, cwd: string, nodeVersion?: string) => void
       ptyWrite: (id: string, data: string) => void
       ptyResize: (id: string, cols: number, rows: number) => void
       ptyKill: (id: string) => void

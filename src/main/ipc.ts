@@ -1,5 +1,5 @@
 import { ipcMain, dialog, BrowserWindow, nativeTheme, shell } from 'electron'
-import { exec } from 'child_process'
+import { exec, spawn } from 'child_process'
 import { promisify } from 'util'
 import { readdirSync, readFileSync, readlinkSync, existsSync } from 'fs'
 import { join, basename } from 'path'
@@ -279,12 +279,33 @@ export function setupIpc(): void {
 
   // 在 VS Code 中打开项目
   ipcMain.handle('open-in-vscode', async (_event, folderPath: string): Promise<{ success: boolean; error?: string }> => {
+    // 查找 code 可执行文件（跨平台）
+    const candidates = isWindows
+      ? ['code.cmd', 'code']
+      : [
+          '/usr/local/bin/code',
+          join(process.env.HOME || '', '.local/bin/code'),
+          '/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code'
+        ]
+
+    for (const cmd of candidates) {
+      if (existsSync(cmd) || !cmd.includes('/')) {
+        try {
+          const child = spawn(cmd, ['-n', folderPath], { detached: true, stdio: 'ignore' })
+          child.unref()
+          return { success: true }
+        } catch {
+          continue
+        }
+      }
+    }
+
+    // 最终回退：vscode:// URL 协议
     try {
-      const env = await getShellEnv()
-      await execAsync('code "' + folderPath + '"', { env })
+      await shell.openExternal('vscode://file/' + folderPath)
       return { success: true }
-    } catch (error: any) {
-      return { success: false, error: '未找到 VS Code，请确保已安装且 "code" 命令在 PATH 中' }
+    } catch {
+      return { success: false, error: '未找到 VS Code，请确保已安装' }
     }
   })
 
@@ -307,8 +328,8 @@ export function setupIpc(): void {
   // ===== 进程管理 =====
 
   // 启动项目
-  ipcMain.handle('start-project', async (_event, projectId: string, projectPath: string, command: string): Promise<boolean> => {
-    return await startProject(getMainWindow(), projectId, projectPath, command)
+  ipcMain.handle('start-project', async (_event, projectId: string, projectPath: string, command: string, nodeVersion?: string): Promise<boolean> => {
+    return await startProject(getMainWindow(), projectId, projectPath, command, nodeVersion)
   })
 
   // 停止项目
@@ -322,11 +343,11 @@ export function setupIpc(): void {
   })
 
   // 批量启动所有项目
-  ipcMain.handle('start-all-projects', async (_event, projects: Array<{ id: string; path: string; command: string }>): Promise<{ success: number; failed: number }> => {
+  ipcMain.handle('start-all-projects', async (_event, projects: Array<{ id: string; path: string; command: string; nodeVersion?: string }>): Promise<{ success: number; failed: number }> => {
     let success = 0
     let failed = 0
     for (const project of projects) {
-      const result = await startProject(getMainWindow(), project.id, project.path, project.command)
+      const result = await startProject(getMainWindow(), project.id, project.path, project.command, project.nodeVersion)
       if (result) {
         success++
       } else {

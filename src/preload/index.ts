@@ -43,13 +43,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('open-in-vscode', folderPath),
 
   // 进程管理
-  startProject: (projectId: string, projectPath: string, command: string): Promise<boolean> =>
-    ipcRenderer.invoke('start-project', projectId, projectPath, command),
+  startProject: (projectId: string, projectPath: string, command: string, nodeVersion?: string): Promise<boolean> =>
+    ipcRenderer.invoke('start-project', projectId, projectPath, command, nodeVersion),
   stopProject: (projectId: string): Promise<boolean> =>
     ipcRenderer.invoke('stop-project', projectId),
   getProcessStatus: (projectId: string): Promise<ProcessStatus> =>
     ipcRenderer.invoke('get-process-status', projectId),
-  startAllProjects: (projects: Array<{ id: string; path: string; command: string }>): Promise<{ success: number; failed: number }> =>
+  startAllProjects: (projects: Array<{ id: string; path: string; command: string; nodeVersion?: string }>): Promise<{ success: number; failed: number }> =>
     ipcRenderer.invoke('start-all-projects', projects),
   stopAllProjects: (): Promise<boolean> =>
     ipcRenderer.invoke('stop-all-projects'),
@@ -71,8 +71,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
 
   // PTY 终端
-  ptySpawn: (id: string, cols: number, rows: number, cwd: string) => {
-    ipcRenderer.send('pty-spawn', { id, cols, rows, cwd })
+  ptySpawn: (id: string, cols: number, rows: number, cwd: string, nodeVersion?: string) => {
+    ipcRenderer.send('pty-spawn', { id, cols, rows, cwd, nodeVersion })
   },
   ptyWrite: (id: string, data: string) => {
     ipcRenderer.send('pty-write', { id, data })
