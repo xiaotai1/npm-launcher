@@ -88,8 +88,20 @@ src/
 ```bash
 npm run dev       # 开发模式（热重载）
 npm run build     # 编译
-npm run dist:win  # 打包 Windows 安装包
+npm run dist      # 打包当前平台（自动 patch 版本 +1）
+npm run dist:win  # 打包 Windows 安装包（自动 patch 版本 +1）
+npm run dist:mac  # 打包 macOS 安装包（自动 patch 版本 +1）
 ```
+
+## 打包版本规则
+打包时会自动递增 `package.json` 中的版本号，通过 `scripts/bump-version.js` 实现：
+
+| 命令 | 版本变化 | 示例 |
+|------|----------|------|
+| `npm run dist` | patch +1 | 1.0.0 → 1.0.1 |
+| `npm run dist -- --minor` | minor +1 | 1.0.0 → 1.1.0 |
+| `npm run dist -- --major` | major +1 | 1.0.0 → 2.0.0 |
+| `npm run dist:ask` | 交互式输入 | 提示输入新版本号 |
 
 ## 关键配置
 - 配置文件路径: `%APPDATA%/npm-launcher/config.json`
