@@ -55,15 +55,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 <template>
   <header class="app-header">
     <div class="header-left" :class="{ 'mac-traffic-light': isMac }">
-      <div class="logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/>
-          <line x1="12" y1="2" x2="12" y2="22" opacity="0.3"/>
-          <line x1="2" y1="8.5" x2="22" y2="15.5" opacity="0.3"/>
-          <line x1="22" y1="8.5" x2="2" y2="15.5" opacity="0.3"/>
-        </svg>
-      </div>
-      <h1 class="app-title">NPM Launcher</h1>
+      <span class="logo-label">NPM Launcher</span>
     </div>
     <div class="header-right" :class="{ 'mac-header-right': isMac }">
       <div class="version-wrapper" ref="dropdownRef">
@@ -143,30 +135,17 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .header-left{
   display: flex;
   align-items: center;
-  gap: 10px;
   -webkit-app-region: no-drag;
 }
 
 .header-left.mac-traffic-light{
-  padding-left: 78px;
+  padding-left: 52px;
 }
 
-.logo{
-  width: 22px;
-  height: 22px;
-  color: var(--accent-primary);
-  filter: drop-shadow(0 0 4px var(--accent-glow));
-}
-
-.logo svg{
-  width: 100%;
-  height: 100%;
-}
-
-.app-title{
+.logo-label{
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.3px;
   color: var(--text-secondary);
 }
 
@@ -174,12 +153,12 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   display: flex;
   align-items: center;
   gap: 6px;
-  padding-right: 148px;
+  padding-right: 136px;
   -webkit-app-region: no-drag;
 }
 
 .header-right.mac-header-right{
-  padding-right: 20px;
+  padding-right: 12px;
 }
 
 /* 版本选择器 */

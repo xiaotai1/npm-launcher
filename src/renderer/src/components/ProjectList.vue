@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, toRaw, onMounted, onUnmounted } from 'vue'
+import { ref, computed, toRaw, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import type { Project, Folder, ProcessStatus } from '../types'
 import ConfirmDialog from './ConfirmDialog.vue'
 
@@ -29,6 +29,7 @@ const emit = defineEmits<{
 const showForm = ref(false)
 const form = ref({ name: '', path: '', command: '' })
 const availableScripts = ref<string[]>([])
+const formNameInputRef = ref<HTMLInputElement | null>(null)
 const loadingScripts = ref(false)
 
 // 搜索
@@ -52,6 +53,7 @@ const hasRunningProject = computed(() =>
 // 文件夹相关
 const showFolderInput = ref(false)
 const newFolderName = ref('')
+const folderInputRef = ref<HTMLInputElement | null>(null)
 const renamingFolder = ref<Folder | null>(null)
 const renameInput = ref('')
 
@@ -338,6 +340,14 @@ function onClickOutside() {
 
 onMounted(() => document.addEventListener('click', onClickOutside))
 onUnmounted(() => document.removeEventListener('click', onClickOutside))
+
+watch(showFolderInput, (val) => {
+  if (val) nextTick(() => folderInputRef.value?.focus())
+})
+
+watch(showForm, (val) => {
+  if (val) nextTick(() => formNameInputRef.value?.focus())
+})
 </script>
 
 <template>
@@ -395,11 +405,11 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
         <span>新建文件夹</span>
       </div>
       <input
+        ref="folderInputRef"
         v-model="newFolderName"
         placeholder="输入文件夹名称"
         @keyup.enter="handleAddFolder"
         @keyup.escape="showFolderInput = false"
-        autofocus
       />
       <div class="folder-input-actions">
         <button class="btn-cancel" @click="showFolderInput = false; newFolderName = ''">取消</button>
@@ -409,7 +419,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
     <!-- 新建项目表单 -->
     <div v-if="showForm" class="add-form">
-      <input v-model="form.name" placeholder="项目名称" />
+      <input ref="formNameInputRef" v-model="form.name" placeholder="项目名称" />
       <div class="path-field">
         <input v-model="form.path" placeholder="项目路径" readonly class="path-input" />
         <button class="btn-browse" @click="selectFolder">浏览</button>
