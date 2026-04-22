@@ -89,6 +89,7 @@ function initTerminal() {
       fitAddon.fit()
       // spawn PTY
       window.electronAPI.ptySpawn(props.id, terminal.cols, terminal.rows, props.cwd, props.nodeVersion)
+      terminal.focus()
     }
   })
 
@@ -218,6 +219,7 @@ watch(() => props.visible, async (val) => {
       } catch {
         // 容器尺寸未就绪
       }
+      nextTick(() => terminal?.focus())
     }
   }
 })

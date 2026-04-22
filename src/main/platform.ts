@@ -1,7 +1,7 @@
 import { execSync } from 'child_process'
 import * as os from 'os'
 import * as path from 'path'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 
 export const isMac = process.platform === 'darwin'
 export const isWindows = process.platform === 'win32'
@@ -76,12 +76,58 @@ export function clearShellEnvCache(): void {
 }
 
 /**
+ * 清理 npm/pnpm 配置相关的环境变量，确保项目 .npmrc 优先级不被覆盖
+ * npm_config_* 环境变量优先级高于 .npmrc 文件，会导致项目级配置失效
+ */
+function stripNpmConfigOverrides(env: Record<string, string>): Record<string, string> {
+  const clean = { ...env }
+  for (const key of Object.keys(clean)) {
+    const lower = key.toLowerCase()
+    if (lower.startsWith('npm_config_')) {
+      delete clean[key]
+    }
+  }
+  return clean
+}
+
+/**
+ * 读取项目 .npmrc 中的 registry 配置
+ */
+function readProjectNpmrcRegistry(projectDir: string): string | null {
+  try {
+    const npmrcPath = path.join(projectDir, '.npmrc')
+    if (!existsSync(npmrcPath)) return null
+    const content = readFileSync(npmrcPath, 'utf-8')
+    for (const line of content.split('\n')) {
+      const match = line.match(/^registry\s*=\s*(.+)$/)
+      if (match) return match[1].trim()
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/**
  * 获取项目级环境变量，将指定 Node 版本的 bin 目录 prepend 到 PATH
  * macOS/Linux: ~/.nvm/versions/node/<version>/bin
  * Windows: NVM_HOME\<version>
  */
-export async function getProjectEnv(nodeVersion?: string): Promise<Record<string, string>> {
-  const baseEnv = await getShellEnv()
+export async function getProjectEnv(nodeVersion?: string, cwd?: string): Promise<Record<string, string>> {
+  let baseEnv = await getShellEnv()
+
+  // 读取项目 .npmrc 中的 registry 配置，作为最高优先级
+  if (cwd) {
+    const projectRegistry = readProjectNpmrcRegistry(cwd)
+    if (projectRegistry) {
+      // 清理全局环境变量覆盖，再设置项目级 registry
+      baseEnv = stripNpmConfigOverrides(baseEnv)
+      baseEnv['npm_config_registry'] = projectRegistry
+    } else {
+      // 项目没有配置 registry 时，也清理掉全局环境变量覆盖，让 .npmrc 文件正常生效
+      baseEnv = stripNpmConfigOverrides(baseEnv)
+    }
+  }
 
   if (!nodeVersion) {
     return baseEnv

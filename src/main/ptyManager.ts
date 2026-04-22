@@ -26,8 +26,8 @@ export function setupPtyIpc(): void {
     try {
       const shell = process.env[os.platform() === 'win32' ? 'COMSPEC' : 'SHELL'] || 'cmd.exe'
 
-      // 使用项目级环境（含指定 Node 版本的 PATH）
-      const env = await getProjectEnv(nodeVersion)
+      // 使用项目级环境（含指定 Node 版本的 PATH + 项目 .npmrc 配置）
+      const env = await getProjectEnv(nodeVersion, cwd)
 
       const ptyProcess = pty.spawn(shell, [], {
         name: 'xterm-256color',
