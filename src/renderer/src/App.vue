@@ -21,6 +21,11 @@ const activeTab = ref<'logs' | 'terminal'>('logs')
 const toastMessage = ref('')
 const toastType = ref<'success' | 'error' | 'warning'>('error')
 
+// 侧边栏状态
+const sidebarCollapsed = ref(false)
+const sidebarWidth = ref(parseInt(localStorage.getItem('sidebarWidth') || '260', 10))
+const isResizing = ref(false)
+
 // 清理函数
 let cleanupLog: (() => void) | null = null
 let cleanupStatus: (() => void) | null = null
@@ -222,6 +227,46 @@ async function refreshVersions() {
   await Promise.all([loadNodeVersion(), loadNodeVersions()])
 }
 
+// 获取项目状态颜色（折叠态指示器用）
+function getStatusColor(projectId: string): string {
+  const status = processStatuses.value[projectId]
+  if (status?.status === 'running') return 'var(--success)'
+  if (status?.status === 'error') return 'var(--error)'
+  return 'var(--text-tertiary)'
+}
+
+// 侧边栏折叠
+function toggleSidebar() {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+}
+
+// 侧边栏拖拽调整宽度
+function onResizeStart(e: MouseEvent) {
+  e.preventDefault()
+  isResizing.value = true
+  const startX = e.clientX
+  const startWidth = sidebarWidth.value
+
+  function onMouseMove(ev: MouseEvent) {
+    const newWidth = startWidth + (ev.clientX - startX)
+    sidebarWidth.value = Math.min(500, Math.max(180, newWidth))
+  }
+
+  function onMouseUp() {
+    isResizing.value = false
+    localStorage.setItem('sidebarWidth', String(sidebarWidth.value))
+    document.removeEventListener('mousemove', onMouseMove)
+    document.removeEventListener('mouseup', onMouseUp)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }
+
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+  document.addEventListener('mousemove', onMouseMove)
+  document.addEventListener('mouseup', onMouseUp)
+}
+
 // 主题切换
 async function toggleTheme() {
   if (!config.value) return
@@ -282,8 +327,13 @@ watch(() => config.value?.theme, (theme) => {
       @refresh-versions="refreshVersions"
     />
     <main class="main-content">
-      <aside class="sidebar">
+      <aside
+        class="sidebar"
+        :class="{ collapsed: sidebarCollapsed, resizing: isResizing }"
+        :style="{ width: sidebarCollapsed ? '' : sidebarWidth + 'px' }"
+      >
         <ProjectList
+          v-show="!sidebarCollapsed"
           :projects="config?.projects || []"
           :folders="config?.folders || []"
           :selected-id="selectedProjectId"
@@ -302,7 +352,31 @@ watch(() => config.value?.theme, (theme) => {
           @start-all="startAllProjects"
           @stop-all="stopAllProjects"
         />
+        <!-- 折叠态指示器 -->
+        <div v-if="sidebarCollapsed" class="collapsed-indicators">
+          <div
+            v-for="project in (config?.projects || [])"
+            :key="project.id"
+            :class="['indicator-dot', { active: selectedProjectId === project.id }]"
+            :style="{ background: getStatusColor(project.id) }"
+            :title="project.name"
+            @click="selectProject(project.id)"
+          ></div>
+        </div>
+        <!-- 折叠切换按钮 -->
+        <button class="sidebar-toggle" @click="toggleSidebar" :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline :points="sidebarCollapsed ? '9 6 15 12 9 18' : '15 6 9 12 15 18'"/>
+          </svg>
+        </button>
       </aside>
+      <!-- 拖拽调整宽度手柄 -->
+      <div
+        v-if="!sidebarCollapsed"
+        class="resize-handle"
+        :class="{ active: isResizing }"
+        @mousedown="onResizeStart"
+      ></div>
       <section class="content">
         <template v-if="selectedProject">
           <ProjectDetail
@@ -378,6 +452,7 @@ watch(() => config.value?.theme, (theme) => {
 
 .sidebar{
   width: 260px;
+  min-width: 0;
   border-right: 1px solid var(--border-default);
   background: var(--sidebar-bg);
   backdrop-filter: blur(var(--glass-blur));
@@ -386,6 +461,17 @@ watch(() => config.value?.theme, (theme) => {
   flex-direction: column;
   overflow: hidden;
   position: relative;
+  transition: width 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 拖拽时禁用过渡动画，消除卡顿 */
+.sidebar.resizing{
+  transition: none !important;
+}
+
+.sidebar.collapsed{
+  width: 40px;
+  align-items: center;
 }
 
 .sidebar::after{
@@ -397,6 +483,94 @@ watch(() => config.value?.theme, (theme) => {
   width: 1px;
   background: var(--sidebar-border);
   pointer-events: none;
+}
+
+/* 折叠态指示器 */
+.collapsed-indicators{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 0 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.indicator-dot{
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 180ms ease;
+  flex-shrink: 0;
+  opacity: 0.45;
+}
+
+.indicator-dot:hover{
+  transform: scale(1.6);
+  opacity: 1;
+}
+
+.indicator-dot.active{
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  opacity: 1;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* 折叠切换按钮 */
+.sidebar-toggle{
+  position: absolute;
+  right: -13px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 50%;
+  color: var(--text-tertiary);
+  z-index: 10;
+  box-shadow: var(--shadow-sm);
+  opacity: 0;
+  transition: all 200ms ease;
+}
+
+.sidebar:hover .sidebar-toggle,
+.sidebar.collapsed .sidebar-toggle{
+  opacity: 0.7;
+}
+
+.sidebar-toggle:hover{
+  opacity: 1 !important;
+  color: var(--accent-primary);
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* 拖拽调整宽度手柄 */
+.resize-handle{
+  width: 3px;
+  margin-left: -1px;
+  cursor: col-resize;
+  position: relative;
+  z-index: 5;
+  flex-shrink: 0;
+}
+
+.resize-handle:hover,
+.resize-handle.active{
+  background: var(--border-strong);
+  border-radius: 1.5px;
+}
+
+.resize-handle.active{
+  background: var(--text-tertiary);
 }
 
 .content{
