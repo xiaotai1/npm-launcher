@@ -258,41 +258,33 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="terminalContainer" class="terminal-container"></div>
+  <div ref="terminalContainer" class="w-full h-full bg-console-bg border-none outline-none"></div>
 </template>
 
 <style scoped>
-.terminal-container {
-  width: 100%;
-  height: 100%;
-  background: var(--console-bg);
-  border: none;
-  outline: none;
-}
-
-.terminal-container :deep(.xterm),
-.terminal-container :deep(.xterm-screen),
-.terminal-container :deep(.xterm-viewport),
-.terminal-container :deep(.xterm-rows) {
+:deep(.xterm),
+:deep(.xterm-screen),
+:deep(.xterm-viewport),
+:deep(.xterm-rows) {
   background: var(--console-bg) !important;
   border: none;
   outline: none;
 }
 
-.terminal-container :deep(.xterm) {
+:deep(.xterm) {
   padding: 4px 8px;
   height: 100%;
 }
 
-.terminal-container :deep(.xterm-screen) {
+:deep(.xterm-screen) {
   height: 100%;
 }
 
-.terminal-container :deep(.xterm-viewport::-webkit-scrollbar) {
+:deep(.xterm-viewport::-webkit-scrollbar) {
   width: 6px;
 }
 
-.terminal-container :deep(.xterm-viewport::-webkit-scrollbar-thumb) {
+:deep(.xterm-viewport::-webkit-scrollbar-thumb) {
   background: rgba(255, 255, 255, 0.15);
   border-radius: 3px;
 }

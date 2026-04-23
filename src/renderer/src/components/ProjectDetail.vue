@@ -109,35 +109,35 @@ function selectNodeVersion(version: string | null) {
 </script>
 
 <template>
-  <div class="detail">
+  <div class="relative px-5.5 py-4.5 border-b border-border bg-surface detail">
     <template v-if="!isEditing">
-      <div class="detail-header">
-        <div class="detail-title-row">
-          <h2 class="detail-name">{{ project.name }}</h2>
-          <div :class="['status-badge', status?.status || 'stopped']">
-            <span class="status-dot"></span>
+      <div class="flex items-start justify-between mb-4.5">
+        <div class="flex items-center gap-2.5">
+          <h2 class="text-[17px] font-bold tracking-[-0.3px] text-tprimary">{{ project.name }}</h2>
+          <div :class="['inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[11px] font-medium transition-all duration-300 status-badge', status?.status || 'stopped']">
+            <span class="w-1.5 h-1.5 rounded-full status-dot"></span>
             {{ status?.status === 'running' ? '运行中' : status?.status === 'error' ? '错误' : '未启动' }}
-            <span v-if="status?.pid" class="pid">PID {{ status.pid }}</span>
+            <span v-if="status?.pid" class="opacity-50 font-normal text-[10px] font-mono">PID {{ status.pid }}</span>
           </div>
         </div>
-        <div class="detail-actions">
-          <button class="btn-ghost" @click="isEditing = true">编辑</button>
-          <button class="btn-danger-ghost" @click="remove">删除</button>
+        <div class="flex gap-1">
+          <button class="py-1.75 px-3.5 text-xs text-tsecondary border border-border rounded-lg transition-all duration-200 ease-out btn-ghost" @click="isEditing = true">编辑</button>
+          <button class="py-1.75 px-3.5 text-xs text-ttertiary border border-transparent rounded-lg transition-all duration-200 ease-out btn-danger-ghost" @click="remove">删除</button>
         </div>
       </div>
 
-      <div class="detail-info">
-        <div class="info-item">
-          <span class="info-label">路径</span>
-          <span class="info-value mono" :title="project.path">{{ project.path }}</span>
-          <div class="info-actions">
-            <button class="btn-quick-action" @click="openFolder" title="在文件管理器中打开">
+      <div class="flex flex-col gap-3 mb-4.5">
+        <div class="flex items-center gap-3 min-w-0">
+          <span class="w-14 shrink-0 text-[9px] font-medium text-ttertiary uppercase tracking-[0.5px]">路径</span>
+          <span class="font-mono text-[11px] text-tsecondary overflow-hidden text-ellipsis whitespace-nowrap" :title="project.path">{{ project.path }}</span>
+          <div class="flex gap-1 shrink-0 ml-auto">
+            <button class="flex items-center gap-1 py-1 px-2.5 text-[11px] font-medium text-ttertiary border border-border rounded-lg transition-all duration-200 ease-out whitespace-nowrap btn-quick-action" @click="openFolder" title="在文件管理器中打开">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
               </svg>
               <span>打开</span>
             </button>
-            <button class="btn-quick-action" @click="openInVscode" title="在 VS Code 中打开">
+            <button class="flex items-center gap-1 py-1 px-2.5 text-[11px] font-medium text-ttertiary border border-border rounded-lg transition-all duration-200 ease-out whitespace-nowrap btn-quick-action" @click="openInVscode" title="在 VS Code 中打开">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="16 18 22 12 16 6"/>
                 <polyline points="8 6 2 12 8 18"/>
@@ -146,30 +146,30 @@ function selectNodeVersion(version: string | null) {
             </button>
           </div>
         </div>
-        <div class="info-item">
-          <span class="info-label">命令</span>
-          <span class="info-value code">npm run {{ project.command }}</span>
+        <div class="flex items-center gap-3 min-w-0">
+          <span class="w-14 shrink-0 text-[9px] font-medium text-ttertiary uppercase tracking-[0.5px]">命令</span>
+          <span class="font-mono text-[11px] py-0.5 px-2 rounded text-accent border border-accent-border transition-all duration-200 ease-out info-code">{{ project.command ? 'npm run ' + project.command : '' }}</span>
         </div>
-        <div class="info-item">
-          <span class="info-label">Node</span>
-          <div class="version-selector">
-            <button class="version-btn" @click="showVersionDropdown = !showVersionDropdown">
+        <div class="flex items-center gap-3 min-w-0">
+          <span class="w-14 shrink-0 text-[9px] font-medium text-ttertiary uppercase tracking-[0.5px]">Node</span>
+          <div class="relative">
+            <button class="flex items-center gap-1.5 py-0.5 px-2 text-[11px] rounded-[5px] text-tsecondary border border-border transition-all duration-200 ease-out version-btn" @click="showVersionDropdown = !showVersionDropdown">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
-              <span :class="['version-text', { custom: project.nodeVersion }]">{{ project.nodeVersion || '跟随系统 (' + (globalNodeVersion || '--') + ')' }}</span>
+              <span :class="['font-mono text-[11px] version-text', { custom: project.nodeVersion }]">{{ project.nodeVersion || '跟随系统 (' + (globalNodeVersion || '--') + ')' }}</span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-            <div v-if="showVersionDropdown" class="version-dropdown">
-              <button :class="['version-option', { active: !project.nodeVersion }]" @click="selectNodeVersion(null)">
+            <div v-if="showVersionDropdown" class="absolute left-0 top-full mt-1 min-w-45 bg-surface border border-border rounded-xl p-1 z-100 animate-scale-in origin-top-left version-dropdown">
+              <button :class="['flex items-center gap-1.5 w-full py-1.5 px-2.5 text-[11px] rounded-[5px] text-left transition-all duration-150 ease-out font-mono version-option', { active: !project.nodeVersion }]" @click="selectNodeVersion(null)">
                 跟随系统{{ globalNodeVersion ? ' (' + globalNodeVersion + ')' : '' }}
               </button>
-              <div v-if="nodeVersions.length" class="version-divider"></div>
+              <div v-if="nodeVersions.length" class="h-px mx-1.5 my-0.75 version-divider"></div>
               <button
                 v-for="v in nodeVersions" :key="v"
-                :class="['version-option', { active: project.nodeVersion === v }]"
+                :class="['flex items-center gap-1.5 w-full py-1.5 px-2.5 text-[11px] rounded-[5px] text-left transition-all duration-150 ease-out font-mono version-option', { active: project.nodeVersion === v }]"
                 @click="selectNodeVersion(v)"
               >
                 <svg v-if="project.nodeVersion === v" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                <span v-else class="version-check-placeholder"></span>
+                <span v-else class="w-3 h-3"></span>
                 {{ v }}
               </button>
             </div>
@@ -177,46 +177,46 @@ function selectNodeVersion(version: string | null) {
         </div>
       </div>
 
-      <div class="detail-toolbar">
-        <div class="toolbar-primary">
-          <button v-if="!isRunning()" class="btn-start" @click="emit('start')">
-            <span class="btn-icon">▶</span> 启动
+      <div class="flex items-center justify-between gap-1.5">
+        <div class="flex gap-1.5">
+          <button v-if="!isRunning()" class="py-1.75 px-5 text-xs font-semibold rounded-lg flex items-center gap-1.5 text-white btn-start" @click="emit('start')">
+            <span class="text-[10px]">▶</span> 启动
           </button>
-          <button v-else class="btn-stop" @click="emit('stop')">
-            <span class="btn-icon">■</span> 停止
+          <button v-else class="py-1.75 px-5 text-xs font-semibold rounded-lg flex items-center gap-1.5 text-white btn-stop" @click="emit('stop')">
+            <span class="text-[10px]">■</span> 停止
           </button>
         </div>
-        <button class="btn-ghost" @click="emit('clear-logs')">清空日志</button>
+        <button class="py-1.75 px-3.5 text-xs text-tsecondary border border-border rounded-lg transition-all duration-200 ease-out btn-ghost" @click="emit('clear-logs')">清空日志</button>
       </div>
     </template>
 
     <template v-else>
-      <div class="detail-header">
-        <h2 class="detail-name">编辑项目</h2>
+      <div class="flex items-start justify-between mb-4.5">
+        <h2 class="text-[17px] font-bold tracking-[-0.3px] text-tprimary">编辑项目</h2>
       </div>
-      <div class="edit-form">
-        <div class="field">
-          <label>名称</label>
+      <div class="flex flex-col gap-3.5">
+        <div class="flex flex-col gap-1.25">
+          <label class="text-xs font-medium text-tsecondary">名称</label>
           <input v-model="editForm.name" />
         </div>
-        <div class="field">
-          <label>路径</label>
-          <div class="path-field">
-            <input v-model="editForm.path" readonly class="path-input" />
-            <button class="btn-browse" @click="selectFolder">浏览</button>
+        <div class="flex flex-col gap-1.25">
+          <label class="text-xs font-medium text-tsecondary">路径</label>
+          <div class="flex gap-1.5">
+            <input v-model="editForm.path" readonly class="flex-1 cursor-pointer path-input" />
+            <button class="shrink-0 py-1.75 px-3.5 text-xs font-medium text-accent border border-accent-border rounded-md bg-transparent transition-all duration-200 ease-out btn-browse" @click="selectFolder">浏览</button>
           </div>
         </div>
-        <div class="field">
-          <label>命令</label>
-          <select v-model="editForm.command" class="command-select">
+        <div class="flex flex-col gap-1.25">
+          <label class="text-xs font-medium text-tsecondary">命令</label>
+          <select v-model="editForm.command" class="cursor-pointer appearance-auto">
             <option value="" disabled>选择命令</option>
             <option v-for="script in editScripts" :key="script" :value="script">{{ script }}</option>
           </select>
-          <span v-if="editScripts.length === 0 && editForm.path" class="field-hint">未找到 package.json 或无 scripts</span>
+          <span v-if="editScripts.length === 0 && editForm.path" class="text-[11px] text-ttertiary">未找到 package.json 或无 scripts</span>
         </div>
-        <div class="edit-actions">
-          <button class="btn-ghost" @click="cancelEdit">取消</button>
-          <button class="btn-primary" @click="save">保存</button>
+        <div class="flex gap-2 justify-end mt-2">
+          <button class="py-1.75 px-3.5 text-xs text-tsecondary border border-border rounded-lg transition-all duration-200 ease-out btn-ghost" @click="cancelEdit">取消</button>
+          <button class="py-1.75 px-5 text-xs font-semibold text-white rounded-lg btn-primary" @click="save">保存</button>
         </div>
       </div>
     </template>
@@ -234,14 +234,8 @@ function selectNodeVersion(version: string | null) {
 </template>
 
 <style scoped>
-.detail{
-  padding: 18px 22px;
-  border-bottom: 1px solid var(--border-default);
-  background: var(--bg-surface);
-  position: relative;
-}
-
-.detail::after{
+/* Pseudo-element for glow line — cannot be a Tailwind utility */
+.detail::after {
   content: '';
   position: absolute;
   bottom: 0;
@@ -252,415 +246,158 @@ function selectNodeVersion(version: string | null) {
   pointer-events: none;
 }
 
-.detail-header{
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 18px;
-}
-
-.detail-title-row{
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.detail-name{
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.3px;
-}
-
-.detail-actions{
-  display: flex;
-  gap: 4px;
-}
-
-.status-badge{
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: 9999px;
-  font-size: 11px;
-  font-weight: 500;
-  transition: all 300ms ease;
-}
-
-.status-badge.running{
+/* Status badge variants — all use CSS variables for colors */
+.status-badge.running {
   background: var(--success-bg);
   color: var(--success);
   border: 1px solid var(--success-border);
   box-shadow: 0 0 12px var(--success-bg);
 }
 
-.status-badge.running .status-dot{
+.status-badge.running .status-dot {
   background: var(--success);
   animation: dotPulse 1.5s ease-in-out infinite;
   box-shadow: 0 0 6px var(--success);
 }
 
-.status-badge.stopped{
+.status-badge.stopped {
   background: var(--bg-elevated);
   color: var(--text-tertiary);
 }
 
-.status-badge.stopped .status-dot{
+.status-badge.stopped .status-dot {
   background: var(--text-tertiary);
 }
 
-.status-badge.error{
+.status-badge.error {
   background: var(--error-bg);
   color: var(--error);
 }
 
-.status-badge.error .status-dot{
+.status-badge.error .status-dot {
   background: var(--error);
 }
 
-.status-dot{
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-
-.pid{
-  opacity: 0.5;
-  font-weight: 400;
-  font-size: 10px;
-  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-}
-
-.detail-info{
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.info-item{
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.info-label{
-  width: 56px;
-  flex-shrink: 0;
-  font-size: 9px;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.info-value{
-  font-size: 12px;
-  color: var(--text-primary);
-}
-
-.info-value.mono{
-  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 11px;
-  color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.info-value.code{
-  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 11px;
+/* Info value code — CSS variable backgrounds/borders */
+.info-code {
   background: var(--accent-glow);
-  padding: 2px 8px;
-  border-radius: 4px;
   color: var(--accent-primary);
-  border: 1px solid var(--accent-border);
-  transition: all 200ms ease;
+  border-color: var(--accent-border);
 }
 
-.info-value.code:hover{
+.info-code:hover {
   background: rgba(59, 130, 246, 0.12);
   border-color: var(--accent-primary);
 }
 
-.detail-toolbar{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-
-.toolbar-primary{
-  display: flex;
-  gap: 6px;
-}
-
-.info-actions{
-  display: flex;
-  gap: 4px;
-  flex-shrink: 0;
-  margin-left: auto;
-}
-
-.btn-quick-action{
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  border: 1px solid var(--border-default);
-  border-radius: 8px;
-  transition: all 200ms ease;
-  white-space: nowrap;
-}
-
-.btn-quick-action:hover{
+/* Quick action buttons — hover states with CSS variables */
+.btn-quick-action:hover {
   background: var(--bg-hover);
   color: var(--accent-primary);
   border-color: var(--accent-border);
 }
 
-.btn-quick-action:active{
+.btn-quick-action:active {
   transform: scale(0.97);
 }
 
-.btn-start, .btn-stop{
-  padding: 7px 20px;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #fff;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.btn-start{
-  background: linear-gradient(135deg, #2563eb, #3b82f6);
-  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.25);
-}
-
-.btn-start:hover:not(:disabled){
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.35);
-  transform: translateY(-1px);
-}
-
-.btn-start:active:not(:disabled){
-  transform: translateY(0);
-  box-shadow: 0 1px 6px rgba(59, 130, 246, 0.2);
-}
-
-.btn-stop{
-  background: linear-gradient(135deg, #dc2626, #ef4444);
-  box-shadow: 0 2px 12px rgba(239, 68, 68, 0.2);
-}
-
-.btn-stop:hover:not(:disabled){
-  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
-  transform: translateY(-1px);
-}
-
-.btn-stop:active:not(:disabled){
-  transform: translateY(0);
-}
-
-.btn-icon{
-  font-size: 10px;
-}
-
-.btn-ghost{
-  padding: 7px 14px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-default);
-  border-radius: 8px;
-  transition: all 200ms ease;
-}
-
-.btn-ghost:hover{
+/* Ghost button hover — CSS variables */
+.btn-ghost:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
   border-color: var(--text-tertiary);
 }
 
-.btn-danger-ghost{
-  padding: 7px 14px;
-  font-size: 12px;
-  color: var(--text-tertiary);
-  border: 1px solid transparent;
-  border-radius: 8px;
-  transition: all 200ms ease;
-}
-
-.btn-danger-ghost:hover{
+/* Danger ghost button — hover with CSS variables */
+.btn-danger-ghost:hover {
   color: var(--error);
   background: var(--error-bg);
 }
 
-.btn-primary{
-  padding: 7px 20px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #fff;
+/* Start button — gradient + shadow with CSS values */
+.btn-start {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.25);
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-start:hover:not(:disabled) {
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-start:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 6px rgba(59, 130, 246, 0.2);
+}
+
+/* Stop button — gradient + shadow */
+.btn-stop {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  box-shadow: 0 2px 12px rgba(239, 68, 68, 0.2);
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-stop:hover:not(:disabled) {
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-stop:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Primary button — CSS variable gradient */
+.btn-primary {
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover));
-  border-radius: 8px;
   box-shadow: 0 2px 8px var(--accent-glow);
   transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.btn-primary:hover{
+.btn-primary:hover {
   box-shadow: 0 4px 16px var(--accent-glow);
   transform: translateY(-1px);
 }
 
-.edit-form{
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.field{
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.field label{
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.path-field{
-  display: flex;
-  gap: 6px;
-}
-
-.path-input{
-  flex: 1;
-  cursor: pointer;
+/* Path input — CSS variable color override */
+.path-input {
   color: var(--text-secondary) !important;
 }
 
-.btn-browse{
-  flex-shrink: 0;
-  padding: 7px 14px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--accent-primary);
-  border: 1px solid var(--accent-border);
-  border-radius: 6px;
-  background: transparent;
-  transition: all 200ms ease;
-}
-
-.btn-browse:hover{
+/* Browse button — hover with CSS variables */
+.btn-browse:hover {
   background: var(--accent-glow);
   border-color: var(--accent-primary);
 }
 
-.command-select{
-  cursor: pointer;
-  appearance: auto;
-}
-
-.field-hint{
-  font-size: 11px;
-  color: var(--text-tertiary);
-}
-
-.edit-actions{
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 8px;
-}
-
-/* 版本选择器 */
-.version-selector{
-  position: relative;
-}
-
-.version-btn{
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  font-size: 11px;
-  border-radius: 5px;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-default);
-  transition: all 200ms ease;
-}
-
-.version-btn:hover{
+/* Version button hover — CSS variables */
+.version-btn:hover {
   background: var(--bg-hover);
   border-color: var(--accent-border);
 }
 
-.version-text{
-  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 11px;
-}
-
-.version-text.custom{
+/* Version text custom state — CSS variable */
+.version-text.custom {
   color: var(--accent-primary);
-  font-weight: 600;
 }
 
-.version-dropdown{
-  position: absolute;
-  left: 0;
-  top: 100%;
-  margin-top: 4px;
-  min-width: 180px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: 12px;
+/* Version dropdown — CSS variable shadow */
+.version-dropdown {
   box-shadow: var(--shadow-lg);
-  padding: 4px;
-  z-index: 100;
-  animation: scaleIn 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-origin: top left;
 }
 
-.version-option{
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 6px 10px;
-  font-size: 11px;
-  color: var(--text-primary);
-  border-radius: 5px;
-  text-align: left;
-  transition: all 150ms ease;
-  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-}
-
-.version-option:hover{
+/* Version option states — CSS variables */
+.version-option:hover {
   background: var(--bg-hover);
 }
 
-.version-option.active{
+.version-option.active {
   color: var(--accent-primary);
   font-weight: 600;
 }
 
-.version-check-placeholder{
-  width: 12px;
-  height: 12px;
-}
-
-.version-divider{
-  height: 1px;
+/* Version divider — CSS variable gradient */
+.version-divider {
   background: var(--divider);
-  margin: 3px 6px;
 }
 </style>

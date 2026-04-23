@@ -24,6 +24,7 @@
     "@xterm/xterm": "^6.0.0",
     "electron-store": "^8.1.0",
     "iconv-lite": "^0.6.3",
+    "motion-v": "^2.2.1",
     "node-pty": "^1.1.0",
     "vue": "^3.4.21"
   },
@@ -31,12 +32,14 @@
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^3.0.0",
     "@electron/rebuild": "^3.7.2",
+    "@tailwindcss/vite": "^4.2.4",
     "@types/node": "^20.11.24",
     "@vitejs/plugin-vue": "^5.0.4",
     "electron": "^29.1.0",
     "electron-builder": "^24.13.3",
     "electron-vite": "^2.0.0",
     "sharp": "^0.34.5",
+    "tailwindcss": "^4.2.4",
     "typescript": "^5.3.3",
     "vite": "^5.1.4"
   },

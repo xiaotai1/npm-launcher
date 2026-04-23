@@ -351,33 +351,34 @@ watch(showForm, (val) => {
 </script>
 
 <template>
-  <div class="project-list">
-    <div class="list-header">
-      <span class="list-title">项目</span>
-      <div class="header-btns">
-        <button class="add-btn" @click="showFolderInput = !showFolderInput" title="新建文件夹">
+  <div class="h-full flex flex-col">
+    <div class="px-4 pt-4 pb-2.5 flex items-center justify-between">
+      <span class="text-[10px] font-semibold text-ttertiary uppercase tracking-[1.2px]">项目</span>
+      <div class="flex gap-1">
+        <button class="add-btn flex items-center justify-center w-6 h-6 p-0 text-[11px] font-medium text-ttertiary rounded-[5px] transition-all duration-150 ease-in-out" @click="showFolderInput = !showFolderInput" title="新建文件夹">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
           </svg>
         </button>
-        <button class="add-btn" @click="showForm = !showForm">
-          <span class="add-icon">+</span> 新建
+        <button class="add-btn flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-ttertiary rounded-[5px] transition-all duration-150 ease-in-out" @click="showForm = !showForm">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          新建
         </button>
       </div>
     </div>
 
     <!-- 搜索框 -->
-    <div class="search-bar">
-      <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <div class="relative mx-2.5 mb-1.5">
+      <svg class="search-icon absolute left-2 top-1/2 -translate-y-1/2 text-ttertiary pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="8"/>
         <line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
       <input
         v-model="searchQuery"
         placeholder="搜索项目..."
-        class="search-input"
+        class="search-input w-full py-1.75 px-7 text-[12px] rounded-[7px] transition-all duration-200 ease-in-out box-border"
       />
-      <button v-if="searchQuery" class="search-clear" @click="searchQuery = ''">
+      <button v-if="searchQuery" class="search-clear absolute right-1.5 top-1/2 -translate-y-1/2 w-5.5 h-5.5 flex items-center justify-center rounded text-ttertiary" @click="searchQuery = ''">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
@@ -385,21 +386,21 @@ watch(showForm, (val) => {
     </div>
 
     <!-- 批量操作栏 -->
-    <div class="batch-actions">
-      <button class="batch-btn" @click="emit('start-all')" :disabled="projects.length === 0" title="启动所有项目">
+    <div class="flex gap-1 px-2.5 pb-1.5">
+      <button class="batch-btn flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-ttertiary rounded-[5px] transition-all duration-150 ease-in-out" @click="emit('start-all')" :disabled="projects.length === 0" title="启动所有项目">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
         全部启动
       </button>
-      <button :class="['batch-btn', { active: hasRunningProject }]" @click="emit('stop-all')" :disabled="!hasRunningProject" title="停止所有项目">
+      <button :class="['batch-btn', 'flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-ttertiary rounded-[5px] transition-all duration-150 ease-in-out', { active: hasRunningProject }]" @click="emit('stop-all')" :disabled="!hasRunningProject" title="停止所有项目">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
         全部停止
       </button>
     </div>
 
     <!-- 新建文件夹 -->
-    <div v-if="showFolderInput" class="folder-input-card">
-      <div class="folder-input-header">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <div v-if="showFolderInput" class="mx-2.5 my-1.5 p-2.5 border border-border rounded-xl flex flex-col gap-2 folder-input-card">
+      <div class="flex items-center gap-1.5 text-xs font-medium text-tsecondary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
         </svg>
         <span>新建文件夹</span>
@@ -408,50 +409,51 @@ watch(showForm, (val) => {
         ref="folderInputRef"
         v-model="newFolderName"
         placeholder="输入文件夹名称"
+        class="w-full py-1.5 px-2.5 text-[12px] rounded-md"
         @keyup.enter="handleAddFolder"
         @keyup.escape="showFolderInput = false"
       />
-      <div class="folder-input-actions">
-        <button class="btn-cancel" @click="showFolderInput = false; newFolderName = ''">取消</button>
-        <button class="btn-primary" @click="handleAddFolder" :disabled="!newFolderName.trim()">确认</button>
+      <div class="flex gap-1.5 justify-end">
+        <button class="py-1.5 px-3 text-[11px] text-tsecondary border border-border rounded-md btn-cancel" @click="showFolderInput = false; newFolderName = ''">取消</button>
+        <button class="py-1.5 px-4 text-[11px] font-semibold text-white rounded-lg btn-primary" @click="handleAddFolder" :disabled="!newFolderName.trim()">确认</button>
       </div>
     </div>
 
     <!-- 新建项目表单 -->
-    <div v-if="showForm" class="add-form">
-      <input ref="formNameInputRef" v-model="form.name" placeholder="项目名称" />
-      <div class="path-field">
-        <input v-model="form.path" placeholder="项目路径" readonly class="path-input" />
-        <button class="btn-browse" @click="selectFolder">浏览</button>
+    <div v-if="showForm" class="px-3 py-2.5 border-t border-b border-border flex flex-col gap-1.5 add-form">
+      <input ref="formNameInputRef" v-model="form.name" placeholder="项目名称" class="w-full py-1.5 px-2.5 text-[12px] rounded-md" />
+      <div class="flex gap-1.5">
+        <input v-model="form.path" placeholder="项目路径" readonly class="flex-1 cursor-pointer py-1.5 px-2.5 text-[12px] path-input" />
+        <button class="shrink-0 py-1.5 px-3 text-[11px] font-medium text-accent border border-accent-border rounded-md bg-transparent transition-all duration-200 ease-out btn-browse" @click="selectFolder">浏览</button>
       </div>
-      <div class="command-field">
-        <select v-model="form.command" class="command-select" :disabled="availableScripts.length === 0">
+      <div class="flex flex-col gap-0.5">
+        <select v-model="form.command" class="cursor-pointer py-1.5 px-2.5 text-[12px] appearance-auto" :disabled="availableScripts.length === 0">
           <option value="" disabled>
             {{ loadingScripts ? '加载中...' : availableScripts.length === 0 ? '请先选择项目路径' : '选择命令' }}
           </option>
           <option v-for="script in availableScripts" :key="script" :value="script">{{ script }}</option>
         </select>
-        <span v-if="availableScripts.length > 0" class="command-hint">npm run {{ form.command }}</span>
+        <span v-if="availableScripts.length > 0" class="text-[10px] font-mono command-hint">npm run {{ form.command }}</span>
       </div>
-      <div class="form-actions">
-        <button class="btn-cancel" @click="resetForm">取消</button>
-        <button class="btn-primary" @click="handleAdd" :disabled="!form.name || !form.path || !form.command">确认</button>
+      <div class="flex gap-1.5 justify-end pt-0.5">
+        <button class="py-1.5 px-3 text-[11px] text-tsecondary border border-border rounded-md btn-cancel" @click="resetForm">取消</button>
+        <button class="py-1.5 px-4 text-[11px] font-semibold text-white rounded-lg btn-primary" @click="handleAdd" :disabled="!form.name || !form.path || !form.command">确认</button>
       </div>
     </div>
 
     <!-- 项目列表 -->
-    <div class="list-items" @dragover="onRootDragOver" @drop="onRootDrop">
+    <div class="flex-1 overflow-y-auto px-2 py-1" @dragover="onRootDragOver" @drop="onRootDrop">
 
       <!-- 根级别收藏项目 -->
       <template v-if="rootFavorites.length">
-        <div class="section-label">
+        <div class="flex items-center gap-1.5 px-2 py-1.5 pt-1.5 pb-1 text-[10px] font-semibold text-ttertiary uppercase tracking-[0.8px] section-label">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
           收藏
         </div>
         <div
           v-for="project in rootFavorites"
           :key="project.id"
-          :class="['project-card', { active: selectedId === project.id }]"
+          :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }]"
           draggable="true"
           @click="emit('select', project.id)"
           @contextmenu="onProjectContextMenu($event, project)"
@@ -459,34 +461,34 @@ watch(showForm, (val) => {
           @dragover="onProjectDragOver"
           @dragend="onDragEnd"
         >
-          <div class="card-drag-handle" title="拖拽排序">
+          <div class="shrink-0 w-3.5 flex items-center justify-center text-ttertiary opacity-0 transition-opacity duration-200 ease-out cursor-grab card-drag-handle" title="拖拽排序">
             <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
               <circle cx="3" cy="2" r="1.2"/><circle cx="7" cy="2" r="1.2"/>
               <circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/>
               <circle cx="3" cy="12" r="1.2"/><circle cx="7" cy="12" r="1.2"/>
             </svg>
           </div>
-          <div class="card-body">
-            <div class="card-top">
-              <span class="card-name">{{ project.name }}</span>
-              <span class="card-status-dot" :style="{ background: getStatusInfo(project.id).color }"></span>
+          <div class="flex-1 min-w-0 flex flex-col gap-0.5">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-medium text-tsecondary whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-name">{{ project.name }}</span>
+              <span class="w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-300" :style="{ background: getStatusInfo(project.id).color }"></span>
             </div>
-            <div class="card-bottom">
-              <span class="card-command">npm run {{ project.command }}</span>
-              <span class="card-status-text" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[10px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command">npm run {{ project.command }}</span>
+              <span class="text-[9px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
             </div>
           </div>
-          <button class="star-btn active" @click="onToggleFavorite(project.id, $event)" title="取消收藏">
+          <button class="shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn active" @click="onToggleFavorite(project.id, $event)" title="取消收藏">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
           </button>
         </div>
-        <div v-if="folders.length || rootNormal.length" class="section-divider"></div>
+        <div v-if="folders.length || rootNormal.length" class="h-px mx-1 my-1.5 section-divider"></div>
       </template>
 
       <!-- 文件夹 -->
       <template v-for="folder in visibleFolders" :key="folder.id">
         <div
-          :class="['folder-row', { 'drop-highlight': dropTarget?.type === 'folder' && dropTarget?.id === folder.id, dragging: dragFolderId === folder.id }]"
+          :class="['flex items-center gap-1.75 py-1.75 px-2 mb-0.5 rounded-lg cursor-default transition-all duration-150 ease-out folder-row', { 'drop-highlight': dropTarget?.type === 'folder' && dropTarget?.id === folder.id, dragging: dragFolderId === folder.id }]"
           draggable="true"
           @dragstart="onFolderDragStart($event, folder.id)"
           @dragover="dragFolderId ? onFolderDragOverForSort($event, folder.id) : onFolderDragOver($event, folder.id)"
@@ -498,7 +500,7 @@ watch(showForm, (val) => {
           <template v-if="renamingFolder?.id === folder.id">
             <input
               v-model="renameInput"
-              class="rename-input"
+              class="flex-1 py-1 px-2 text-xs rounded"
               @keyup.enter="confirmRename"
               @keyup.escape="cancelRename"
               @blur="confirmRename"
@@ -506,24 +508,24 @@ watch(showForm, (val) => {
             />
           </template>
           <template v-else>
-            <button class="folder-toggle" @click="toggleCollapse(folder.id)">
+            <button class="w-5.5 h-5.5 flex items-center justify-center rounded text-ttertiary folder-toggle" @click="toggleCollapse(folder.id)">
               <svg :class="['chevron', { collapsed: isCollapsed(folder.id) }]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <polyline points="9 18 15 12 9 6"/>
               </svg>
             </button>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="folder-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="shrink-0 folder-icon">
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
             </svg>
-            <span class="folder-name">{{ folder.name }}</span>
-            <span class="folder-count">{{ folderProjects(folder.id).length }}</span>
+            <span class="flex-1 text-xs font-medium text-tsecondary whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out folder-name">{{ folder.name }}</span>
+            <span class="text-[10px] px-2 rounded-[10px] min-w-5.5 text-center folder-count">{{ folderProjects(folder.id).length }}</span>
           </template>
         </div>
         <!-- 文件夹内的项目 -->
-        <div v-if="!isCollapsed(folder.id)" class="folder-projects">
+        <div v-if="!isCollapsed(folder.id)" class="pl-3.5 ml-4.5 mb-1 relative folder-projects">
           <div
             v-for="project in folderProjects(folder.id)"
             :key="project.id"
-            :class="['project-card', { active: selectedId === project.id }]"
+            :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }]"
             draggable="true"
             @click="emit('select', project.id)"
             @contextmenu="onProjectContextMenu($event, project)"
@@ -531,29 +533,29 @@ watch(showForm, (val) => {
             @dragover="onProjectDragOver"
             @dragend="onDragEnd"
           >
-            <div class="card-drag-handle" title="拖拽排序">
+            <div class="shrink-0 w-3.5 flex items-center justify-center text-ttertiary opacity-0 transition-opacity duration-200 ease-out cursor-grab card-drag-handle" title="拖拽排序">
               <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
                 <circle cx="3" cy="2" r="1.2"/><circle cx="7" cy="2" r="1.2"/>
                 <circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/>
                 <circle cx="3" cy="12" r="1.2"/><circle cx="7" cy="12" r="1.2"/>
               </svg>
             </div>
-            <div class="card-body">
-              <div class="card-top">
-                <span class="card-name">{{ project.name }}</span>
-                <span class="card-status-dot" :style="{ background: getStatusInfo(project.id).color }"></span>
+            <div class="flex-1 min-w-0 flex flex-col gap-0.5">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-medium text-tsecondary whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-name">{{ project.name }}</span>
+                <span class="w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-300" :style="{ background: getStatusInfo(project.id).color }"></span>
               </div>
-              <div class="card-bottom">
-                <span class="card-command">npm run {{ project.command }}</span>
-                <span class="card-status-text" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-[10px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command">npm run {{ project.command }}</span>
+                <span class="text-[9px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
               </div>
             </div>
-            <button :class="['star-btn', { active: project.favorite }]" @click="onToggleFavorite(project.id, $event)" :title="project.favorite ? '取消收藏' : '收藏'">
+            <button :class="['shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn', { active: project.favorite }]" @click="onToggleFavorite(project.id, $event)" :title="project.favorite ? '取消收藏' : '收藏'">
               <svg v-if="project.favorite" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
               <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
             </button>
           </div>
-          <div v-if="folderProjects(folder.id).length === 0" class="folder-empty">
+          <div v-if="folderProjects(folder.id).length === 0" class="py-3 text-xs text-ttertiary opacity-50 text-center">
             拖拽项目到此处
           </div>
         </div>
@@ -563,7 +565,7 @@ watch(showForm, (val) => {
       <div
         v-for="project in rootNormal"
         :key="project.id"
-        :class="['project-card', { active: selectedId === project.id }]"
+        :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }]"
         draggable="true"
         @click="emit('select', project.id)"
         @contextmenu="onProjectContextMenu($event, project)"
@@ -571,32 +573,32 @@ watch(showForm, (val) => {
         @dragover="onProjectDragOver"
         @dragend="onDragEnd"
       >
-        <div class="card-drag-handle" title="拖拽排序">
+        <div class="shrink-0 w-3.5 flex items-center justify-center text-ttertiary opacity-0 transition-opacity duration-200 ease-out cursor-grab card-drag-handle" title="拖拽排序">
           <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
             <circle cx="3" cy="2" r="1.2"/><circle cx="7" cy="2" r="1.2"/>
             <circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/>
             <circle cx="3" cy="12" r="1.2"/><circle cx="7" cy="12" r="1.2"/>
           </svg>
         </div>
-        <div class="card-body">
-          <div class="card-top">
-            <span class="card-name">{{ project.name }}</span>
-            <span class="card-status-dot" :style="{ background: getStatusInfo(project.id).color }"></span>
+        <div class="flex-1 min-w-0 flex flex-col gap-0.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-medium text-tsecondary whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-name">{{ project.name }}</span>
+            <span class="w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-300" :style="{ background: getStatusInfo(project.id).color }"></span>
           </div>
-          <div class="card-bottom">
-            <span class="card-command">npm run {{ project.command }}</span>
-            <span class="card-status-text" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command">npm run {{ project.command }}</span>
+            <span class="text-[9px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
           </div>
         </div>
-        <button :class="['star-btn', { active: project.favorite }]" @click="onToggleFavorite(project.id, $event)" :title="project.favorite ? '取消收藏' : '收藏'">
-            <svg v-if="project.favorite" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
-            <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
-          </button>
+        <button :class="['shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn', { active: project.favorite }]" @click="onToggleFavorite(project.id, $event)" :title="project.favorite ? '取消收藏' : '收藏'">
+          <svg v-if="project.favorite" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+        </button>
       </div>
 
-      <div v-if="filteredProjects.length === 0" class="empty-list">
+      <div v-if="filteredProjects.length === 0" class="text-center py-12 px-4.5 text-ttertiary text-[13px]">
         <p>{{ searchQuery ? '未找到匹配项目' : '暂无项目' }}</p>
-        <p class="hint">{{ searchQuery ? '尝试其他关键词' : '点击"新建"添加' }}</p>
+        <p class="text-xs mt-1.5 opacity-60">{{ searchQuery ? '尝试其他关键词' : '点击"新建"添加' }}</p>
       </div>
     </div>
 
@@ -604,32 +606,32 @@ watch(showForm, (val) => {
     <Teleport to="body">
       <div
         v-if="contextMenu.visible"
-        class="context-menu"
+        class="fixed z-1000 min-w-37.5 border border-border rounded-xl p-1 context-menu"
         :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
       >
         <template v-if="contextMenu.type === 'project'">
-          <button class="context-item" @click="handleEdit">
+          <button class="flex items-center gap-2 w-full py-2 px-3 text-xs text-tprimary rounded-md text-left transition-all duration-150 ease-out context-item" @click="handleEdit">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
             </svg>
             <span>编辑</span>
           </button>
-          <button class="context-item" @click="handleOpenFolder">
+          <button class="flex items-center gap-2 w-full py-2 px-3 text-xs text-tprimary rounded-md text-left transition-all duration-150 ease-out context-item" @click="handleOpenFolder">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
             </svg>
             <span>打开文件夹</span>
           </button>
-          <button class="context-item" @click="handleOpenInVscode">
+          <button class="flex items-center gap-2 w-full py-2 px-3 text-xs text-tprimary rounded-md text-left transition-all duration-150 ease-out context-item" @click="handleOpenInVscode">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="16 18 22 12 16 6"/>
               <polyline points="8 6 2 12 8 18"/>
             </svg>
             <span>在 VS Code 中打开</span>
           </button>
-          <div class="context-divider"></div>
-          <button class="context-item danger" @click="handleDelete">
+          <div class="h-px mx-2 my-0.75 context-divider"></div>
+          <button class="flex items-center gap-2 w-full py-2 px-3 text-xs rounded-md text-left transition-all duration-150 ease-out context-item danger" @click="handleDelete">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"/>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -638,15 +640,15 @@ watch(showForm, (val) => {
           </button>
         </template>
         <template v-if="contextMenu.type === 'folder'">
-          <button class="context-item" @click="handleRenameFolder">
+          <button class="flex items-center gap-2 w-full py-2 px-3 text-xs text-tprimary rounded-md text-left transition-all duration-150 ease-out context-item" @click="handleRenameFolder">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
             </svg>
             <span>重命名</span>
           </button>
-          <div class="context-divider"></div>
-          <button class="context-item danger" @click="handleDelete">
+          <div class="h-px mx-2 my-0.75 context-divider"></div>
+          <button class="flex items-center gap-2 w-full py-2 px-3 text-xs rounded-md text-left transition-all duration-150 ease-out context-item danger" @click="handleDelete">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"/>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -673,390 +675,153 @@ watch(showForm, (val) => {
 </template>
 
 <style scoped>
-.project-list{
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.list-header{
-  padding: 16px 16px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.header-btns{
-  display: flex;
-  gap: 4px;
-}
-
-.list-title{
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-}
-
-.add-btn{
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  border-radius: 5px;
-  transition: all 150ms ease;
-}
-
-.add-btn:hover{
+/* 按钮 hover — CSS 变量 */
+.add-btn:hover {
   color: var(--text-primary);
   background: var(--bg-hover);
 }
 
-.add-btn:first-child{
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  justify-content: center;
-}
-
-.add-icon{ font-size: 13px; line-height: 1; }
-
-/* 搜索框 */
-.search-bar{
-  position: relative;
-  margin: 0 10px 6px;
-}
-
-.search-icon{
-  position: absolute;
-  left: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-tertiary);
-  pointer-events: none;
-}
-
-.search-input{
-  width: 100%;
-  padding: 7px 28px 7px 28px;
-  font-size: 12px;
-  border-radius: 7px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-default);
-  color: var(--text-primary);
-  transition: all 200ms ease;
-  box-sizing: border-box;
-}
-
-.search-input::placeholder{
+/* 搜索框 — ::placeholder 和 focus 无法用 Tailwind 处理 */
+.search-input::placeholder {
   color: var(--text-tertiary);
 }
 
-.search-input:focus{
+.search-input:focus {
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 2px var(--accent-glow);
   outline: none;
 }
 
-.search-clear{
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  color: var(--text-tertiary);
-}
-
-.search-clear:hover{
+.search-clear:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
 }
 
-/* 批量操作 */
-.batch-actions{
-  display: flex;
-  gap: 4px;
-  padding: 0 10px 6px;
-}
-
-.batch-btn{
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  border-radius: 5px;
-  transition: all 150ms ease;
-}
-
-.batch-btn:hover:not(:disabled){
+/* 批量操作 — CSS 变量 hover/active */
+.batch-btn:hover:not(:disabled) {
   color: var(--text-primary);
   background: var(--bg-hover);
 }
 
-.batch-btn:disabled{
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.batch-btn.active{
+.batch-btn.active {
   color: var(--error);
 }
 
-.batch-btn.active:hover:not(:disabled){
+.batch-btn.active:hover:not(:disabled) {
   background: var(--error-bg);
 }
 
-/* 文件夹输入卡片 */
-.folder-input-card{
-  margin: 6px 10px;
-  padding: 12px;
-  border: 1px solid var(--border-default);
-  border-radius: 12px;
+/* 文件夹输入卡片 — CSS 变量 */
+.folder-input-card {
   background: var(--bg-surface);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: var(--shadow-sm);
+  animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.folder-input-header{
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.folder-input-header svg{
+.folder-input-header svg {
   color: var(--accent-primary);
   filter: drop-shadow(0 0 3px var(--accent-glow));
 }
 
-.folder-input-card input{
-  width: 100%;
-  padding: 8px 10px;
-  font-size: 12px;
-  border-radius: 6px;
-}
-
-.folder-input-actions{
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-/* 新建表单 */
-.add-form{
-  padding: 16px 14px;
-  border-top: 1px solid var(--border-default);
-  border-bottom: 1px solid var(--border-default);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+/* 新建表单 — CSS 变量 + animation */
+.add-form {
   background: var(--bg-base);
   animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.add-form input, .add-form select{
-  width: 100%;
-  padding: 7px 10px;
-  font-size: 13px;
-  border-radius: 6px;
-}
-
-.path-field{ display: flex; gap: 6px; }
-
-.path-input{ flex: 1; cursor: pointer; color: var(--text-secondary); }
-
-.btn-browse{
-  flex-shrink: 0;
-  padding: 7px 14px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--accent-primary);
-  border: 1px solid var(--accent-border);
-  border-radius: 6px;
-  background: transparent;
-  transition: all 200ms ease;
-}
-
-.btn-browse:hover{ background: var(--accent-glow); border-color: var(--accent-primary); }
-
-.command-field{ display: flex; flex-direction: column; gap: 3px; }
-
-.command-select{ cursor: pointer; appearance: auto; }
-
-.command-hint{
-  font-size: 11px;
-  color: var(--text-tertiary);
-  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-}
-
-.form-actions{ display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
-
-.btn-cancel{
-  padding: 7px 14px;
-  font-size: 12px;
+.path-input {
   color: var(--text-secondary);
-  border: 1px solid var(--border-default);
-  border-radius: 6px;
 }
 
-.btn-cancel:hover{ background: var(--bg-hover); }
+.btn-browse:hover {
+  background: var(--accent-glow);
+  border-color: var(--accent-primary);
+}
 
-.btn-primary{
-  padding: 7px 18px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #fff;
+.command-hint {
+  color: var(--text-tertiary);
+}
+
+.btn-cancel:hover {
+  background: var(--bg-hover);
+}
+
+.btn-primary {
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover));
-  border-radius: 8px;
   box-shadow: 0 2px 8px var(--accent-glow);
 }
 
-.btn-primary:hover:not(:disabled){ box-shadow: 0 4px 16px var(--accent-glow); transform: translateY(-1px); }
-.btn-primary:disabled{ opacity: 0.4; cursor: not-allowed; }
-
-/* 列表 */
-.list-items{ flex: 1; overflow-y: auto; padding: 4px 8px; }
-
-.section-label{
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px 4px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 4px 16px var(--accent-glow);
+  transform: translateY(-1px);
 }
 
-.section-label::after{
+/* 分区标签 — ::after 渐变 */
+.section-label::after {
   content: '';
   flex: 1;
   height: 1px;
   background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), transparent);
 }
 
-.section-divider{
-  height: 1px;
+.section-divider {
   background: var(--divider);
-  margin: 6px 4px;
 }
 
-/* 文件夹 */
-.folder-row{
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 8px;
-  margin-bottom: 2px;
-  border-radius: 8px;
-  cursor: default;
-  transition: all 150ms ease;
+/* 文件夹 — 父子选择器 + CSS 变量 */
+.folder-row:hover {
+  background: var(--bg-hover);
 }
 
-.folder-row:hover{ background: var(--bg-hover); }
-.folder-row.drop-highlight{ background: var(--accent-glow); border: 1px dashed var(--accent-primary); }
-
-.folder-toggle{
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  color: var(--text-tertiary);
+.folder-row.drop-highlight {
+  background: var(--accent-glow);
+  border: 1px dashed var(--accent-primary);
 }
 
-.folder-toggle:hover{ background: var(--bg-active); }
+.folder-toggle:hover {
+  background: var(--bg-active);
+}
 
-.chevron{
+.chevron {
   transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
   display: inline-block;
 }
 
-.chevron.collapsed{
+.chevron.collapsed {
   transform: rotate(0deg);
 }
 
-.chevron:not(.collapsed){
+.chevron:not(.collapsed) {
   transform: rotate(90deg);
 }
 
-.folder-icon{
+.folder-icon {
   color: var(--accent-primary);
-  flex-shrink: 0;
   filter: drop-shadow(0 0 3px var(--accent-glow));
   transition: filter 200ms ease;
 }
 
-.folder-row:hover .folder-icon{
+.folder-row:hover .folder-icon {
   filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.35));
 }
 
-.folder-name{
-  flex: 1;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: color 150ms ease;
-}
-
-.folder-row:hover .folder-name{
-  color: var(--text-primary);
-}
-
-.folder-count{
-  font-size: 10px;
+.folder-count {
   color: var(--text-tertiary);
   background: var(--bg-elevated);
-  padding: 2px 8px;
-  border-radius: 10px;
-  min-width: 22px;
-  text-align: center;
   transition: all 200ms ease;
 }
 
-.folder-row:hover .folder-count{
+.folder-row:hover .folder-count {
   background: var(--accent-glow);
   color: var(--text-secondary);
 }
 
-.rename-input{
-  flex: 1;
-  padding: 4px 8px;
-  font-size: 12px;
-  border-radius: 4px;
-}
-
-.folder-projects{
-  padding-left: 14px;
-  margin-left: 18px;
-  margin-bottom: 4px;
-  position: relative;
+/* 文件夹内项目 — ::before 渐变线 */
+.folder-projects {
   animation: slideIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.folder-projects::before{
+.folder-projects::before {
   content: '';
   position: absolute;
   left: 0;
@@ -1066,45 +831,22 @@ watch(showForm, (val) => {
   background: linear-gradient(180deg, var(--accent-border), transparent);
 }
 
-.folder-empty{
-  padding: 12px 12px;
-  font-size: 12px;
-  color: var(--text-tertiary);
-  opacity: 0.5;
-  text-align: center;
-}
-
-/* 项目卡片 */
-.project-card{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 8px;
-  margin-bottom: 2px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+/* 项目卡片 — 复杂状态 + ::before 指示器 */
+.project-card {
   animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  border: 1px solid transparent;
 }
 
-.project-card:hover{
+.project-card:hover {
   background: var(--bg-hover);
 }
 
-.project-card:active{
-  transform: scale(0.98);
-}
-
-.project-card.active{
+.project-card.active {
   background: var(--card-active-bg);
   border-color: var(--card-active-border);
   box-shadow: 0 0 16px var(--accent-glow), inset 0 1px 0 var(--accent-glow);
-  padding: 6px 7px;
 }
 
-.project-card.active::before{
+.project-card.active::before {
   content: '';
   position: absolute;
   left: -1px;
@@ -1117,156 +859,70 @@ watch(showForm, (val) => {
   animation: barGrow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.project-card.dragging{ opacity: 0.35; transform: scale(0.97); }
-
-.card-drag-handle{
-  flex-shrink: 0;
-  width: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-tertiary);
-  opacity: 0;
-  transition: opacity 200ms ease;
-  cursor: grab;
+.project-card:hover .card-drag-handle {
+  opacity: 0.4;
 }
 
-.card-drag-handle:active{ cursor: grabbing; }
-.project-card:hover .card-drag-handle{ opacity: 0.4; }
-.card-drag-handle:hover{ opacity: 0.7 !important; }
-
-.card-drag-handle:active{ cursor: grabbing; }
-.project-card:hover .card-drag-handle{ opacity: 0.4; }
-.card-drag-handle:hover{ opacity: 0.7 !important; }
-
-.card-body{ flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-
-.card-top{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+.card-drag-handle:hover {
+  opacity: 0.7 !important;
 }
 
-.card-name{
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: color 150ms ease;
+.card-drag-handle:active {
+  cursor: grabbing;
 }
 
-.project-card.active .card-name{
+.project-card.active .card-name {
   color: var(--text-primary);
   font-weight: 600;
 }
 
-.project-card:hover .card-name{
+.project-card:hover .card-name {
   color: var(--text-primary);
 }
 
-.card-status-dot{
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  transition: all 300ms ease;
-}
-
-.card-bottom{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.card-command{
-  font-size: 10px;
-  color: var(--text-tertiary);
-  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: color 150ms ease;
-}
-
-.project-card:hover .card-command{
+.project-card:hover .card-command {
   color: var(--text-secondary);
 }
 
-.card-status-text{
-  font-size: 9px;
-  font-weight: 600;
-  flex-shrink: 0;
-  letter-spacing: 0.5px;
-  padding: 1px 6px;
-  border-radius: 9999px;
+/* 星标 — 父子选择器 + CSS 变量 */
+.project-card:hover .star-btn {
+  opacity: 0.5;
 }
 
-/* 星标 */
-.star-btn{
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-tertiary);
-  opacity: 0;
-  transition: all 150ms ease;
-  border-radius: 6px;
+.star-btn:hover {
+  opacity: 1 !important;
+  background: var(--bg-hover);
+  transform: scale(1.1);
 }
 
-.project-card:hover .star-btn{ opacity: 0.5; }
-.star-btn:hover{ opacity: 1 !important; background: var(--bg-hover); transform: scale(1.1); }
-
-.star-btn.active{
+.star-btn.active {
   opacity: 1 !important;
   color: #f59e0b;
   filter: drop-shadow(0 0 3px rgba(245, 158, 11, 0.4));
 }
 
-/* 空状态 */
-.empty-list{
-  text-align: center;
-  padding: 48px 18px;
-  color: var(--text-tertiary);
-  font-size: 13px;
-}
-
-.empty-list .hint{ font-size: 12px; margin-top: 6px; opacity: 0.6; }
-
-/* 右键菜单 */
-.context-menu{
-  position: fixed;
-  z-index: 1000;
-  min-width: 150px;
+/* 右键菜单 — CSS 变量 + animation */
+.context-menu {
   background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: 12px;
   box-shadow: var(--shadow-lg);
-  padding: 4px;
   animation: scaleIn 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   transform-origin: top left;
 }
 
-.context-item{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 12px;
-  font-size: 12px;
-  color: var(--text-primary);
-  border-radius: 6px;
-  text-align: left;
-  transition: all 150ms ease;
+.context-item:hover {
+  background: var(--bg-hover);
 }
 
-.context-item:hover{ background: var(--bg-hover); }
-.context-item.danger{ color: var(--text-tertiary); }
-.context-item.danger:hover{ color: var(--error); background: var(--error-bg); }
-.context-divider{ height: 1px; background: var(--divider); margin: 3px 8px; }
+.context-item.danger {
+  color: var(--text-tertiary);
+}
+
+.context-item.danger:hover {
+  color: var(--error);
+  background: var(--error-bg);
+}
+
+.context-divider {
+  background: var(--divider);
+}
 </style>

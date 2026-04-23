@@ -1,3 +1,119 @@
+@import "tailwindcss";
+
+/* ===== Theme: 颜色别名映射 ===== */
+@theme inline {
+  --color-surface: var(--bg-surface);
+  --color-base: var(--bg-base);
+  --color-elevated: var(--bg-elevated);
+  --color-hover-bg: var(--bg-hover);
+  --color-active-bg: var(--bg-active);
+
+  --color-tprimary: var(--text-primary);
+  --color-tsecondary: var(--text-secondary);
+  --color-ttertiary: var(--text-tertiary);
+
+  --color-border: var(--border-default);
+  --color-border-muted: var(--border-muted);
+
+  --color-accent: var(--accent-primary);
+  --color-accent-hover: var(--accent-primary-hover);
+  --color-accent-glow: var(--accent-glow);
+  --color-accent-border: var(--accent-border);
+
+  --color-success-c: var(--success);
+  --color-success-bg-c: var(--success-bg);
+  --color-warning-c: var(--warning);
+  --color-warning-bg-c: var(--warning-bg);
+  --color-error-c: var(--error);
+  --color-error-bg-c: var(--error-bg);
+
+  --color-console-bg: var(--console-bg);
+  --color-console-text: var(--console-text);
+  --color-console-info: var(--console-info);
+  --color-console-error: var(--console-error);
+  --color-console-warn: var(--console-warn);
+  --color-console-success: var(--console-success);
+
+  --color-panel-bg: var(--panel-bg);
+  --color-sidebar-bg: var(--sidebar-bg);
+}
+
+/* ===== Theme: 间距 & 字号（补偿 14px 根字号） ===== */
+@theme {
+  --spacing: 4px;
+  --text-xs: 12px;
+  --text-xs--line-height: 1.5;
+
+  --animate-dot-pulse: dotPulse 1.5s ease-in-out infinite;
+  --animate-fade-in: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-in: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-scale-in: scaleIn 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --animate-shimmer: shimmer 2s linear infinite;
+  --animate-bar-grow: barGrow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --animate-log-in: logIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  --animate-check-pop: checkPop 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --animate-star-pop: starPop 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --animate-toast-in: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-dialog-in: dialogIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes dotPulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px currentColor; }
+    50% { opacity: 0.5; box-shadow: 0 0 3px currentColor; }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  @keyframes barGrow {
+    from { transform: scaleY(0); opacity: 0; }
+    to { transform: scaleY(1); opacity: 1; }
+  }
+
+  @keyframes logIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes checkPop {
+    0% { transform: scale(0); }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes starPop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.4); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  @keyframes dialogIn {
+    from { opacity: 0; transform: scale(0.95) translateY(-8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+}
+
 /* ===== 浅色主题 ===== */
 :root[data-theme='light'] {
   --bg-base: #f8fafc;
@@ -103,30 +219,55 @@
   --indicator: linear-gradient(180deg, #3b82f6, #2563eb);
 }
 
-/* ===== 基础重置 ===== */
-*,
-*::before,
-*::after {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/* ===== 基础样式 ===== */
+@layer base {
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Inter', Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.01em;
+  }
 
-html, body {
-  height: 100%;
-  overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Inter', Roboto, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text-primary);
-  background: var(--bg-base);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.01em;
-}
+  #app {
+    height: 100%;
+  }
 
-#app {
-  height: 100%;
+  input, textarea, select {
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
+    padding: 8px 12px;
+    outline: none;
+    transition: box-shadow 200ms ease;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  button {
+    cursor: pointer;
+    border: none;
+    background: none;
+    transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 200ms ease, opacity 200ms ease;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
 }
 
 /* ===== 滚动条 ===== */
@@ -148,92 +289,3 @@ html, body {
   background: var(--text-tertiary);
 }
 
-/* ===== 输入框 ===== */
-input, textarea, select {
-  font-family: inherit;
-  font-size: inherit;
-  color: var(--text-primary);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-default);
-  border-radius: 8px;
-  padding: 8px 12px;
-  outline: none;
-  transition: border-color 200ms ease, box-shadow 200ms ease;
-}
-
-input:focus, textarea:focus, select:focus {
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px var(--accent-glow);
-}
-
-input::placeholder, textarea::placeholder {
-  color: var(--text-tertiary);
-}
-
-/* ===== 按钮 ===== */
-button {
-  cursor: pointer;
-  border: none;
-  background: none;
-  font-family: inherit;
-  font-size: inherit;
-  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-/* ===== 动画 ===== */
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-@keyframes dotPulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 8px currentColor; }
-  50% { opacity: 0.5; box-shadow: 0 0 3px currentColor; }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(-8px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-@keyframes barGrow {
-  from { transform: scaleY(0); opacity: 0; }
-  to { transform: scaleY(1); opacity: 1; }
-}
-
-@keyframes logIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes checkPop {
-  0% { transform: scale(0); }
-  60% { transform: scale(1.2); }
-  100% { transform: scale(1); }
-}
-
-@keyframes starPop {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.4); }
-  100% { transform: scale(1); }
-}

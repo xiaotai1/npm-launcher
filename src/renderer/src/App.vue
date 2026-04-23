@@ -271,11 +271,10 @@ function onResizeStart(e: MouseEvent) {
 async function toggleTheme() {
   if (!config.value) return
   const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system']
-  const currentIndex = themes.indexOf(config.value.theme)
-  const nextTheme = themes[(currentIndex + 1) % themes.length]
+  const nextTheme = themes[(themes.indexOf(config.value.theme) + 1) % themes.length]
   config.value.theme = nextTheme
-  await window.electronAPI.saveConfig(toRaw(config.value))
   applyTheme(nextTheme)
+  await window.electronAPI.saveConfig(toRaw(config.value))
 }
 
 function applyTheme(theme: 'light' | 'dark' | 'system') {
@@ -314,7 +313,7 @@ watch(() => config.value?.theme, (theme) => {
 </script>
 
 <template>
-  <div class="app-container">
+  <div class="h-screen flex flex-col bg-base">
     <Toast :message="toastMessage" :type="toastType" />
     <Header
       :node-version="nodeVersion"
@@ -326,9 +325,9 @@ watch(() => config.value?.theme, (theme) => {
       @switch-version="switchNodeVersion"
       @refresh-versions="refreshVersions"
     />
-    <main class="main-content">
+    <main class="flex-1 flex overflow-hidden">
       <aside
-        class="sidebar"
+        class="sidebar min-w-0 border-r border-border flex flex-col overflow-hidden relative"
         :class="{ collapsed: sidebarCollapsed, resizing: isResizing }"
         :style="{ width: sidebarCollapsed ? '' : sidebarWidth + 'px' }"
       >
@@ -353,18 +352,18 @@ watch(() => config.value?.theme, (theme) => {
           @stop-all="stopAllProjects"
         />
         <!-- 折叠态指示器 -->
-        <div v-if="sidebarCollapsed" class="collapsed-indicators">
+        <div v-if="sidebarCollapsed" class="flex-1 flex flex-col items-center gap-1 py-3.5 pb-2 overflow-y-auto overflow-x-hidden">
           <div
             v-for="project in (config?.projects || [])"
             :key="project.id"
-            :class="['indicator-dot', { active: selectedProjectId === project.id }]"
+            :class="['w-1.5 h-1.5 rounded-full cursor-pointer transition-all duration-180 ease-out shrink-0 opacity-45 indicator-dot', { active: selectedProjectId === project.id }]"
             :style="{ background: getStatusColor(project.id) }"
             :title="project.name"
             @click="selectProject(project.id)"
           ></div>
         </div>
         <!-- 折叠切换按钮 -->
-        <button class="sidebar-toggle" @click="toggleSidebar" :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'">
+        <button class="absolute -right-3.25 top-1/2 -translate-y-1/2 w-6.5 h-6.5 flex items-center justify-center bg-surface border border-border rounded-full text-ttertiary z-10 shadow-xs opacity-0 transition-all duration-200 ease-out sidebar-toggle" @click="toggleSidebar" :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline :points="sidebarCollapsed ? '9 6 15 12 9 18' : '15 6 9 12 15 18'"/>
           </svg>
@@ -373,11 +372,11 @@ watch(() => config.value?.theme, (theme) => {
       <!-- 拖拽调整宽度手柄 -->
       <div
         v-if="!sidebarCollapsed"
-        class="resize-handle"
+        class="w-0.75 -ml-px cursor-col-resize relative z-5 shrink-0 resize-handle"
         :class="{ active: isResizing }"
         @mousedown="onResizeStart"
       ></div>
-      <section class="content">
+      <section class="flex-1 flex flex-col overflow-hidden bg-base">
         <template v-if="selectedProject">
           <ProjectDetail
             :project="selectedProject"
@@ -393,25 +392,25 @@ watch(() => config.value?.theme, (theme) => {
             @toast="showToast"
             @set-node-version="setProjectNodeVersion"
           />
-          <div class="bottom-panel">
-            <div class="panel-tabs">
+          <div class="flex-1 flex flex-col min-h-50 overflow-hidden">
+            <div class="flex border-b border-border bg-surface px-3.5 relative panel-tabs">
               <button
-                :class="['panel-tab', { active: activeTab === 'logs' }]"
+                :class="['px-4 py-2 text-[11px] font-medium text-ttertiary border-b-2 border-transparent transition-all duration-200 ease-out tracking-[0.3px] panel-tab', { active: activeTab === 'logs' }]"
                 @click="activeTab = 'logs'"
               >日志</button>
               <button
-                :class="['panel-tab', { active: activeTab === 'terminal' }]"
+                :class="['px-4 py-2 text-[11px] font-medium text-ttertiary border-b-2 border-transparent transition-all duration-200 ease-out tracking-[0.3px] panel-tab', { active: activeTab === 'terminal' }]"
                 @click="activeTab = 'terminal'"
               >终端</button>
             </div>
-            <div class="panel-content">
-              <div v-show="activeTab === 'logs'" class="panel-layer">
+            <div class="flex-1 flex flex-col overflow-hidden relative">
+              <div v-show="activeTab === 'logs'" class="absolute inset-0 flex flex-col">
                 <LogConsole
                   :logs="currentLogs"
                   :is-running="currentStatus?.status === 'running'"
                 />
               </div>
-              <div class="panel-layer" :class="{ 'layer-hidden': activeTab !== 'terminal' }">
+              <div class="absolute inset-0 flex flex-col" :class="{ 'invisible pointer-events-none': activeTab !== 'terminal' }">
                 <Terminal
                   :id="'pty-' + selectedProject.id"
                   :cwd="selectedProject.path"
@@ -422,14 +421,14 @@ watch(() => config.value?.theme, (theme) => {
             </div>
           </div>
         </template>
-        <div v-else class="empty-state">
-          <div class="empty-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <div v-else class="flex-1 flex flex-col items-center justify-center text-ttertiary animate-fade-in">
+          <div class="w-12 h-12 mb-3.5 opacity-30 text-accent">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-full h-full">
               <path d="M3 16l4-4m0 0l4 4m4-4m4 4m4-4m4 4" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M3 20h18" stroke-linecap="round"/>
             </svg>
           </div>
-          <p class="empty-text">选择或添加项目开始使用</p>
+          <p class="text-[13px] tracking-[0.2px]">选择或添加项目开始使用</p>
         </div>
       </section>
     </main>
@@ -437,44 +436,23 @@ watch(() => config.value?.theme, (theme) => {
 </template>
 
 <style scoped>
-.app-container {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-base);
-}
-
-.main-content {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-}
-
-.sidebar{
-  width: 260px;
-  min-width: 0;
-  border-right: 1px solid var(--border-default);
+.sidebar {
   background: var(--sidebar-bg);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
   transition: width 250ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 拖拽时禁用过渡动画，消除卡顿 */
-.sidebar.resizing{
+.sidebar.resizing {
   transition: none !important;
 }
 
-.sidebar.collapsed{
+.sidebar.collapsed {
   width: 40px;
   align-items: center;
 }
 
-.sidebar::after{
+.sidebar::after {
   content: '';
   position: absolute;
   right: 0;
@@ -485,34 +463,12 @@ watch(() => config.value?.theme, (theme) => {
   pointer-events: none;
 }
 
-/* 折叠态指示器 */
-.collapsed-indicators{
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 14px 0 8px;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.indicator-dot{
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 180ms ease;
-  flex-shrink: 0;
-  opacity: 0.45;
-}
-
-.indicator-dot:hover{
+.indicator-dot:hover {
   transform: scale(1.6);
   opacity: 1;
 }
 
-.indicator-dot.active{
+.indicator-dot.active {
   width: 4px;
   height: 16px;
   border-radius: 2px;
@@ -520,114 +476,29 @@ watch(() => config.value?.theme, (theme) => {
   box-shadow: 0 0 10px var(--accent-glow);
 }
 
-/* 折叠切换按钮 */
-.sidebar-toggle{
-  position: absolute;
-  right: -13px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: 50%;
-  color: var(--text-tertiary);
-  z-index: 10;
-  box-shadow: var(--shadow-sm);
-  opacity: 0;
-  transition: all 200ms ease;
-}
-
 .sidebar:hover .sidebar-toggle,
-.sidebar.collapsed .sidebar-toggle{
+.sidebar.collapsed .sidebar-toggle {
   opacity: 0.7;
 }
 
-.sidebar-toggle:hover{
+.sidebar-toggle:hover {
   opacity: 1 !important;
   color: var(--accent-primary);
   border-color: var(--accent-border);
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
-/* 拖拽调整宽度手柄 */
-.resize-handle{
-  width: 3px;
-  margin-left: -1px;
-  cursor: col-resize;
-  position: relative;
-  z-index: 5;
-  flex-shrink: 0;
-}
-
 .resize-handle:hover,
-.resize-handle.active{
+.resize-handle.active {
   background: var(--border-strong);
   border-radius: 1.5px;
 }
 
-.resize-handle.active{
+.resize-handle.active {
   background: var(--text-tertiary);
 }
 
-.content{
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--bg-base);
-}
-
-.empty-state{
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-tertiary);
-  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.empty-icon{
-  width: 48px;
-  height: 48px;
-  margin-bottom: 14px;
-  opacity: 0.3;
-  color: var(--accent-primary);
-}
-
-.empty-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.empty-text{
-  font-size: 13px;
-  letter-spacing: 0.2px;
-}
-
-/* 底部面板 */
-.bottom-panel{
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 200px;
-  overflow: hidden;
-}
-
-.panel-tabs{
-  display: flex;
-  gap: 0;
-  border-bottom: 1px solid var(--border-default);
-  background: var(--bg-surface);
-  padding: 0 14px;
-  position: relative;
-}
-
-.panel-tabs::after{
+.panel-tabs::after {
   content: '';
   position: absolute;
   bottom: 0;
@@ -638,48 +509,17 @@ watch(() => config.value?.theme, (theme) => {
   pointer-events: none;
 }
 
-.panel-tab{
-  padding: 8px 16px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  border-bottom: 2px solid transparent;
-  transition: all 200ms ease;
-  letter-spacing: 0.3px;
-}
-
-.panel-tab:hover{
+.panel-tab:hover {
   color: var(--text-secondary);
 }
 
-.panel-tab.active{
+.panel-tab.active {
   color: var(--accent-primary);
   border-bottom-color: var(--accent-primary);
   text-shadow: 0 0 8px var(--accent-glow);
 }
 
-.panel-content{
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
-}
-
-.panel-layer{
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.panel-layer.layer-hidden{
-  visibility: hidden;
-  pointer-events: none;
-}
-
-/* 搜索框样式覆盖 */
-.sidebar :deep(.search-input){
+.sidebar :deep(.search-input) {
   border-radius: 8px;
 }
 </style>
