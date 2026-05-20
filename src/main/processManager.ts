@@ -3,6 +3,7 @@ import { BrowserWindow } from 'electron'
 import * as iconv from 'iconv-lite'
 import { deleteProject } from './configManager'
 import { getProjectEnv } from './platform'
+import { startLogFile, writeLog, endLogFile, analyzeErrors } from './logManager'
 
 // 运行中的进程
 const runningProcesses: Map<string, ChildProcess> = new Map()
@@ -139,6 +140,9 @@ function bufferLog(
 ): void {
   if (!data.trim()) return
 
+  // 同时写入日志文件
+  writeLog(projectId, type, data)
+
   if (!logBuffers.has(projectId)) {
     logBuffers.set(projectId, [])
   }
@@ -269,6 +273,9 @@ export async function startProject(
       })
     }
 
+    // 启动日志文件记录
+    startLogFile(projectId)
+
     runningProcesses.set(projectId, child)
 
     // 设置二进制编码
@@ -300,6 +307,9 @@ export async function startProject(
       // 清理日志缓冲区，发送剩余日志
       cleanupLogBuffer(mainWindow, projectId)
 
+      // 结束日志文件记录
+      endLogFile(projectId, code ?? 0)
+
       runningProcesses.delete(projectId)
       // 如果是用户手动停止的，状态设为 stopped
       const wasManualStop = manualStopped.has(projectId)
@@ -310,6 +320,18 @@ export async function startProject(
       } else {
         sendStatus(mainWindow, projectId, code === 0 ? 'stopped' : 'error', { exitCode: code ?? 0 })
         sendLog(mainWindow, projectId, 'info', `[${formatTime(Date.now())}] 进程退出，代码: ${code ?? 0}`)
+
+        // 异常退出时触发错误分析
+        if (code !== 0 && code !== null && mainWindow && !mainWindow.isDestroyed()) {
+          const analysis = analyzeErrors(projectId, code)
+          if (analysis) {
+            try {
+              mainWindow.webContents.send('error-analysis', analysis)
+            } catch {
+              // 窗口可能已销毁
+            }
+          }
+        }
       }
     })
 
@@ -317,6 +339,9 @@ export async function startProject(
     child.on('error', (error) => {
       // 清理日志缓冲区，发送剩余日志
       cleanupLogBuffer(mainWindow, projectId)
+
+      // 结束日志文件记录
+      endLogFile(projectId)
 
       runningProcesses.delete(projectId)
       sendStatus(mainWindow, projectId, 'error')
@@ -350,6 +375,9 @@ export function stopProject(projectId: string, mainWindow: BrowserWindow | null 
 
     // 清理日志缓冲区，发送剩余日志
     cleanupLogBuffer(mainWindow, projectId)
+
+    // 结束日志文件记录
+    endLogFile(projectId)
 
     if (process.platform === 'win32') {
       // Windows: 异步强制终止进程树，避免 taskkill 卡死主进程
