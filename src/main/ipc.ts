@@ -334,7 +334,7 @@ export function setupIpc(): void {
 
   // 停止项目
   ipcMain.handle('stop-project', (_event, projectId: string): boolean => {
-    return stopProject(projectId)
+    return stopProject(projectId, getMainWindow())
   })
 
   // 获取状态

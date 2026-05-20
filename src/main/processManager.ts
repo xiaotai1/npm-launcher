@@ -7,6 +7,12 @@ import { getProjectEnv } from './platform'
 // 运行中的进程
 const runningProcesses: Map<string, ChildProcess> = new Map()
 
+// 日志缓冲区（批量合并发送，减少 IPC 消息洪泛）
+const logBuffers: Map<string, string[]> = new Map()
+const logFlushTimers: Map<string, NodeJS.Timeout> = new Map()
+const LOG_FLUSH_INTERVAL = 100 // ms
+const LOG_MAX_BUFFER_SIZE = 50 // 超过此数量立即刷新
+
 // 记录用户手动停止的项目，避免被误判为 error
 const manualStopped: Set<string> = new Set()
 
@@ -123,6 +129,81 @@ function sendLog(
 }
 
 /**
+ * 缓冲日志（批量合并发送，减少 IPC 消息洪泛）
+ */
+function bufferLog(
+  mainWindow: BrowserWindow | null,
+  projectId: string,
+  type: LogEntry['type'],
+  data: string
+): void {
+  if (!data.trim()) return
+
+  if (!logBuffers.has(projectId)) {
+    logBuffers.set(projectId, [])
+  }
+  const buffer = logBuffers.get(projectId)!
+  buffer.push(JSON.stringify({ type, data }))
+
+  // 缓冲区满时立即刷新
+  if (buffer.length >= LOG_MAX_BUFFER_SIZE) {
+    flushLogBuffer(mainWindow, projectId)
+    return
+  }
+
+  // 首条日志时启动定时器
+  if (!logFlushTimers.has(projectId)) {
+    const timer = setTimeout(() => {
+      flushLogBuffer(mainWindow, projectId)
+    }, LOG_FLUSH_INTERVAL)
+    logFlushTimers.set(projectId, timer)
+  }
+}
+
+/**
+ * 刷新日志缓冲区，合并发送
+ */
+function flushLogBuffer(mainWindow: BrowserWindow | null, projectId: string): void {
+  const buffer = logBuffers.get(projectId)
+  if (!buffer || buffer.length === 0) return
+
+  const entries: { type: LogEntry['type']; data: string }[] = buffer.map((item) => JSON.parse(item))
+  logBuffers.set(projectId, [])
+
+  const timer = logFlushTimers.get(projectId)
+  if (timer) {
+    clearTimeout(timer)
+    logFlushTimers.delete(projectId)
+  }
+
+  // 合并同类型日志批量发送
+  const grouped = new Map<LogEntry['type'], string[]>()
+  for (const entry of entries) {
+    if (!grouped.has(entry.type)) {
+      grouped.set(entry.type, [])
+    }
+    grouped.get(entry.type)!.push(entry.data)
+  }
+  for (const [type, lines] of grouped) {
+    sendLog(mainWindow, projectId, type, lines.join('\n'))
+  }
+}
+
+/**
+ * 清理项目的日志缓冲区
+ */
+function cleanupLogBuffer(mainWindow: BrowserWindow | null, projectId: string): void {
+  flushLogBuffer(mainWindow, projectId)
+  logBuffers.delete(projectId)
+
+  const timer = logFlushTimers.get(projectId)
+  if (timer) {
+    clearTimeout(timer)
+    logFlushTimers.delete(projectId)
+  }
+}
+
+/**
  * 发送状态
  */
 function sendStatus(
@@ -199,7 +280,7 @@ export async function startProject(
       const decoded = decodeBuffer(buffer)
       const processed = processLogLine(decoded, Date.now())
       if (processed) {
-        sendLog(mainWindow, projectId, 'stdout', processed)
+        bufferLog(mainWindow, projectId, 'stdout', processed)
       }
     })
 
@@ -209,12 +290,15 @@ export async function startProject(
       const decoded = decodeBuffer(buffer)
       const processed = processLogLine(decoded, Date.now())
       if (processed) {
-        sendLog(mainWindow, projectId, 'stderr', processed)
+        bufferLog(mainWindow, projectId, 'stderr', processed)
       }
     })
 
     // 进程关闭
     child.on('close', (code) => {
+      // 清理日志缓冲区，发送剩余日志
+      cleanupLogBuffer(mainWindow, projectId)
+
       runningProcesses.delete(projectId)
       // 如果是用户手动停止的，状态设为 stopped
       const wasManualStop = manualStopped.has(projectId)
@@ -230,6 +314,9 @@ export async function startProject(
 
     // 进程错误
     child.on('error', (error) => {
+      // 清理日志缓冲区，发送剩余日志
+      cleanupLogBuffer(mainWindow, projectId)
+
       runningProcesses.delete(projectId)
       sendStatus(mainWindow, projectId, 'error')
       sendLog(mainWindow, projectId, 'error', `[${formatTime(Date.now())}] 进程错误: ${error.message}`)
@@ -250,7 +337,7 @@ export async function startProject(
 /**
  * 停止项目
  */
-export function stopProject(projectId: string): boolean {
+export function stopProject(projectId: string, mainWindow: BrowserWindow | null = null): boolean {
   const child = runningProcesses.get(projectId)
   if (!child) {
     return false
@@ -259,6 +346,9 @@ export function stopProject(projectId: string): boolean {
   try {
     // 标记为手动停止
     manualStopped.add(projectId)
+
+    // 清理日志缓冲区，发送剩余日志
+    cleanupLogBuffer(mainWindow, projectId)
 
     if (process.platform === 'win32') {
       // Windows: 强制终止进程树
