@@ -6,7 +6,8 @@ import LogConsole from './components/LogConsole.vue'
 import Terminal from './components/Terminal.vue'
 import Header from './components/Header.vue'
 import Toast from './components/Toast.vue'
-import type { Project, AppConfig, Folder, ProcessStatus, LogEntry } from './types'
+import ErrorAnalysisDialog from './components/ErrorAnalysisDialog.vue'
+import type { Project, AppConfig, Folder, ProcessStatus, LogEntry, ErrorAnalysis } from './types'
 
 // 状态
 const config = ref<AppConfig | null>(null)
@@ -20,6 +21,10 @@ const projectLogs = ref<Record<string, LogEntry[]>>({})
 const activeTab = ref<'logs' | 'terminal'>('logs')
 const toastMessage = ref('')
 const toastType = ref<'success' | 'error' | 'warning'>('error')
+
+// 错误分析状态
+const errorAnalysis = ref<ErrorAnalysis | null>(null)
+const showErrorAnalysis = ref(false)
 
 // 侧边栏状态
 const sidebarCollapsed = ref(false)
@@ -161,6 +166,31 @@ function handleStatus(status: ProcessStatus) {
   processStatuses.value[status.projectId] = status
 }
 
+function handleErrorAnalysis(analysis: ErrorAnalysis) {
+  errorAnalysis.value = analysis
+  showErrorAnalysis.value = true
+}
+
+function closeErrorAnalysis() {
+  showErrorAnalysis.value = false
+  errorAnalysis.value = null
+}
+
+async function openLogDir(projectId: string) {
+  await window.electronAPI.openLogDir(projectId)
+}
+
+async function handleAnalyzeErrors() {
+  if (!selectedProjectId.value) return
+  const status = processStatuses.value[selectedProjectId.value]
+  const exitCode = status?.exitCode ?? 1
+  const result = await window.electronAPI.analyzeErrors(selectedProjectId.value, exitCode)
+  if (result) {
+    errorAnalysis.value = result
+    showErrorAnalysis.value = true
+  }
+}
+
 // Node 版本切换
 async function handleNodeVersionChanged() {
   await loadNodeVersion()
@@ -295,6 +325,9 @@ onMounted(async () => {
   cleanupLog = window.electronAPI.onLogData(handleLog)
   cleanupStatus = window.electronAPI.onProcessStatus(handleStatus)
 
+  // 监听错误分析事件
+  window.electronAPI.onErrorAnalysis?.(handleErrorAnalysis)
+
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     if (config.value?.theme === 'system') {
       applyTheme('system')
@@ -315,6 +348,12 @@ watch(() => config.value?.theme, (theme) => {
 <template>
   <div class="h-screen flex flex-col bg-base">
     <Toast :message="toastMessage" :type="toastType" />
+    <ErrorAnalysisDialog
+      :visible="showErrorAnalysis"
+      :analysis="errorAnalysis"
+      @close="closeErrorAnalysis"
+      @open-log-dir="openLogDir"
+    />
     <Header
       :node-version="nodeVersion"
       :available-versions="nodeVersions"
@@ -408,6 +447,9 @@ watch(() => config.value?.theme, (theme) => {
                 <LogConsole
                   :logs="currentLogs"
                   :is-running="currentStatus?.status === 'running'"
+                  :project-id="selectedProjectId || ''"
+                  :has-error="currentStatus?.status === 'error'"
+                  @analyze-errors="handleAnalyzeErrors"
                 />
               </div>
               <div class="absolute inset-0 flex flex-col" :class="{ 'invisible pointer-events-none': activeTab !== 'terminal' }">
