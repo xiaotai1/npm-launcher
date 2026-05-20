@@ -31,6 +31,8 @@ import { execWithSudo } from './sudoExecutor'
 import { setupPtyIpc, broadcastToAllPty } from './ptyManager'
 import { isWindows, getShellEnv, getNvmPaths, clearShellEnvCache } from './platform'
 import type { Project, AppConfig } from './configManager'
+import { getLogFiles, getLogContent, getLogDirPath, analyzeErrors } from './logManager'
+import type { ErrorAnalysis } from './logManager'
 
 const execAsync = promisify(exec)
 
@@ -361,5 +363,61 @@ export function setupIpc(): void {
   ipcMain.handle('stop-all-projects', (): boolean => {
     stopAllProcesses()
     return true
+  })
+
+  // ===== 日志管理 =====
+
+  // 获取项目的历史日志文件列表
+  ipcMain.handle('get-log-files', (_event, projectId: string): string[] => {
+    return getLogFiles(projectId)
+  })
+
+  // 读取指定日志文件内容
+  ipcMain.handle('get-log-content', (_event, projectId: string, filename: string): string => {
+    return getLogContent(projectId, filename)
+  })
+
+  // 导出日志到用户选择的目录
+  ipcMain.handle('export-log', async (_event, projectId: string): Promise<{ success: boolean; path?: string; error?: string }> => {
+    try {
+      const logDir = getLogDirPath(projectId)
+      const files = getLogFiles(projectId)
+      if (files.length === 0) {
+        return { success: false, error: '没有可导出的日志文件' }
+      }
+
+      const win = BrowserWindow.getFocusedWindow()
+      const result = await dialog.showSaveDialog(win!, {
+        title: '导出日志',
+        defaultPath: files[0],
+        filters: [{ name: '日志文件', extensions: ['log'] }]
+      })
+      if (result.canceled || !result.filePath) {
+        return { success: false }
+      }
+
+      const latestLog = join(logDir, files[0])
+      const content = readFileSync(latestLog, 'utf-8')
+      writeFileSync(result.filePath, content, 'utf-8')
+      return { success: true, path: result.filePath }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // 手动触发错误分析
+  ipcMain.handle('analyze-errors', (_event, projectId: string, exitCode: number): ErrorAnalysis | null => {
+    return analyzeErrors(projectId, exitCode)
+  })
+
+  // 打开日志目录
+  ipcMain.handle('open-log-dir', async (_event, projectId: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const logDir = getLogDirPath(projectId)
+      await shell.openPath(logDir)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
   })
 }

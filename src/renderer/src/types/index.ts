@@ -39,6 +39,23 @@ export interface LogEntry {
   timestamp: number
 }
 
+// 错误分析匹配项
+export interface ErrorMatch {
+  name: string
+  severity: 'critical' | 'warning' | 'info'
+  lines: string[]
+  suggestion: string
+}
+
+// 错误分析结果
+export interface ErrorAnalysis {
+  projectId: string
+  exitCode: number
+  timestamp: number
+  matches: ErrorMatch[]
+  summary: string
+}
+
 // Electron API 类型声明
 declare global {
   interface Window {
