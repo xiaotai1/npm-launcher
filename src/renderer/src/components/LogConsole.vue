@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, computed } from 'vue'
 import type { LogEntry } from '../types'
+
+const MAX_LOG_LINES = 5000
+const VISIBLE_LOG_LINES = 500
 
 const props = defineProps<{
   logs: LogEntry[]
@@ -9,6 +12,22 @@ const props = defineProps<{
 
 const consoleEl = ref<HTMLElement | null>(null)
 const autoScroll = ref(true)
+
+// 截断后的日志（保留最新的 MAX_LOG_LINES 行）
+const truncatedLogs = computed(() => {
+  if (props.logs.length <= MAX_LOG_LINES) {
+    return props.logs
+  }
+  return props.logs.slice(-MAX_LOG_LINES)
+})
+
+// 可视区域日志（保留最新的 VISIBLE_LOG_LINES 行）
+const displayLogs = computed(() => {
+  if (truncatedLogs.value.length <= VISIBLE_LOG_LINES) {
+    return truncatedLogs.value
+  }
+  return truncatedLogs.value.slice(-VISIBLE_LOG_LINES)
+})
 
 watch(() => props.logs.length, async () => {
   if (autoScroll.value) {
@@ -48,7 +67,10 @@ function lineClass(type: LogEntry['type']): string {
       <div v-if="logs.length === 0" class="h-full flex items-center justify-center text-ttertiary font-sans text-[13px] opacity-50">
         <p>等待输出...</p>
       </div>
-      <div v-for="(log, i) in logs" :key="i" :class="['relative py-1 px-2 pl-3 mb-px rounded whitespace-pre-wrap break-all animate-log-in log-block', lineClass(log.type)]">
+      <div v-if="truncatedLogs.length > VISIBLE_LOG_LINES" class="sticky top-0 z-1 py-1 px-2 text-[11px] text-center text-tsecondary bg-elevated">
+        显示最近 {{ VISIBLE_LOG_LINES }} 行（共 {{ truncatedLogs.length }} 行）
+      </div>
+      <div v-for="(log, i) in displayLogs" :key="i" :class="['relative py-1 px-2 pl-3 mb-px rounded whitespace-pre-wrap break-all animate-log-in log-block', lineClass(log.type)]">
         <span class="font-mono text-xs leading-[1.7]">{{ log.data }}</span>
       </div>
     </div>
