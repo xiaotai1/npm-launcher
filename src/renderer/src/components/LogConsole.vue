@@ -8,10 +8,17 @@ const VISIBLE_LOG_LINES = 500
 const props = defineProps<{
   logs: LogEntry[]
   isRunning: boolean
+  projectId: string
+  hasError: boolean
+}>()
+
+const emit = defineEmits<{
+  'analyze-errors': []
 }>()
 
 const consoleEl = ref<HTMLElement | null>(null)
 const autoScroll = ref(true)
+const exporting = ref(false)
 
 // 截断后的日志（保留最新的 MAX_LOG_LINES 行）
 const truncatedLogs = computed(() => {
@@ -45,6 +52,19 @@ function onScroll() {
 function lineClass(type: LogEntry['type']): string {
   return `log-${type}`
 }
+
+async function exportLog() {
+  if (exporting.value) return
+  exporting.value = true
+  try {
+    const result = await window.electronAPI.exportLog(props.projectId)
+    if (result.success) {
+      // 导出成功
+    }
+  } finally {
+    exporting.value = false
+  }
+}
 </script>
 
 <template>
@@ -57,10 +77,28 @@ function lineClass(type: LogEntry['type']): string {
           运行中
         </span>
       </div>
-      <label class="flex items-center gap-1.5 text-[11px] text-ttertiary cursor-pointer select-none">
-        <input type="checkbox" v-model="autoScroll" class="w-3.5 h-3.5 cursor-pointer p-0" />
-        自动滚动
-      </label>
+      <div class="flex items-center gap-2">
+        <button
+          v-if="hasError"
+          class="flex items-center gap-1 py-0.5 px-2 text-[10px] font-medium text-error border border-error/30 rounded hover:bg-error/10 transition-colors"
+          @click="emit('analyze-errors')"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          分析错误
+        </button>
+        <button
+          class="flex items-center gap-1 py-0.5 px-2 text-[10px] font-medium text-ttertiary border border-border rounded hover:bg-hover transition-colors"
+          :disabled="exporting"
+          @click="exportLog"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          {{ exporting ? '导出中...' : '导出日志' }}
+        </button>
+        <label class="flex items-center gap-1.5 text-[11px] text-ttertiary cursor-pointer select-none">
+          <input type="checkbox" v-model="autoScroll" class="w-3.5 h-3.5 cursor-pointer p-0" />
+          自动滚动
+        </label>
+      </div>
     </div>
 
     <div ref="consoleEl" class="flex-1 overflow-y-auto px-4 py-3 font-mono text-xs leading-[1.8] bg-console-bg text-console-text relative console-body" @scroll="onScroll">
