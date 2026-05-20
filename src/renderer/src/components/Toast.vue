@@ -38,22 +38,25 @@ function close() {
 .error {
   background: rgba(239, 68, 68, 0.15);
   color: var(--error);
-  border-color: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.3);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  border-width: 1.5px;
 }
 
 .success {
   background: rgba(16, 185, 129, 0.15);
   color: var(--success);
-  border-color: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.3);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  border-width: 1.5px;
 }
 
 .warning {
   background: rgba(245, 158, 11, 0.15);
   color: var(--warning);
-  border-color: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.3);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  border-width: 1.5px;
 }
 
 .error .toast-icon {

@@ -84,7 +84,7 @@ function onOverlayClick() {
 
 .modal-dialog {
   background: var(--bg-surface);
-  border: 1px solid var(--border-default);
+  border: 1.5px solid var(--border-default);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
 }
 

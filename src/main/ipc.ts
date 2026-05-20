@@ -316,17 +316,6 @@ export function setupIpc(): void {
     nativeTheme.themeSource = theme
   })
 
-  ipcMain.handle('set-titlebar-overlay', (_event, theme: 'light' | 'dark') => {
-    const win = getMainWindow()
-    if (!win) return
-    if (process.platform !== 'win32') return
-    if (theme === 'dark') {
-      win.setTitleBarOverlay({ color: '#0f172a', symbolColor: '#94a3b8' })
-    } else {
-      win.setTitleBarOverlay({ color: '#ffffff', symbolColor: '#475569' })
-    }
-  })
-
   // ===== 进程管理 =====
 
   // 启动项目
@@ -429,11 +418,34 @@ export function setupIpc(): void {
     }
   })
 
-  // 动态更新标题栏覆盖层颜色（主题切换/弹框遮罩）
-  ipcMain.handle('update-titlebar', (_event, options: { color: string; symbolColor?: string }) => {
+  // ===== 窗口控制（自定义标题栏） =====
+  ipcMain.handle('window-minimize', () => {
     const win = getMainWindow()
     if (win && !win.isDestroyed()) {
-      win.setTitleBarOverlay(options)
+      win.minimize()
     }
+  })
+
+  ipcMain.handle('window-maximize', () => {
+    const win = getMainWindow()
+    if (win && !win.isDestroyed()) {
+      if (win.isMaximized()) {
+        win.unmaximize()
+      } else {
+        win.maximize()
+      }
+    }
+  })
+
+  ipcMain.handle('window-close', () => {
+    const win = getMainWindow()
+    if (win && !win.isDestroyed()) {
+      win.close()
+    }
+  })
+
+  ipcMain.handle('window-is-maximized', () => {
+    const win = getMainWindow()
+    return win?.isMaximized() ?? false
   })
 }

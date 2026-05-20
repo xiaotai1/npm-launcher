@@ -70,15 +70,6 @@ const contextMenu = ref<{ visible: boolean; x: number; y: number; target: Projec
 // 删除确认
 const confirmState = ref<{ visible: boolean; type: 'project' | 'folder'; id: string; name: string }>({ visible: false, type: 'project', id: '', name: '' })
 
-watch(() => confirmState.value.visible, (val) => {
-  if (window.electronAPI.platform === 'win32') {
-    window.electronAPI.updateTitlebar({
-      color: val ? 'rgba(0,0,0,0.55)' : (document.documentElement.getAttribute('data-theme') !== 'light' ? '#0f172a' : '#ffffff'),
-      symbolColor: val ? 'rgba(255,255,255,0.5)' : undefined
-    })
-  }
-})
-
 // 折叠状态
 const collapsedFolders = ref<Set<string>>(new Set())
 

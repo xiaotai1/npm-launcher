@@ -29,8 +29,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 原生主题
   setNativeTheme: (theme: 'light' | 'dark' | 'system'): Promise<void> =>
     ipcRenderer.invoke('set-native-theme', theme),
-  setTitlebarOverlay: (theme: 'light' | 'dark'): Promise<void> =>
-    ipcRenderer.invoke('set-titlebar-overlay', theme),
+
+  // 窗口控制（自定义标题栏）
+  minimize: (): Promise<void> => ipcRenderer.invoke('window-minimize'),
+  maximize: (): Promise<void> => ipcRenderer.invoke('window-maximize'),
+  close: (): Promise<void> => ipcRenderer.invoke('window-close'),
+  isMaximized: (): Promise<boolean> => ipcRenderer.invoke('window-is-maximized'),
 
   // 文件对话框
   selectFolder: (): Promise<{ canceled: boolean; path: string | null }> =>

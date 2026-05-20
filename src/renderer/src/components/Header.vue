@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import WindowControls from './WindowControls.vue'
 
 const props = defineProps<{
   nodeVersion: string | null
@@ -53,11 +54,12 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 </script>
 
 <template>
-  <header class="h-12 px-5 flex items-center justify-between border-b border-border bg-surface relative select-none app-header">
+  <header class="h-12 flex items-center justify-between border-b border-border bg-surface relative select-none app-header">
     <div class="flex items-center header-left" :class="{ 'mac-traffic-light': isMac }">
       <span class="text-[13px] font-semibold tracking-[-0.3px] text-tsecondary">NPM Launcher</span>
     </div>
-    <div class="flex items-center gap-1.5 header-right" :class="{ 'mac-header-right': isMac }">
+    <div class="flex items-center">
+      <div class="flex items-center gap-1.5 header-right" :class="{ 'mac-header-right': isMac }">
       <div class="relative" ref="dropdownRef">
         <button
           class="flex items-center gap-1.5 py-1 px-3.5 pl-2.5 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 ease-out node-badge"
@@ -104,6 +106,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       <button class="w-8 h-8 flex items-center justify-center rounded-lg text-ttertiary text-sm transition-all duration-200 ease-out theme-btn" @click="emit('toggle-theme')" :title="themeLabel[theme]">
         {{ themeIcon[theme] }}
       </button>
+      </div>
+      <WindowControls v-if="!isMac" />
     </div>
   </header>
 </template>
@@ -126,19 +130,16 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 .header-left {
   -webkit-app-region: no-drag;
+  padding-left: 20px;
 }
 
 .header-left.mac-traffic-light {
-  padding-left: 52px;
+  padding-left: 72px;
 }
 
 .header-right {
-  padding-right: 136px;
-  -webkit-app-region: no-drag;
-}
-
-.header-right.mac-header-right {
   padding-right: 12px;
+  -webkit-app-region: no-drag;
 }
 
 .node-badge {

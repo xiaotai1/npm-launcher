@@ -93,7 +93,11 @@ declare global {
       openLogDir: (projectId: string) => Promise<{ success: boolean; error?: string }>
       onErrorAnalysis: (callback: (analysis: ErrorAnalysis) => void) => () => void
       platform: string
-      updateTitlebar: (options: { color: string; symbolColor?: string }) => Promise<void>
+      setNativeTheme: (theme: 'light' | 'dark' | 'system') => Promise<void>
+      minimize: () => Promise<void>
+      maximize: () => Promise<void>
+      close: () => Promise<void>
+      isMaximized: () => Promise<boolean>
       ptySpawn: (id: string, cols: number, rows: number, cwd: string, nodeVersion?: string) => void
       ptyWrite: (id: string, data: string) => void
       ptyResize: (id: string, cols: number, rows: number) => void

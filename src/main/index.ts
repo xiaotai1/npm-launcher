@@ -49,14 +49,10 @@ function createWindow() {
     minWidth: 1000,
     minHeight: 700,
     show: false,
-    frame: true,
+    // macOS 保持原生标题栏样式，Windows 使用自定义
+    frame: process.platform !== 'win32',
+    titleBarStyle: isMac ? 'hidden' : undefined,
     icon: join(__dirname, '../../build/icon.png'),
-    titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#0f172a',
-      symbolColor: '#94a3b8',
-      height: 48
-    },
     backgroundColor: '#0f172a',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
