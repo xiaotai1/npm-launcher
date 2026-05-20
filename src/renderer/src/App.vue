@@ -7,7 +7,7 @@ import Terminal from './components/Terminal.vue'
 import Header from './components/Header.vue'
 import Toast from './components/Toast.vue'
 import ErrorAnalysisDialog from './components/ErrorAnalysisDialog.vue'
-import type { Project, AppConfig, Folder, ProcessStatus, LogEntry, ErrorAnalysis } from './types'
+import type { Project, AppConfig, Folder, ProcessStatus, ErrorAnalysis } from './types'
 
 // 状态
 const config = ref<AppConfig | null>(null)
@@ -17,7 +17,6 @@ const currentNodeVersion = ref<string | null>(null)
 const switchingVersion = ref(false)
 const selectedProjectId = ref<string | null>(null)
 const processStatuses = ref<Record<string, ProcessStatus>>({})
-const projectLogs = ref<Record<string, LogEntry[]>>({})
 const activeTab = ref<'logs' | 'terminal'>('logs')
 const toastMessage = ref('')
 const toastType = ref<'success' | 'error' | 'warning'>('error')
@@ -30,20 +29,15 @@ const showErrorAnalysis = ref(false)
 const sidebarCollapsed = ref(false)
 const sidebarWidth = ref(parseInt(localStorage.getItem('sidebarWidth') || '260', 10))
 const isResizing = ref(false)
+const logConsoleRef = ref<InstanceType<typeof LogConsole> | null>(null)
 
 // 清理函数
-let cleanupLog: (() => void) | null = null
 let cleanupStatus: (() => void) | null = null
 
 // 计算属性
 const selectedProject = computed(() => {
   if (!selectedProjectId.value || !config.value) return null
   return config.value.projects.find(p => p.id === selectedProjectId.value) || null
-})
-
-const currentLogs = computed(() => {
-  if (!selectedProjectId.value) return []
-  return projectLogs.value[selectedProjectId.value] || []
 })
 
 const currentStatus = computed(() => {
@@ -76,7 +70,6 @@ function selectProject(id: string) {
 
 function startEditProject(id: string) {
   selectedProjectId.value = id
-  // 触发 ProjectDetail 进入编辑模式 —— 通过临时设置一个标记
   editTrigger.value = Date.now()
 }
 
@@ -139,7 +132,6 @@ async function moveToFolder(projectId: string, folderId: string | null) {
 async function startProject() {
   const project = selectedProject.value
   if (!project) return
-  projectLogs.value[project.id] = []
   await window.electronAPI.startProject(project.id, project.path, project.command, project.nodeVersion)
 }
 
@@ -147,19 +139,6 @@ async function stopProject() {
   const project = selectedProject.value
   if (!project) return
   await window.electronAPI.stopProject(project.id)
-}
-
-function clearLogs() {
-  if (selectedProjectId.value) {
-    projectLogs.value[selectedProjectId.value] = []
-  }
-}
-
-function handleLog(log: LogEntry) {
-  if (!projectLogs.value[log.projectId]) {
-    projectLogs.value[log.projectId] = []
-  }
-  projectLogs.value[log.projectId].push(log)
 }
 
 function handleStatus(status: ProcessStatus) {
@@ -191,6 +170,10 @@ async function handleAnalyzeErrors() {
   }
 }
 
+function handleExportResult(success: boolean, message: string) {
+  showToast(message, success ? 'success' : 'error')
+}
+
 // Node 版本切换
 async function handleNodeVersionChanged() {
   await loadNodeVersion()
@@ -201,7 +184,6 @@ async function switchNodeVersion(version: string) {
   const result = await window.electronAPI.switchNodeVersion(version)
   switchingVersion.value = false
   if (result.success) {
-    // 信任切换结果，直接更新 UI
     const v = version.startsWith('v') ? version : 'v' + version
     nodeVersion.value = v
     currentNodeVersion.value = v
@@ -322,7 +304,6 @@ onMounted(async () => {
   await Promise.all([loadConfig(), loadNodeVersion(), loadNodeVersions()])
   applyTheme(config.value?.theme || 'system')
 
-  cleanupLog = window.electronAPI.onLogData(handleLog)
   cleanupStatus = window.electronAPI.onProcessStatus(handleStatus)
 
   // 监听错误分析事件
@@ -336,7 +317,6 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  cleanupLog?.()
   cleanupStatus?.()
 })
 
@@ -427,7 +407,7 @@ watch(() => config.value?.theme, (theme) => {
             @delete="deleteProject"
             @start="startProject"
             @stop="stopProject"
-            @clear-logs="clearLogs"
+            @clear-logs="logConsoleRef?.clear()"
             @toast="showToast"
             @set-node-version="setProjectNodeVersion"
           />
@@ -445,11 +425,13 @@ watch(() => config.value?.theme, (theme) => {
             <div class="flex-1 flex flex-col overflow-hidden relative">
               <div v-show="activeTab === 'logs'" class="absolute inset-0 flex flex-col">
                 <LogConsole
-                  :logs="currentLogs"
+                  ref="logConsoleRef"
                   :is-running="currentStatus?.status === 'running'"
                   :project-id="selectedProjectId || ''"
                   :has-error="currentStatus?.status === 'error'"
+                  :has-logs="currentStatus?.status === 'running' || currentStatus?.status === 'error'"
                   @analyze-errors="handleAnalyzeErrors"
+                  @export-result="handleExportResult"
                 />
               </div>
               <div class="absolute inset-0 flex flex-col" :class="{ 'invisible pointer-events-none': activeTab !== 'terminal' }">

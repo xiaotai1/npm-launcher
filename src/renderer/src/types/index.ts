@@ -86,6 +86,12 @@ declare global {
       stopAllProjects: () => Promise<boolean>
       onLogData: (callback: (log: LogEntry) => void) => () => void
       onProcessStatus: (callback: (status: ProcessStatus) => void) => () => void
+      getLogFiles: (projectId: string) => Promise<string[]>
+      getLogContent: (projectId: string, filename: string) => Promise<string>
+      exportLog: (projectId: string) => Promise<{ success: boolean; path?: string; error?: string }>
+      analyzeErrors: (projectId: string, exitCode: number) => Promise<ErrorAnalysis | null>
+      openLogDir: (projectId: string) => Promise<{ success: boolean; error?: string }>
+      onErrorAnalysis: (callback: (analysis: ErrorAnalysis) => void) => () => void
       platform: string
       ptySpawn: (id: string, cols: number, rows: number, cwd: string, nodeVersion?: string) => void
       ptyWrite: (id: string, data: string) => void

@@ -9,9 +9,9 @@ import { startLogFile, writeLog, endLogFile, analyzeErrors } from './logManager'
 const runningProcesses: Map<string, ChildProcess> = new Map()
 
 // 日志缓冲区（批量合并发送，减少 IPC 消息洪泛）
-const logBuffers: Map<string, string[]> = new Map()
+const logBuffers: Map<string, { type: LogEntry['type']; data: string }[]> = new Map()
 const logFlushTimers: Map<string, NodeJS.Timeout> = new Map()
-const LOG_FLUSH_INTERVAL = 100 // ms
+const LOG_FLUSH_INTERVAL = 30 // ms
 const LOG_MAX_BUFFER_SIZE = 50 // 超过此数量立即刷新
 
 // 记录用户手动停止的项目，避免被误判为 error
@@ -86,22 +86,27 @@ function formatTime(timestamp: number): string {
 }
 
 /**
- * 处理日志行（添加时间戳，清理 ANSI）
+ * 处理日志行（去除 ANSI，加时间戳和类型着色）
  */
-function processLogLine(text: string, timestamp: number): string {
-  // 移除 ANSI
-  let line = stripAnsi(text)
-  // 移除回车符
-  line = line.replace(/\r/g, '')
-  // 移除控制字符
+function processLogLine(text: string, type: LogEntry['type'], timestamp: number): string {
+  let clean = stripAnsi(text)
+  clean = clean.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
   // eslint-disable-next-line no-control-regex
-  line = line.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
-  // 跳过空行
-  if (!line.trim()) {
-    return ''
+  clean = clean.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
+
+  const ts = `\x1b[2m[${formatTime(timestamp)}]\x1b[22m`
+  let prefix = ''
+  let suffix = ''
+  switch (type) {
+    case 'error': prefix = '\x1b[38;2;224;108;117m'; suffix = '\x1b[0m'; break
+    case 'stderr': prefix = '\x1b[38;2;209;154;102m'; suffix = '\x1b[0m'; break
+    case 'info': prefix = '\x1b[38;2;97;175;239m'; suffix = '\x1b[0m'; break
   }
-  // 添加时间戳前缀
-  return `[${formatTime(timestamp)}] ${line}`
+
+  const lines = clean.split('\n').filter(l => l.trim())
+  if (lines.length === 0) return ''
+
+  return lines.map(l => `${ts} ${prefix}${l}${suffix}`).join('\r\n')
 }
 
 /**
@@ -140,14 +145,14 @@ function bufferLog(
 ): void {
   if (!data.trim()) return
 
-  // 同时写入日志文件
-  writeLog(projectId, type, data)
+  // 同时写入日志文件（清理 ANSI 和 \r，保证文件内容可读）
+  writeLog(projectId, type, stripAnsi(data).replace(/\r\n/g, '\n').replace(/\r/g, '\n'))
 
   if (!logBuffers.has(projectId)) {
     logBuffers.set(projectId, [])
   }
   const buffer = logBuffers.get(projectId)!
-  buffer.push(JSON.stringify({ type, data }))
+  buffer.push({ type, data })
 
   // 缓冲区满时立即刷新
   if (buffer.length >= LOG_MAX_BUFFER_SIZE) {
@@ -171,8 +176,7 @@ function flushLogBuffer(mainWindow: BrowserWindow | null, projectId: string): vo
   const buffer = logBuffers.get(projectId)
   if (!buffer || buffer.length === 0) return
 
-  const entries: { type: LogEntry['type']; data: string }[] = buffer.map((item) => JSON.parse(item))
-  logBuffers.set(projectId, [])
+  const entries = buffer.splice(0)
 
   const timer = logFlushTimers.get(projectId)
   if (timer) {
@@ -180,7 +184,7 @@ function flushLogBuffer(mainWindow: BrowserWindow | null, projectId: string): vo
     logFlushTimers.delete(projectId)
   }
 
-  // 合并同类型日志批量发送
+  // 合并同类型日志为一条 IPC 消息，大幅减少 IPC 调用次数
   const grouped = new Map<LogEntry['type'], string[]>()
   for (const entry of entries) {
     if (!grouped.has(entry.type)) {
@@ -189,7 +193,7 @@ function flushLogBuffer(mainWindow: BrowserWindow | null, projectId: string): vo
     grouped.get(entry.type)!.push(entry.data)
   }
   for (const [type, lines] of grouped) {
-    sendLog(mainWindow, projectId, type, lines.join('\n'))
+    sendLog(mainWindow, projectId, type, lines.join('\r\n'))
   }
 }
 
@@ -286,7 +290,7 @@ export async function startProject(
     child.stdout?.on('data', (data: string) => {
       const buffer = Buffer.from(data, 'binary')
       const decoded = decodeBuffer(buffer)
-      const processed = processLogLine(decoded, Date.now())
+      const processed = processLogLine(decoded, 'stdout', Date.now())
       if (processed) {
         bufferLog(mainWindow, projectId, 'stdout', processed)
       }
@@ -296,7 +300,7 @@ export async function startProject(
     child.stderr?.on('data', (data: string) => {
       const buffer = Buffer.from(data, 'binary')
       const decoded = decodeBuffer(buffer)
-      const processed = processLogLine(decoded, Date.now())
+      const processed = processLogLine(decoded, 'stderr', Date.now())
       if (processed) {
         bufferLog(mainWindow, projectId, 'stderr', processed)
       }
@@ -316,10 +320,10 @@ export async function startProject(
       manualStopped.delete(projectId)
       if (wasManualStop) {
         sendStatus(mainWindow, projectId, 'stopped', { exitCode: code ?? 0 })
-        sendLog(mainWindow, projectId, 'info', `[${formatTime(Date.now())}] 已手动停止`)
+        sendLog(mainWindow, projectId, 'info', processLogLine('已手动停止', 'info', Date.now()))
       } else {
         sendStatus(mainWindow, projectId, code === 0 ? 'stopped' : 'error', { exitCode: code ?? 0 })
-        sendLog(mainWindow, projectId, 'info', `[${formatTime(Date.now())}] 进程退出，代码: ${code ?? 0}`)
+        sendLog(mainWindow, projectId, 'info', processLogLine(`进程退出，代码: ${code ?? 0}`, 'info', Date.now()))
 
         // 异常退出时触发错误分析
         if (code !== 0 && code !== null && mainWindow && !mainWindow.isDestroyed()) {
@@ -345,17 +349,17 @@ export async function startProject(
 
       runningProcesses.delete(projectId)
       sendStatus(mainWindow, projectId, 'error')
-      sendLog(mainWindow, projectId, 'error', `[${formatTime(Date.now())}] 进程错误: ${error.message}`)
+      sendLog(mainWindow, projectId, 'error', processLogLine(`进程错误: ${error.message}`, 'error', Date.now()))
     })
 
     // 通知已启动
     sendStatus(mainWindow, projectId, 'running', { pid: child.pid })
-    sendLog(mainWindow, projectId, 'info', `[${formatTime(Date.now())}] 启动: npm run ${command}`)
-    sendLog(mainWindow, projectId, 'info', `[${formatTime(Date.now())}] 目录: ${projectPath}`)
+    sendLog(mainWindow, projectId, 'info', processLogLine(`启动: npm run ${command}`, 'info', Date.now()))
+    sendLog(mainWindow, projectId, 'info', processLogLine(`目录: ${projectPath}`, 'info', Date.now()))
 
     return true
   } catch (error: any) {
-    sendLog(mainWindow, projectId, 'error', `[${formatTime(Date.now())}] 启动失败: ${error.message}`)
+    sendLog(mainWindow, projectId, 'error', processLogLine(`启动失败: ${error.message}`, 'error', Date.now()))
     return false
   }
 }
@@ -372,33 +376,45 @@ export function stopProject(projectId: string, mainWindow: BrowserWindow | null 
   try {
     // 标记为手动停止
     manualStopped.add(projectId)
+    runningProcesses.delete(projectId)
 
-    // 清理日志缓冲区，发送剩余日志
-    cleanupLogBuffer(mainWindow, projectId)
+    // 立即通知 UI 进程已停止，不用等 close 事件
+    sendStatus(mainWindow, projectId, 'stopped')
 
-    // 结束日志文件记录
-    endLogFile(projectId)
-
+    // 杀进程树
+    const pid = child.pid
     if (process.platform === 'win32') {
-      // Windows: 异步强制终止进程树，避免 taskkill 卡死主进程
-      if (child.pid) {
-        exec(`taskkill /f /t /pid ${child.pid}`, (error) => {
+      // Windows: taskkill /f 已是强制终止
+      if (pid) {
+        exec(`taskkill /f /t /pid ${pid}`, (error) => {
           if (error) {
-            console.warn(`taskkill failed for pid ${child.pid}:`, error.message)
+            console.warn(`taskkill failed for pid ${pid}:`, error.message)
           }
         })
       }
-    } else {
-      // macOS/Linux: 杀整个进程组（detached 创建的进程组）
+    } else if (pid) {
+      // macOS/Linux: SIGTERM 先尝试优雅退出，1 秒后强杀
       try {
-        if (child.pid) {
-          process.kill(-child.pid, 'SIGTERM')
-        }
+        process.kill(-pid, 'SIGTERM')
       } catch {
         child.kill('SIGTERM')
       }
+      setTimeout(() => {
+        try {
+          process.kill(-pid, 0) // 检查进程组是否还存活
+          process.kill(-pid, 'SIGKILL') // 还活着就强杀
+        } catch {
+          // 已退出，无需处理
+        }
+      }, 1000)
     }
-    runningProcesses.delete(projectId)
+
+    // 异步清理日志，不阻塞返回
+    setImmediate(() => {
+      cleanupLogBuffer(mainWindow, projectId)
+      endLogFile(projectId)
+    })
+
     return true
   } catch {
     manualStopped.delete(projectId)

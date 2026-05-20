@@ -1,7 +1,7 @@
-import { ipcMain, dialog, BrowserWindow, nativeTheme, shell } from 'electron'
+import { app, ipcMain, dialog, BrowserWindow, nativeTheme, shell } from 'electron'
 import { exec, spawn } from 'child_process'
 import { promisify } from 'util'
-import { readdirSync, readFileSync, readlinkSync, existsSync } from 'fs'
+import { readdirSync, readFileSync, readlinkSync, existsSync, writeFileSync, mkdirSync, promises as fsp } from 'fs'
 import { join, basename } from 'path'
 import * as os from 'os'
 import {
@@ -378,7 +378,7 @@ export function setupIpc(): void {
   })
 
   // 导出日志到用户选择的目录
-  ipcMain.handle('export-log', async (_event, projectId: string): Promise<{ success: boolean; path?: string; error?: string }> => {
+  ipcMain.handle('export-log', async (event, projectId: string): Promise<{ success: boolean; path?: string; error?: string }> => {
     try {
       const logDir = getLogDirPath(projectId)
       const files = getLogFiles(projectId)
@@ -386,19 +386,27 @@ export function setupIpc(): void {
         return { success: false, error: '没有可导出的日志文件' }
       }
 
-      const win = BrowserWindow.getFocusedWindow()
-      const result = await dialog.showSaveDialog(win!, {
+      const win = BrowserWindow.fromWebContents(event.sender) || BrowserWindow.getAllWindows()[0]
+      if (!win) {
+        return { success: false, error: '无法获取窗口' }
+      }
+
+      // 拼接完整的默认保存路径（桌面 + 文件名）
+      const homeDir = app.getPath('home')
+      const defaultPath = join(homeDir, 'Desktop', files[0])
+
+      const result = await dialog.showSaveDialog(win, {
         title: '导出日志',
-        defaultPath: files[0],
-        filters: [{ name: '日志文件', extensions: ['log'] }]
+        defaultPath,
+        filters: [{ name: '日志文件', extensions: ['log'] }, { name: '所有文件', extensions: ['*'] }]
       })
       if (result.canceled || !result.filePath) {
         return { success: false }
       }
 
       const latestLog = join(logDir, files[0])
-      const content = readFileSync(latestLog, 'utf-8')
-      writeFileSync(result.filePath, content, 'utf-8')
+      const content = await fsp.readFile(latestLog, 'utf-8')
+      await fsp.writeFile(result.filePath, content, 'utf-8')
       return { success: true, path: result.filePath }
     } catch (error: any) {
       return { success: false, error: error.message }

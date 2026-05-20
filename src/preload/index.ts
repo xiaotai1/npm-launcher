@@ -67,6 +67,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('process-status', handler)
   },
 
+  // 日志管理
+  getLogFiles: (projectId: string): Promise<string[]> =>
+    ipcRenderer.invoke('get-log-files', projectId),
+  getLogContent: (projectId: string, filename: string): Promise<string> =>
+    ipcRenderer.invoke('get-log-content', projectId, filename),
+  exportLog: (projectId: string): Promise<{ success: boolean; path?: string; error?: string }> =>
+    ipcRenderer.invoke('export-log', projectId),
+  analyzeErrors: (projectId: string, exitCode: number): Promise<any> =>
+    ipcRenderer.invoke('analyze-errors', projectId, exitCode),
+  openLogDir: (projectId: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('open-log-dir', projectId),
+  onErrorAnalysis: (callback: (analysis: any) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, analysis: any) => callback(analysis)
+    ipcRenderer.on('error-analysis', handler)
+    return () => ipcRenderer.removeListener('error-analysis', handler)
+  },
+
   // 平台信息
   platform: process.platform,
 

@@ -73,6 +73,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
           <div v-if="showDropdown" class="absolute top-full mt-2 right-0 w-65 bg-surface border border-border rounded-xl p-1 z-100 animate-scale-in version-dropdown">
             <div class="flex items-center justify-between px-1 pt-1">
               <span class="px-2.5 pt-1.75 pb-1.25 text-[11px] font-semibold text-ttertiary tracking-[0.3px]">已安装版本</span>
+              <span class="text-[10px] text-blue-500 font-medium mr-2">仅识别 nvm</span>
               <button class="w-6 h-6 flex items-center justify-center rounded-md text-ttertiary mr-1 refresh-btn" @click="refreshVersions" title="刷新版本列表">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="23 4 23 10 17 10"/>

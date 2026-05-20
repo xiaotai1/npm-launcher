@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, toRaw } from 'vue'
+import { ref, watch, toRaw, onMounted, onBeforeUnmount } from 'vue'
 import type { Project, ProcessStatus } from '../types'
 import ConfirmDialog from './ConfirmDialog.vue'
 
@@ -101,6 +101,16 @@ async function openInVscode() {
 }
 
 const showVersionDropdown = ref(false)
+const versionDropdownRef = ref<HTMLElement>()
+
+function handleClickOutside(e: MouseEvent) {
+  if (showVersionDropdown.value && versionDropdownRef.value && !versionDropdownRef.value.contains(e.target as Node)) {
+    showVersionDropdown.value = false
+  }
+}
+
+onMounted(() => document.addEventListener('click', handleClickOutside))
+onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 
 function selectNodeVersion(version: string | null) {
   emit('set-node-version', props.project.id, version)
@@ -152,13 +162,14 @@ function selectNodeVersion(version: string | null) {
         </div>
         <div class="flex items-center gap-3 min-w-0">
           <span class="w-14 shrink-0 text-[9px] font-medium text-ttertiary uppercase tracking-[0.5px]">Node</span>
-          <div class="relative">
+          <div ref="versionDropdownRef" class="relative">
             <button class="flex items-center gap-1.5 py-0.5 px-2 text-[11px] rounded-[5px] text-tsecondary border border-border transition-all duration-200 ease-out version-btn" @click="showVersionDropdown = !showVersionDropdown">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
               <span :class="['font-mono text-[11px] version-text', { custom: project.nodeVersion }]">{{ project.nodeVersion || '跟随系统 (' + (globalNodeVersion || '--') + ')' }}</span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
             <div v-if="showVersionDropdown" class="absolute left-0 top-full mt-1 min-w-45 bg-surface border border-border rounded-xl p-1 z-100 animate-scale-in origin-top-left version-dropdown">
+              <div class="px-2.5 pt-1.5 pb-1 text-[10px] text-blue-500 font-medium">仅识别 nvm 管理的版本</div>
               <button :class="['flex items-center gap-1.5 w-full py-1.5 px-2.5 text-[11px] rounded-[5px] text-left transition-all duration-150 ease-out font-mono version-option', { active: !project.nodeVersion }]" @click="selectNodeVersion(null)">
                 跟随系统{{ globalNodeVersion ? ' (' + globalNodeVersion + ')' : '' }}
               </button>
