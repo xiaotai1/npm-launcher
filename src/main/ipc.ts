@@ -428,4 +428,12 @@ export function setupIpc(): void {
       return { success: false, error: error.message }
     }
   })
+
+  // 动态更新标题栏覆盖层颜色（主题切换/弹框遮罩）
+  ipcMain.handle('update-titlebar', (_event, options: { color: string; symbolColor?: string }) => {
+    const win = getMainWindow()
+    if (win && !win.isDestroyed()) {
+      win.setTitleBarOverlay(options)
+    }
+  })
 }

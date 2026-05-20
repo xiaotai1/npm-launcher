@@ -27,6 +27,16 @@ const editScripts = ref<string[]>([])
 const isRunning = () => props.status?.status === 'running'
 const showDeleteConfirm = ref(false)
 
+// 弹框显示时同步更新标题栏颜色为遮罩色，关闭时恢复
+watch(showDeleteConfirm, (val) => {
+  if (window.electronAPI.platform === 'win32') {
+    window.electronAPI.updateTitlebar({
+      color: val ? 'rgba(0,0,0,0.55)' : (document.documentElement.getAttribute('data-theme') !== 'light' ? '#0f172a' : '#ffffff'),
+      symbolColor: val ? 'rgba(255,255,255,0.5)' : undefined
+    })
+  }
+})
+
 watch(() => props.project, (p) => {
   editForm.value = { ...p }
   isEditing.value = false

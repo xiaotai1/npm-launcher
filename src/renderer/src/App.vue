@@ -25,6 +25,16 @@ const toastType = ref<'success' | 'error' | 'warning'>('error')
 const errorAnalysis = ref<ErrorAnalysis | null>(null)
 const showErrorAnalysis = ref(false)
 
+// Windows 弹框时同步标题栏遮罩色
+watch(showErrorAnalysis, (val) => {
+  if (window.electronAPI.platform === 'win32') {
+    window.electronAPI.updateTitlebar({
+      color: val ? 'rgba(0,0,0,0.55)' : (document.documentElement.getAttribute('data-theme') !== 'light' ? '#0f172a' : '#ffffff'),
+      symbolColor: val ? 'rgba(255,255,255,0.5)' : undefined
+    })
+  }
+})
+
 // 侧边栏状态
 const sidebarCollapsed = ref(false)
 const sidebarWidth = ref(parseInt(localStorage.getItem('sidebarWidth') || '260', 10))

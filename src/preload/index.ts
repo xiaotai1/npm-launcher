@@ -87,6 +87,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 平台信息
   platform: process.platform,
 
+  updateTitlebar: (options: { color: string; symbolColor?: string }) =>
+    ipcRenderer.invoke('update-titlebar', options),
+
   // PTY 终端
   ptySpawn: (id: string, cols: number, rows: number, cwd: string, nodeVersion?: string) => {
     ipcRenderer.send('pty-spawn', { id, cols, rows, cwd, nodeVersion })
