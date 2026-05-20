@@ -1,4 +1,4 @@
-import { spawn, ChildProcess } from 'child_process'
+import { spawn, exec, ChildProcess } from 'child_process'
 import { BrowserWindow } from 'electron'
 import * as iconv from 'iconv-lite'
 import { deleteProject } from './configManager'
@@ -247,6 +247,7 @@ export async function startProject(
       const projectEnv = await getProjectEnv(nodeVersion)
       child = spawn('cmd.exe', ['/c', `npm run ${command} 2>&1`], {
         cwd: projectPath,
+        windowsHide: true,
         env: {
           ...projectEnv,
           FORCE_COLOR: '0',
@@ -351,8 +352,14 @@ export function stopProject(projectId: string, mainWindow: BrowserWindow | null 
     cleanupLogBuffer(mainWindow, projectId)
 
     if (process.platform === 'win32') {
-      // Windows: 强制终止进程树
-      spawn('taskkill', ['/pid', String(child.pid), '/f', '/t'])
+      // Windows: 异步强制终止进程树，避免 taskkill 卡死主进程
+      if (child.pid) {
+        exec(`taskkill /f /t /pid ${child.pid}`, (error) => {
+          if (error) {
+            console.warn(`taskkill failed for pid ${child.pid}:`, error.message)
+          }
+        })
+      }
     } else {
       // macOS/Linux: 杀整个进程组（detached 创建的进程组）
       try {
