@@ -39,6 +39,12 @@ function askVersion(current) {
 }
 
 async function main() {
+  if (args.includes('--skip')) {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+    console.log(`版本: ${pkg.version} (跳过 bump)`)
+    return
+  }
+
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
   const current = pkg.version
   let newVersion

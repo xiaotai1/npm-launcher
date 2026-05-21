@@ -1,6 +1,6 @@
 {
   "name": "npm-launcher",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "NPM 项目启动器 - 可视化管理多个 NPM 项目",
   "main": "./out/main/index.js",
   "author": "xiaotai",
@@ -12,8 +12,9 @@
     "start": "electron-vite preview",
     "postinstall": "electron-builder install-app-deps",
     "dist": "node scripts/bump-version.js && npm run build && electron-builder",
-    "dist:win": "node scripts/bump-version.js && npm run build && electron-builder --win",
-    "dist:mac": "node scripts/bump-version.js && npm run build && electron-builder --mac",
+    "dist:all": "node scripts/bump-version.js && npm run build && electron-builder --mac && electron-builder --win",
+    "dist:win": "node scripts/bump-version.js --skip && npm run build && electron-builder --win",
+    "dist:mac": "node scripts/bump-version.js --skip && npm run build && electron-builder --mac",
     "dist:ask": "node scripts/bump-version.js --ask && npm run build && electron-builder",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
