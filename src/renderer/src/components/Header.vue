@@ -134,7 +134,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .header-left.mac-traffic-light {
-  padding-left: 72px;
+  padding-left: 80px;
 }
 
 .header-right {
