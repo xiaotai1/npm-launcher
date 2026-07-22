@@ -22,3 +22,5 @@ Thumbs.db
 .env.local
 .claude/
 .worktrees/
+.planning/
+docs/superpowers/
