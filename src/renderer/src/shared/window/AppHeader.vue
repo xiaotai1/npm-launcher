@@ -19,7 +19,6 @@ const emit = defineEmits<{
 const isMac = window.electronAPI.platform === 'darwin'
 const nvmListCommand = isMac ? 'nvm ls-remote' : 'nvm list available'
 
-const themeIcon: Record<string, string> = { light: '☀', dark: '☾', system: '⊞' }
 const themeLabel: Record<string, string> = { light: '浅色', dark: '深色', system: '系统' }
 
 const showDropdown = ref(false)
@@ -54,7 +53,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 </script>
 
 <template>
-  <header class="h-12 flex items-center justify-between border-b border-border bg-surface relative select-none app-header">
+  <header class="flex items-center justify-between border-b border-border bg-surface relative select-none app-header">
     <div class="flex items-center header-left" :class="{ 'mac-traffic-light': isMac }">
       <span class="text-[13px] font-semibold tracking-[-0.3px] text-tsecondary">NPM Launcher</span>
     </div>
@@ -66,8 +65,13 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
           :class="{ switching, open: showDropdown }"
           @click="toggleDropdown"
           title="点击管理 Node 版本"
+          :aria-expanded="showDropdown"
+          aria-haspopup="listbox"
         >
-          <span class="text-success-c text-[13px]" style="text-shadow: 0 0 6px var(--success)">⬢</span>
+          <svg class="text-success-c" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 2l8.66 5v10L12 22l-8.66-5V7z"/>
+            <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/>
+          </svg>
           <span class="text-accent font-mono text-[11.5px]">{{ switching ? '切换中...' : (nodeVersion || '...') }}</span>
           <span class="text-ttertiary text-[9px] transition-transform duration-250 ease-in-out dropdown-arrow" :class="{ open: showDropdown }">▾</span>
         </button>
@@ -76,7 +80,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
             <div class="flex items-center justify-between px-1 pt-1">
               <span class="px-2.5 pt-1.75 pb-1.25 text-[11px] font-semibold text-ttertiary tracking-[0.3px]">已安装版本</span>
               <span class="text-[10px] text-blue-500 font-medium mr-2">仅识别 nvm</span>
-              <button class="w-6 h-6 flex items-center justify-center rounded-md text-ttertiary mr-1 refresh-btn" @click="refreshVersions" title="刷新版本列表">
+              <button class="w-7 h-7 flex items-center justify-center rounded-md text-ttertiary mr-1 refresh-btn" @click="refreshVersions" title="刷新版本列表" aria-label="刷新 Node 版本列表">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="23 4 23 10 17 10"/>
                   <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
@@ -93,7 +97,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
                 :disabled="switching"
               >
                 <span>{{ ver }}</span>
-                <span v-if="ver === currentVersion" class="text-success-c text-[13px] animate-check-pop">✓</span>
+                <svg v-if="ver === currentVersion" class="text-success-c animate-check-pop" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-label="当前版本"><polyline points="20 6 9 17 4 12"/></svg>
               </button>
               <div v-if="availableVersions.length === 0" class="py-4 px-2.5 text-center text-xs text-ttertiary">
                 暂无已安装版本
@@ -103,8 +107,10 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
           </div>
         </Transition>
       </div>
-      <button class="w-8 h-8 flex items-center justify-center rounded-lg text-ttertiary text-sm transition-all duration-200 ease-out theme-btn" @click="emit('toggle-theme')" :title="themeLabel[theme]">
-        {{ themeIcon[theme] }}
+      <button class="w-8 h-8 flex items-center justify-center rounded-lg text-ttertiary text-sm transition-all duration-200 ease-out theme-btn" @click="emit('toggle-theme')" :title="themeLabel[theme]" :aria-label="`切换主题，当前为${themeLabel[theme]}`">
+        <svg v-if="theme === 'light'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+        <svg v-else-if="theme === 'dark'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20.5 14.1A8.5 8.5 0 0 1 9.9 3.5 8.5 8.5 0 1 0 20.5 14.1z"/></svg>
+        <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg>
       </button>
       </div>
       <WindowControls v-if="!isMac" />
@@ -114,18 +120,9 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 <style scoped>
 .app-header {
+  height: 44px;
+  min-height: 44px;
   -webkit-app-region: drag;
-}
-
-.app-header::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--header-glow);
-  pointer-events: none;
 }
 
 .header-left {
@@ -143,18 +140,18 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .node-badge {
-  background: var(--card-active-bg);
-  border: 1px solid var(--accent-border);
-  box-shadow: 0 0 12px var(--accent-glow);
+  min-height: 30px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-default);
 }
 
 .node-badge:hover:not(.switching) {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.18);
-  transform: translateY(-1px);
+  border-color: var(--accent-border);
+  background: var(--bg-hover);
 }
 
 .node-badge.open {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.18);
+  border-color: var(--accent-primary);
 }
 
 .node-badge.switching {
@@ -196,6 +193,5 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .theme-btn:hover {
   background: var(--bg-hover);
   color: var(--accent-primary);
-  transform: rotate(15deg);
 }
 </style>

@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ref, watch, toRaw, onMounted, onBeforeUnmount } from 'vue'
-import type { Project, ProcessStatus } from '../../../shared/types'
+import { computed, ref, watch, toRaw, onMounted, onBeforeUnmount } from 'vue'
+import type { Project } from '../../../shared/types'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
 
 const props = defineProps<{
   project: Project
-  status: ProcessStatus | null
   editTrigger?: number
   nodeVersions: string[]
   globalNodeVersion: string | null
@@ -14,9 +13,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   update: [project: Project]
   delete: [id: string]
-  start: []
-  stop: []
-  'clear-logs': []
   toast: [message: string, type: 'success' | 'error' | 'warning']
   'set-node-version': [projectId: string, version: string | null]
 }>()
@@ -24,8 +20,10 @@ const emit = defineEmits<{
 const isEditing = ref(false)
 const editForm = ref({ ...props.project })
 const editScripts = ref<string[]>([])
-const isRunning = () => props.status?.status === 'running'
 const showDeleteConfirm = ref(false)
+const canSave = computed(() => Boolean(
+  editForm.value.name.trim() && editForm.value.path.trim() && editForm.value.command.trim()
+))
 
 watch(() => props.project, (p) => {
   editForm.value = { ...p }
@@ -67,6 +65,7 @@ async function selectFolder() {
 }
 
 function save() {
+  if (!canSave.value) return
   emit('update', toRaw(editForm.value))
   isEditing.value = false
 }
@@ -119,17 +118,10 @@ function selectNodeVersion(version: string | null) {
 </script>
 
 <template>
-  <div class="relative px-5.5 py-4.5 border-b border-border bg-surface detail">
+  <div class="relative px-5.5 py-4.5 bg-surface detail">
     <template v-if="!isEditing">
       <div class="flex items-start justify-between mb-4.5">
-        <div class="flex items-center gap-2.5">
-          <h2 class="text-[17px] font-bold tracking-[-0.3px] text-tprimary">{{ project.name }}</h2>
-          <div :class="['inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[11px] font-medium transition-all duration-300 status-badge', status?.status || 'stopped']">
-            <span class="w-1.5 h-1.5 rounded-full status-dot"></span>
-            {{ status?.status === 'running' ? '运行中' : status?.status === 'error' ? '错误' : '未启动' }}
-            <span v-if="status?.pid" class="opacity-50 font-normal text-[10px] font-mono">PID {{ status.pid }}</span>
-          </div>
-        </div>
+        <h2 class="text-[17px] font-bold tracking-[-0.3px] text-tprimary">项目信息</h2>
         <div class="flex gap-1">
           <button class="py-1.75 px-3.5 text-xs text-tsecondary border border-border rounded-lg transition-all duration-200 ease-out btn-ghost" @click="isEditing = true">编辑</button>
           <button class="py-1.75 px-3.5 text-xs text-ttertiary border border-transparent rounded-lg transition-all duration-200 ease-out btn-danger-ghost" @click="remove">删除</button>
@@ -138,7 +130,7 @@ function selectNodeVersion(version: string | null) {
 
       <div class="flex flex-col gap-3 mb-4.5">
         <div class="flex items-center gap-3 min-w-0">
-          <span class="w-14 shrink-0 text-[9px] font-medium text-ttertiary uppercase tracking-[0.5px]">路径</span>
+          <span class="w-14 shrink-0 text-[11px] font-medium text-ttertiary">路径</span>
           <span class="font-mono text-[11px] text-tsecondary overflow-hidden text-ellipsis whitespace-nowrap" :title="project.path">{{ project.path }}</span>
           <div class="flex gap-1 shrink-0 ml-auto">
             <button class="flex items-center gap-1 py-1 px-2.5 text-[11px] font-medium text-ttertiary border border-border rounded-lg transition-all duration-200 ease-out whitespace-nowrap btn-quick-action" @click="openFolder" title="在文件管理器中打开">
@@ -157,11 +149,11 @@ function selectNodeVersion(version: string | null) {
           </div>
         </div>
         <div class="flex items-center gap-3 min-w-0">
-          <span class="w-14 shrink-0 text-[9px] font-medium text-ttertiary uppercase tracking-[0.5px]">命令</span>
+          <span class="w-14 shrink-0 text-[11px] font-medium text-ttertiary">命令</span>
           <span class="font-mono text-[11px] py-0.5 px-2 rounded text-accent border border-accent-border transition-all duration-200 ease-out info-code">{{ project.command ? 'npm run ' + project.command : '' }}</span>
         </div>
         <div class="flex items-center gap-3 min-w-0">
-          <span class="w-14 shrink-0 text-[9px] font-medium text-ttertiary uppercase tracking-[0.5px]">Node</span>
+          <span class="w-14 shrink-0 text-[11px] font-medium text-ttertiary">Node</span>
           <div ref="versionDropdownRef" class="relative">
             <button class="flex items-center gap-1.5 py-0.5 px-2 text-[11px] rounded-[5px] text-tsecondary border border-border transition-all duration-200 ease-out version-btn" @click="showVersionDropdown = !showVersionDropdown">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
@@ -188,17 +180,6 @@ function selectNodeVersion(version: string | null) {
         </div>
       </div>
 
-      <div class="flex items-center justify-between gap-1.5">
-        <div class="flex gap-1.5">
-          <button v-if="!isRunning()" class="py-1.75 px-5 text-xs font-semibold rounded-lg flex items-center gap-1.5 text-white btn-start" @click="emit('start')">
-            <span class="text-[10px]">▶</span> 启动
-          </button>
-          <button v-else class="py-1.75 px-5 text-xs font-semibold rounded-lg flex items-center gap-1.5 text-white btn-stop" @click="emit('stop')">
-            <span class="text-[10px]">■</span> 停止
-          </button>
-        </div>
-        <button class="py-1.75 px-3.5 text-xs text-tsecondary border border-border rounded-lg transition-all duration-200 ease-out btn-ghost" @click="emit('clear-logs')">清空日志</button>
-      </div>
     </template>
 
     <template v-else>
@@ -227,7 +208,7 @@ function selectNodeVersion(version: string | null) {
         </div>
         <div class="flex gap-2 justify-end mt-2">
           <button class="py-1.75 px-3.5 text-xs text-tsecondary border border-border rounded-lg transition-all duration-200 ease-out btn-ghost" @click="cancelEdit">取消</button>
-          <button class="py-1.75 px-5 text-xs font-semibold text-white rounded-lg btn-primary" @click="save">保存</button>
+          <button class="py-1.75 px-5 text-xs font-semibold text-white rounded-lg btn-primary" :disabled="!canSave" @click="save">保存</button>
         </div>
       </div>
     </template>
@@ -245,50 +226,6 @@ function selectNodeVersion(version: string | null) {
 </template>
 
 <style scoped>
-/* Pseudo-element for glow line — cannot be a Tailwind utility */
-.detail::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--header-glow);
-  pointer-events: none;
-}
-
-/* Status badge variants — all use CSS variables for colors */
-.status-badge.running {
-  background: var(--success-bg);
-  color: var(--success);
-  border: 1px solid var(--success-border);
-  box-shadow: 0 0 12px var(--success-bg);
-}
-
-.status-badge.running .status-dot {
-  background: var(--success);
-  animation: dotPulse 1.5s ease-in-out infinite;
-  box-shadow: 0 0 6px var(--success);
-}
-
-.status-badge.stopped {
-  background: var(--bg-elevated);
-  color: var(--text-tertiary);
-}
-
-.status-badge.stopped .status-dot {
-  background: var(--text-tertiary);
-}
-
-.status-badge.error {
-  background: var(--error-bg);
-  color: var(--error);
-}
-
-.status-badge.error .status-dot {
-  background: var(--error);
-}
-
 /* Info value code — CSS variable backgrounds/borders */
 .info-code {
   background: var(--accent-glow);
@@ -325,38 +262,6 @@ function selectNodeVersion(version: string | null) {
   background: var(--error-bg);
 }
 
-/* Start button — gradient + shadow with CSS values */
-.btn-start {
-  background: linear-gradient(135deg, #2563eb, #3b82f6);
-  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.25);
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.btn-start:hover:not(:disabled) {
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.35);
-  transform: translateY(-1px);
-}
-
-.btn-start:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 1px 6px rgba(59, 130, 246, 0.2);
-}
-
-/* Stop button — gradient + shadow */
-.btn-stop {
-  background: linear-gradient(135deg, #dc2626, #ef4444);
-  box-shadow: 0 2px 12px rgba(239, 68, 68, 0.2);
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.btn-stop:hover:not(:disabled) {
-  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
-  transform: translateY(-1px);
-}
-
-.btn-stop:active:not(:disabled) {
-  transform: translateY(0);
-}
 
 /* Primary button — CSS variable gradient */
 .btn-primary {

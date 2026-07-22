@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { ref, computed, toRaw, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import type { Project, Folder, ProcessStatus } from '../../../shared/types'
+import type { ActiveView, Project, Folder, ProcessStatus } from '../../../shared/types'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
+import { filterProjects, getFolderProjects, getRootFavorites, getRootProjects } from '../model/projectFilters'
 
 const props = defineProps<{
   projects: Project[]
   folders: Folder[]
   selectedId: string | null
   statuses: Record<string, ProcessStatus>
+  activeView: ActiveView
 }>()
 
 const emit = defineEmits<{
+  'select-overview': []
   select: [id: string]
   add: [project: Project]
   reorder: [ids: string[]]
@@ -22,8 +25,6 @@ const emit = defineEmits<{
   'delete-folder': [id: string]
   'rename-folder': [folder: Folder]
   'move-to-folder': [projectId: string, folderId: string | null]
-  'start-all': []
-  'stop-all': []
 }>()
 
 const showForm = ref(false)
@@ -36,19 +37,7 @@ const loadingScripts = ref(false)
 const searchQuery = ref('')
 
 // 计算搜索过滤后的列表
-const filteredProjects = computed(() => {
-  const q = searchQuery.value.toLowerCase().trim()
-  if (!q) return props.projects
-  return props.projects.filter(p =>
-    p.name.toLowerCase().includes(q) ||
-    p.path.toLowerCase().includes(q) ||
-    p.command.toLowerCase().includes(q)
-  )
-})
-
-const hasRunningProject = computed(() =>
-  Object.values(props.statuses).some(s => s.status === 'running')
-)
+const filteredProjects = computed(() => filterProjects(props.projects, searchQuery.value))
 
 // 文件夹相关
 const showFolderInput = ref(false)
@@ -74,16 +63,12 @@ const confirmState = ref<{ visible: boolean; type: 'project' | 'folder'; id: str
 const collapsedFolders = ref<Set<string>>(new Set())
 
 // 计算分组后的列表（使用搜索过滤）
-const rootFavorites = computed(() =>
-  filteredProjects.value.filter(p => p.favorite && !p.folderId)
-)
+const rootFavorites = computed(() => getRootFavorites(filteredProjects.value))
 
-const rootNormal = computed(() =>
-  filteredProjects.value.filter(p => !p.favorite && !p.folderId)
-)
+const rootNormal = computed(() => getRootProjects(filteredProjects.value))
 
 function folderProjects(folderId: string) {
-  return filteredProjects.value.filter(p => p.folderId === folderId)
+  return getFolderProjects(filteredProjects.value, folderId)
 }
 
 // 搜索时只显示有匹配项目的文件夹
@@ -110,6 +95,13 @@ function getStatusInfo(projectId: string) {
   if (status?.status === 'error') return { text: '错误', color: 'var(--error)' }
   return { text: '未启动', color: 'var(--text-tertiary)' }
 }
+
+function openAddForm() {
+  showForm.value = true
+  nextTick(() => formNameInputRef.value?.focus())
+}
+
+defineExpose({ openAddForm })
 
 // 新建项目
 async function selectFolder() {
@@ -355,7 +347,7 @@ watch(showForm, (val) => {
     <div class="px-4 pt-4 pb-2.5 flex items-center justify-between">
       <span class="text-[10px] font-semibold text-ttertiary uppercase tracking-[1.2px]">项目</span>
       <div class="flex gap-1">
-        <button class="add-btn flex items-center justify-center w-6 h-6 p-0 text-[11px] font-medium text-ttertiary rounded-[5px] transition-all duration-150 ease-in-out" @click="showFolderInput = !showFolderInput" title="新建文件夹">
+        <button class="add-btn flex items-center justify-center w-6 h-6 p-0 text-[11px] font-medium text-ttertiary rounded-[5px] transition-all duration-150 ease-in-out" @click="showFolderInput = !showFolderInput" title="新建文件夹" aria-label="新建文件夹">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
           </svg>
@@ -378,22 +370,25 @@ watch(showForm, (val) => {
         placeholder="搜索项目..."
         class="search-input w-full py-1.75 px-7 text-[12px] rounded-[7px] transition-all duration-200 ease-in-out box-border"
       />
-      <button v-if="searchQuery" class="search-clear absolute right-1.5 top-1/2 -translate-y-1/2 w-5.5 h-5.5 flex items-center justify-center rounded text-ttertiary" @click="searchQuery = ''">
+      <button v-if="searchQuery" class="search-clear absolute right-1.5 top-1/2 -translate-y-1/2 w-5.5 h-5.5 flex items-center justify-center rounded text-ttertiary" aria-label="清空搜索" @click="searchQuery = ''">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>
     </div>
 
-    <!-- 批量操作栏 -->
-    <div class="flex gap-1 px-2.5 pb-1.5">
-      <button class="batch-btn flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-ttertiary rounded-[5px] transition-all duration-150 ease-in-out" @click="emit('start-all')" :disabled="projects.length === 0" title="启动所有项目">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
-        全部启动
-      </button>
-      <button :class="['batch-btn', 'flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-ttertiary rounded-[5px] transition-all duration-150 ease-in-out', { active: hasRunningProject }]" @click="emit('stop-all')" :disabled="!hasRunningProject" title="停止所有项目">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
-        全部停止
+    <div class="px-2.5 pb-2">
+      <button
+        class="overview-nav"
+        :class="{ active: activeView === 'overview' }"
+        @click="emit('select-overview')"
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+        <span>项目总览</span>
+        <span class="overview-count">{{ projects.length }}</span>
       </button>
     </div>
 
@@ -478,7 +473,7 @@ watch(showForm, (val) => {
               <span class="text-[9px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
             </div>
           </div>
-          <button class="shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn active" @click="onToggleFavorite(project.id, $event)" title="取消收藏">
+          <button class="shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn active" @click="onToggleFavorite(project.id, $event)" title="取消收藏" aria-label="取消收藏">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
           </button>
         </div>
@@ -508,7 +503,7 @@ watch(showForm, (val) => {
             />
           </template>
           <template v-else>
-            <button class="w-5.5 h-5.5 flex items-center justify-center rounded text-ttertiary folder-toggle" @click="toggleCollapse(folder.id)">
+            <button class="w-5.5 h-5.5 flex items-center justify-center rounded text-ttertiary folder-toggle" :aria-label="isCollapsed(folder.id) ? `展开${folder.name}` : `收起${folder.name}`" @click="toggleCollapse(folder.id)">
               <svg :class="['chevron', { collapsed: isCollapsed(folder.id) }]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <polyline points="9 18 15 12 9 6"/>
               </svg>
@@ -550,7 +545,7 @@ watch(showForm, (val) => {
                 <span class="text-[9px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
               </div>
             </div>
-            <button :class="['shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn', { active: project.favorite }]" @click="onToggleFavorite(project.id, $event)" :title="project.favorite ? '取消收藏' : '收藏'">
+            <button :class="['shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn', { active: project.favorite }]" @click="onToggleFavorite(project.id, $event)" :title="project.favorite ? '取消收藏' : '收藏'" :aria-label="project.favorite ? '取消收藏' : '收藏'">
               <svg v-if="project.favorite" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
               <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
             </button>
@@ -590,7 +585,7 @@ watch(showForm, (val) => {
             <span class="text-[9px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
           </div>
         </div>
-        <button :class="['shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn', { active: project.favorite }]" @click="onToggleFavorite(project.id, $event)" :title="project.favorite ? '取消收藏' : '收藏'">
+        <button :class="['shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn', { active: project.favorite }]" @click="onToggleFavorite(project.id, $event)" :title="project.favorite ? '取消收藏' : '收藏'" :aria-label="project.favorite ? '取消收藏' : '收藏'">
           <svg v-if="project.favorite" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
           <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
         </button>
@@ -675,6 +670,42 @@ watch(showForm, (val) => {
 </template>
 
 <style scoped>
+.overview-nav {
+  width: 100%;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 650;
+  text-align: left;
+}
+
+.overview-nav:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.overview-nav.active {
+  color: var(--accent-primary);
+  background: var(--bg-selected);
+  box-shadow: inset 2px 0 var(--accent-primary);
+}
+
+.overview-count {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--text-tertiary);
+  background: var(--bg-subtle);
+  font-size: 10px;
+  text-align: center;
+}
+
 /* 按钮 hover — CSS 变量 */
 .add-btn:hover {
   color: var(--text-primary);

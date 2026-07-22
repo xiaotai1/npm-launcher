@@ -42,7 +42,7 @@ function onOverlayClick() {
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="show" class="fixed inset-0 z-2000 flex items-center justify-center modal-overlay" @click="onOverlayClick">
-        <div class="min-w-85 max-w-105 rounded-2xl animate-dialog-in modal-dialog" @click.stop>
+        <div role="alertdialog" aria-modal="true" :aria-label="title" class="min-w-85 max-w-105 rounded-2xl animate-dialog-in modal-dialog" @click.stop>
           <div class="p-6 px-7 modal-content">
             <div class="flex items-center gap-2.5 mb-2.5 modal-header">
               <span class="flex items-center justify-center shrink-0 modal-icon" :class="{ danger }">

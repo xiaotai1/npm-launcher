@@ -3,6 +3,7 @@ import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
+import { currentTerminalTheme } from '../terminalTheme'
 
 const props = defineProps<{
   id: string
@@ -19,56 +20,6 @@ let cleanupExit: (() => void) | null = null
 let resizeObserver: ResizeObserver | null = null
 let contextMenuHandler: ((e: MouseEvent) => void) | null = null
 
-function getTheme() {
-  const isDark = document.documentElement.getAttribute('data-theme') !== 'light'
-  if (isDark) {
-    return {
-      background: '#080e1a',
-      foreground: '#94a3b8',
-      cursor: '#60a5fa',
-      selectionBackground: 'rgba(59, 130, 246, 0.25)',
-      black: '#1e293b',
-      red: '#f87171',
-      green: '#34d399',
-      yellow: '#fbbf24',
-      blue: '#60a5fa',
-      magenta: '#c084fc',
-      cyan: '#60a5fa',
-      white: '#e2e8f0',
-      brightBlack: '#475569',
-      brightRed: '#f87171',
-      brightGreen: '#34d399',
-      brightYellow: '#fbbf24',
-      brightBlue: '#60a5fa',
-      brightMagenta: '#c084fc',
-      brightCyan: '#60a5fa',
-      brightWhite: '#f1f5f9'
-    }
-  }
-  return {
-    background: '#f6f8fa',
-    foreground: '#24292f',
-    cursor: '#0969da',
-    selectionBackground: 'rgba(9, 105, 218, 0.15)',
-    black: '#24292f',
-    red: '#cf222e',
-    green: '#1a7f37',
-    yellow: '#9a6700',
-    blue: '#0969da',
-    magenta: '#953800',
-    cyan: '#0969da',
-    white: '#6e7781',
-    brightBlack: '#57606a',
-    brightRed: '#cf222e',
-    brightGreen: '#1a7f37',
-    brightYellow: '#9a6700',
-    brightBlue: '#0969da',
-    brightMagenta: '#953800',
-    brightCyan: '#0969da',
-    brightWhite: '#8c959f'
-  }
-}
-
 function initTerminal() {
   if (!terminalContainer.value || terminal) return
 
@@ -77,7 +28,7 @@ function initTerminal() {
     fontSize: 13,
     lineHeight: 1.4,
     fontFamily: "'Consolas', 'JetBrains Mono', 'Fira Code', monospace",
-    theme: getTheme()
+    theme: currentTerminalTheme()
   })
 
   fitAddon = new FitAddon()
@@ -235,7 +186,7 @@ watch(() => props.cwd, (newCwd, oldCwd) => {
 // 主题切换时更新终端配色
 const themeObserver = new MutationObserver(() => {
   if (terminal) {
-    terminal.options.theme = getTheme()
+    terminal.options.theme = currentTerminalTheme()
   }
 })
 onMounted(() => {
@@ -285,7 +236,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.xterm-viewport::-webkit-scrollbar-thumb) {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 </style>

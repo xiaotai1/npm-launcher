@@ -3,6 +3,7 @@ import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
+import { currentTerminalTheme } from '../terminalTheme'
 
 const props = defineProps<{
   isRunning: boolean
@@ -35,56 +36,6 @@ function clear() {
 
 defineExpose({ clear })
 
-function getTheme() {
-  const isDark = document.documentElement.getAttribute('data-theme') !== 'light'
-  if (isDark) {
-    return {
-      background: '#080e1a',
-      foreground: '#94a3b8',
-      cursor: '#60a5fa',
-      selectionBackground: 'rgba(59, 130, 246, 0.25)',
-      black: '#1e293b',
-      red: '#f87171',
-      green: '#34d399',
-      yellow: '#fbbf24',
-      blue: '#60a5fa',
-      magenta: '#c084fc',
-      cyan: '#60a5fa',
-      white: '#e2e8f0',
-      brightBlack: '#475569',
-      brightRed: '#f87171',
-      brightGreen: '#34d399',
-      brightYellow: '#fbbf24',
-      brightBlue: '#60a5fa',
-      brightMagenta: '#c084fc',
-      brightCyan: '#60a5fa',
-      brightWhite: '#f1f5f9'
-    }
-  }
-  return {
-    background: '#f6f8fa',
-    foreground: '#24292f',
-    cursor: '#0969da',
-    selectionBackground: 'rgba(9, 105, 218, 0.15)',
-    black: '#24292f',
-    red: '#cf222e',
-    green: '#1a7f37',
-    yellow: '#9a6700',
-    blue: '#0969da',
-    magenta: '#953800',
-    cyan: '#0969da',
-    white: '#6e7781',
-    brightBlack: '#57606a',
-    brightRed: '#cf222e',
-    brightGreen: '#1a7f37',
-    brightYellow: '#9a6700',
-    brightBlue: '#0969da',
-    brightMagenta: '#953800',
-    brightCyan: '#0969da',
-    brightWhite: '#8c959f'
-  }
-}
-
 function initTerminal() {
   if (!terminalContainer.value || terminal) return
 
@@ -93,7 +44,7 @@ function initTerminal() {
     fontSize: 13,
     lineHeight: 1.4,
     fontFamily: "'Consolas', 'JetBrains Mono', 'Fira Code', monospace",
-    theme: getTheme(),
+    theme: currentTerminalTheme(),
     scrollback: 5000,
     disableStdin: true
   })
@@ -171,7 +122,7 @@ watch(() => props.projectId, (newId, oldId) => {
 // 主题切换时更新终端配色
 themeObserver = new MutationObserver(() => {
   if (terminal) {
-    terminal.options.theme = getTheme()
+    terminal.options.theme = currentTerminalTheme()
   }
 })
 
@@ -240,6 +191,13 @@ async function exportLog() {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           {{ exporting ? '导出中...' : '导出日志' }}
         </button>
+        <button
+          v-if="hasLogs"
+          class="flex items-center gap-1 py-1 px-2.5 min-h-7 text-[11px] font-medium text-ttertiary border border-border rounded-md hover:bg-hover transition-colors"
+          @click="clear"
+        >
+          清空
+        </button>
       </div>
     </div>
     <div ref="terminalContainer" class="flex-1 min-h-0 bg-console-bg border-none outline-none"></div>
@@ -270,7 +228,7 @@ async function exportLog() {
 }
 
 :deep(.xterm-viewport::-webkit-scrollbar-thumb) {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 </style>
