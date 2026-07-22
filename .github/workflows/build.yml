@@ -6,6 +6,9 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     strategy:
@@ -39,8 +42,46 @@ jobs:
         if: matrix.platform == 'mac'
         run: npx electron-builder --mac --publish never
 
-      - name: Upload artifacts
+      - name: Upload installers
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}-build
-          path: dist/*
+          path: |
+            dist/*.dmg
+            dist/*.exe
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: Create release and upload installers
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          mapfile -t assets < <(find release-assets -type f \( -name '*.dmg' -o -name '*.exe' \) -print | sort)
+          if [[ ${#assets[@]} -ne 4 ]]; then
+            printf 'Expected 4 installers, found %s\n' "${#assets[@]}"
+            printf '%s\n' "${assets[@]}"
+            exit 1
+          fi
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber
+          else
+            gh release create "$RELEASE_TAG" "${assets[@]}" \
+              --verify-tag \
+              --title "NPM Launcher $RELEASE_TAG" \
+              --generate-notes
+          fi
