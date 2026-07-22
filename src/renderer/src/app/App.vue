@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, toRaw } from 'vue'
-import ProjectList from './components/ProjectList.vue'
-import ProjectDetail from './components/ProjectDetail.vue'
-import LogConsole from './components/LogConsole.vue'
-import Terminal from './components/Terminal.vue'
-import Header from './components/Header.vue'
-import Toast from './components/Toast.vue'
-import ErrorAnalysisDialog from './components/ErrorAnalysisDialog.vue'
-import type { Project, AppConfig, Folder, ProcessStatus, ErrorAnalysis } from './types'
+import ProjectList from '../features/projects/components/WorkspaceSidebar.vue'
+import ProjectDetail from '../features/projects/components/ProjectDetail.vue'
+import LogConsole from '../features/terminal/components/LogConsole.vue'
+import Terminal from '../features/terminal/components/Terminal.vue'
+import Header from '../shared/window/AppHeader.vue'
+import Toast from '../shared/ui/Toast.vue'
+import ErrorAnalysisDialog from '../features/error-analysis/ErrorAnalysisDialog.vue'
+import type { Project, AppConfig, Folder, ProcessStatus, ErrorAnalysis } from '../shared/types'
 
 // 状态
 const config = ref<AppConfig | null>(null)

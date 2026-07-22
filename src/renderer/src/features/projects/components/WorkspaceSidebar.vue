@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, toRaw, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import type { Project, Folder, ProcessStatus } from '../types'
-import ConfirmDialog from './ConfirmDialog.vue'
+import type { Project, Folder, ProcessStatus } from '../../../shared/types'
+import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
 
 const props = defineProps<{
   projects: Project[]

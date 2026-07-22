@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { ErrorAnalysis } from '../types'
+import type { ErrorAnalysis } from '../../shared/types'
 
 const props = defineProps<{
   visible: boolean

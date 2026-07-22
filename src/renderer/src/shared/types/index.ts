@@ -104,7 +104,6 @@ declare global {
       ptyKill: (id: string) => void
       onPtyData: (callback: (data: { id: string; data: string }) => void) => () => void
       onPtyExit: (callback: (data: { id: string; exitCode: number }) => void) => () => void
-      setNativeTheme: (theme: 'light' | 'dark' | 'system') => Promise<void>
       setTitlebarOverlay: (theme: 'light' | 'dark') => Promise<void>
     }
   }
