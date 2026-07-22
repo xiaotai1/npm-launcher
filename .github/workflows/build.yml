@@ -68,6 +68,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           mapfile -t assets < <(find release-assets -type f \( -name '*.dmg' -o -name '*.exe' \) -print | sort)
@@ -82,6 +83,6 @@ jobs:
           else
             gh release create "$RELEASE_TAG" "${assets[@]}" \
               --verify-tag \
-              --title "NPM Launcher $RELEASE_TAG" \
+              --title "$RELEASE_TAG" \
               --generate-notes
           fi
