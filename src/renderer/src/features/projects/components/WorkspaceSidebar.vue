@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, toRaw, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import type { ActiveView, Project, Folder, ProcessStatus } from '../../../shared/types'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
+import CreateProjectDialog from './CreateProjectDialog.vue'
 import { filterProjects, getFolderProjects, getRootFavorites, getRootProjects } from '../model/projectFilters'
 
 const props = defineProps<{
@@ -27,11 +28,8 @@ const emit = defineEmits<{
   'move-to-folder': [projectId: string, folderId: string | null]
 }>()
 
-const showForm = ref(false)
-const form = ref({ name: '', path: '', command: '' })
-const availableScripts = ref<string[]>([])
-const formNameInputRef = ref<HTMLInputElement | null>(null)
-const loadingScripts = ref(false)
+const createDialogVisible = ref(false)
+const createButtonRef = ref<HTMLButtonElement | null>(null)
 
 // 搜索
 const searchQuery = ref('')
@@ -40,9 +38,6 @@ const searchQuery = ref('')
 const filteredProjects = computed(() => filterProjects(props.projects, searchQuery.value))
 
 // 文件夹相关
-const showFolderInput = ref(false)
-const newFolderName = ref('')
-const folderInputRef = ref<HTMLInputElement | null>(null)
 const renamingFolder = ref<Folder | null>(null)
 const renameInput = ref('')
 
@@ -97,54 +92,14 @@ function getStatusInfo(projectId: string) {
 }
 
 function openAddForm() {
-  showForm.value = true
-  nextTick(() => formNameInputRef.value?.focus())
+  createDialogVisible.value = true
 }
 
 defineExpose({ openAddForm })
 
-// 新建项目
-async function selectFolder() {
-  const result = await window.electronAPI.selectFolder()
-  if (result.canceled || !result.path) return
-  form.value.path = result.path
-  if (!form.value.name) {
-    const parts = result.path.replace(/\\/g, '/').split('/')
-    form.value.name = parts[parts.length - 1] || ''
-  }
-  await loadScripts(result.path)
-}
-
-async function loadScripts(dir: string) {
-  loadingScripts.value = true
-  availableScripts.value = []
-  form.value.command = ''
-  const result = await window.electronAPI.getPackageScripts(dir)
-  loadingScripts.value = false
-  if (result.scripts.length > 0) {
-    availableScripts.value = result.scripts
-    form.value.command = result.scripts[0]
-  }
-}
-
-function resetForm() {
-  form.value = { name: '', path: '', command: '' }
-  availableScripts.value = []
-  showForm.value = false
-}
-
-function handleAdd() {
-  if (!form.value.name || !form.value.path || !form.value.command) return
-  emit('add', { id: crypto.randomUUID(), ...toRaw(form.value) })
-  resetForm()
-}
-
-// 新建文件夹
-function handleAddFolder() {
-  if (!newFolderName.value.trim()) return
-  emit('add-folder', { id: crypto.randomUUID(), name: newFolderName.value.trim() })
-  newFolderName.value = ''
-  showFolderInput.value = false
+function closeCreateDialog() {
+  createDialogVisible.value = false
+  nextTick(() => createButtonRef.value?.focus())
 }
 
 // 收藏
@@ -332,31 +287,16 @@ function onClickOutside() {
 
 onMounted(() => document.addEventListener('click', onClickOutside))
 onUnmounted(() => document.removeEventListener('click', onClickOutside))
-
-watch(showFolderInput, (val) => {
-  if (val) nextTick(() => folderInputRef.value?.focus())
-})
-
-watch(showForm, (val) => {
-  if (val) nextTick(() => formNameInputRef.value?.focus())
-})
 </script>
 
 <template>
   <div class="h-full flex flex-col">
     <div class="px-4 pt-4 pb-2.5 flex items-center justify-between">
       <span class="text-[10px] font-semibold text-ttertiary uppercase tracking-[1.2px]">项目</span>
-      <div class="flex gap-1">
-        <button class="add-btn flex items-center justify-center w-6 h-6 p-0 text-[11px] font-medium text-ttertiary rounded-[5px] transition-all duration-150 ease-in-out" @click="showFolderInput = !showFolderInput" title="新建文件夹" aria-label="新建文件夹">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-          </svg>
-        </button>
-        <button class="add-btn flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-ttertiary rounded-[5px] transition-all duration-150 ease-in-out" @click="showForm = !showForm">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          新建
-        </button>
-      </div>
+      <button ref="createButtonRef" class="create-button" @click="openAddForm">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        新建
+      </button>
     </div>
 
     <!-- 搜索框 -->
@@ -390,50 +330,6 @@ watch(showForm, (val) => {
         <span>项目总览</span>
         <span class="overview-count">{{ projects.length }}</span>
       </button>
-    </div>
-
-    <!-- 新建文件夹 -->
-    <div v-if="showFolderInput" class="mx-2.5 my-1.5 p-2.5 border border-border rounded-xl flex flex-col gap-2 folder-input-card">
-      <div class="flex items-center gap-1.5 text-xs font-medium text-tsecondary">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-        </svg>
-        <span>新建文件夹</span>
-      </div>
-      <input
-        ref="folderInputRef"
-        v-model="newFolderName"
-        placeholder="输入文件夹名称"
-        class="w-full py-1.5 px-2.5 text-[12px] rounded-md"
-        @keyup.enter="handleAddFolder"
-        @keyup.escape="showFolderInput = false"
-      />
-      <div class="flex gap-1.5 justify-end">
-        <button class="py-1.5 px-3 text-[11px] text-tsecondary border border-border rounded-md btn-cancel" @click="showFolderInput = false; newFolderName = ''">取消</button>
-        <button class="py-1.5 px-4 text-[11px] font-semibold text-white rounded-lg btn-primary" @click="handleAddFolder" :disabled="!newFolderName.trim()">确认</button>
-      </div>
-    </div>
-
-    <!-- 新建项目表单 -->
-    <div v-if="showForm" class="px-3 py-2.5 border-t border-b border-border flex flex-col gap-1.5 add-form">
-      <input ref="formNameInputRef" v-model="form.name" placeholder="项目名称" class="w-full py-1.5 px-2.5 text-[12px] rounded-md" />
-      <div class="flex gap-1.5">
-        <input v-model="form.path" placeholder="项目路径" readonly class="flex-1 cursor-pointer py-1.5 px-2.5 text-[12px] path-input" />
-        <button class="shrink-0 py-1.5 px-3 text-[11px] font-medium text-accent border border-accent-border rounded-md bg-transparent transition-all duration-200 ease-out btn-browse" @click="selectFolder">浏览</button>
-      </div>
-      <div class="flex flex-col gap-0.5">
-        <select v-model="form.command" class="cursor-pointer py-1.5 px-2.5 text-[12px] appearance-auto" :disabled="availableScripts.length === 0">
-          <option value="" disabled>
-            {{ loadingScripts ? '加载中...' : availableScripts.length === 0 ? '请先选择项目路径' : '选择命令' }}
-          </option>
-          <option v-for="script in availableScripts" :key="script" :value="script">{{ script }}</option>
-        </select>
-        <span v-if="availableScripts.length > 0" class="text-[10px] font-mono command-hint">npm run {{ form.command }}</span>
-      </div>
-      <div class="flex gap-1.5 justify-end pt-0.5">
-        <button class="py-1.5 px-3 text-[11px] text-tsecondary border border-border rounded-md btn-cancel" @click="resetForm">取消</button>
-        <button class="py-1.5 px-4 text-[11px] font-semibold text-white rounded-lg btn-primary" @click="handleAdd" :disabled="!form.name || !form.path || !form.command">确认</button>
-      </div>
     </div>
 
     <!-- 项目列表 -->
@@ -666,6 +562,12 @@ watch(showForm, (val) => {
       @confirm="onConfirmDelete"
       @cancel="onCancelDelete"
     />
+    <CreateProjectDialog
+      :visible="createDialogVisible"
+      @close="closeCreateDialog"
+      @add="emit('add', $event)"
+      @add-folder="emit('add-folder', $event)"
+    />
   </div>
 </template>
 
@@ -706,10 +608,23 @@ watch(showForm, (val) => {
   text-align: center;
 }
 
-/* 按钮 hover — CSS 变量 */
-.add-btn:hover {
-  color: var(--text-primary);
-  background: var(--bg-hover);
+.create-button {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border-radius: 7px;
+  color: #fff;
+  background: var(--accent-primary);
+  box-shadow: 0 3px 10px var(--accent-glow);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.create-button:hover {
+  background: var(--accent-primary-hover);
+  box-shadow: 0 5px 14px var(--accent-glow);
 }
 
 /* 搜索框 — ::placeholder 和 focus 无法用 Tailwind 处理 */
@@ -726,65 +641,6 @@ watch(showForm, (val) => {
 .search-clear:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
-}
-
-/* 批量操作 — CSS 变量 hover/active */
-.batch-btn:hover:not(:disabled) {
-  color: var(--text-primary);
-  background: var(--bg-hover);
-}
-
-.batch-btn.active {
-  color: var(--error);
-}
-
-.batch-btn.active:hover:not(:disabled) {
-  background: var(--error-bg);
-}
-
-/* 文件夹输入卡片 — CSS 变量 */
-.folder-input-card {
-  background: var(--bg-surface);
-  box-shadow: var(--shadow-sm);
-  animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.folder-input-header svg {
-  color: var(--accent-primary);
-  filter: drop-shadow(0 0 3px var(--accent-glow));
-}
-
-/* 新建表单 — CSS 变量 + animation */
-.add-form {
-  background: var(--bg-base);
-  animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.path-input {
-  color: var(--text-secondary);
-}
-
-.btn-browse:hover {
-  background: var(--accent-glow);
-  border-color: var(--accent-primary);
-}
-
-.command-hint {
-  color: var(--text-tertiary);
-}
-
-.btn-cancel:hover {
-  background: var(--bg-hover);
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover));
-  box-shadow: 0 2px 8px var(--accent-glow);
-}
-
-.btn-primary:hover:not(:disabled) {
-  box-shadow: 0 4px 16px var(--accent-glow);
-  transform: translateY(-1px);
 }
 
 /* 分区标签 — ::after 渐变 */
