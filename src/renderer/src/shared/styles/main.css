@@ -295,6 +295,16 @@
   --font-mono: 'SFMono-Regular', 'Cascadia Code', 'Consolas', monospace;
 }
 
+/* 主题变量更新期间禁用旧、新颜色之间的局部过渡，两个渲染帧后自动恢复。 */
+:root[data-theme-changing],
+:root[data-theme-changing] *,
+:root[data-theme-changing] *::before,
+:root[data-theme-changing] *::after {
+  transition: none !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+}
+
 :root[data-theme='dark'] {
   --bg-app: #0d131d;
   --bg-sidebar: #121a26;
