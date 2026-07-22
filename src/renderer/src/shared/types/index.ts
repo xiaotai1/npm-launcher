@@ -23,6 +23,15 @@ export interface AppConfig {
   theme: 'light' | 'dark' | 'system'
 }
 
+export type ActiveView = 'overview' | 'project'
+
+export interface ActivityItem {
+  id: string
+  projectId: string
+  type: 'started' | 'stopped' | 'error'
+  timestamp: number
+}
+
 // 进程状态
 export interface ProcessStatus {
   projectId: string

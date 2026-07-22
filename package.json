@@ -16,6 +16,7 @@
     "dist:win": "node scripts/bump-version.js --skip && npm run build && electron-builder --win",
     "dist:mac": "node scripts/bump-version.js --skip && npm run build && electron-builder --mac",
     "dist:ask": "node scripts/bump-version.js --ask && npm run build && electron-builder",
+    "test": "node scripts/run-tests.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
