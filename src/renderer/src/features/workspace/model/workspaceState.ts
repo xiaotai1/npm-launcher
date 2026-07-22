@@ -48,3 +48,7 @@ export function appendActivity(
 ): ActivityItem[] {
   return item ? [item, ...items].slice(0, limit) : items
 }
+
+export function clearActivities(_items: ActivityItem[]): ActivityItem[] {
+  return []
+}

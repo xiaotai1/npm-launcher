@@ -18,10 +18,12 @@ const emit = defineEmits<{
   'start-all': []
   'stop-all': []
   'add-project': []
+  'clear-activities': []
 }>()
 
 const counts = computed(() => getOverviewCounts(props.projects, props.statuses))
 const hasRunningProjects = computed(() => counts.value.running > 0)
+const stoppedCount = computed(() => Math.max(0, counts.value.total - counts.value.running - counts.value.error))
 
 function projectName(projectId: string) {
   return props.projects.find(project => project.id === projectId)?.name || '已删除项目'
@@ -68,17 +70,45 @@ function activityLabel(type: ActivityItem['type']) {
         />
       </div>
 
-      <section class="activity-panel">
-        <header><h2>最近活动</h2><span>本次会话</span></header>
-        <div v-if="activities.length" class="activity-list">
-          <div v-for="item in activities.slice(0, 8)" :key="item.id" class="activity-row">
-            <time>{{ new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) }}</time>
-            <strong>{{ projectName(item.projectId) }}</strong>
-            <span :class="item.type">{{ activityLabel(item.type) }}</span>
+      <div class="overview-lower-grid">
+        <section class="activity-panel">
+          <header>
+            <div>
+              <h2>最近活动</h2>
+              <span>仅保留本次会话最近 20 条</span>
+            </div>
+            <button class="activity-clear" :disabled="activities.length === 0" @click="emit('clear-activities')">清空</button>
+          </header>
+          <div v-if="activities.length" class="activity-list">
+            <div v-for="item in activities.slice(0, 8)" :key="item.id" class="activity-row">
+              <time>{{ new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) }}</time>
+              <strong>{{ projectName(item.projectId) }}</strong>
+              <span :class="item.type">{{ activityLabel(item.type) }}</span>
+            </div>
           </div>
-        </div>
-        <div v-else class="activity-empty">启动或停止项目后，活动会显示在这里。</div>
-      </section>
+          <div v-else class="activity-empty">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2"/></svg>
+            <strong>本次会话还没有活动</strong>
+            <span>启动、停止或异常退出都会记录在这里。</span>
+          </div>
+        </section>
+
+        <aside class="workspace-guide">
+          <header><h2>工作概览</h2><span>实时状态</span></header>
+          <div class="status-summary">
+            <div><i class="running"></i><span>运行中</span><strong>{{ counts.running }}</strong></div>
+            <div><i></i><span>待启动</span><strong>{{ stoppedCount }}</strong></div>
+            <div><i class="error"></i><span>异常</span><strong>{{ counts.error }}</strong></div>
+          </div>
+          <div class="guide-divider"></div>
+          <div class="quick-guide">
+            <p class="guide-label">快速开始</p>
+            <div><b>1</b><span>点击项目卡片进入专注工作区</span></div>
+            <div><b>2</b><span>启动项目后查看实时运行日志</span></div>
+            <div><b>3</b><span>需要交互命令时切换到终端</span></div>
+          </div>
+        </aside>
+      </div>
     </div>
 
     <div v-else class="overview-empty">
@@ -102,21 +132,27 @@ function activityLabel(type: ActivityItem['type']) {
 .overview-header h1 { margin: 0; color: var(--text-primary); font-size: 20px; letter-spacing: -.03em; }
 .overview-header p:not(.section-eyebrow) { margin: 4px 0 0; color: var(--text-secondary); font-size: 12px; }
 .overview-actions { display: flex; gap: 8px; }
-.overview-content { max-width: 1180px; margin: 0 auto; padding: 22px 24px 32px; }
+.overview-content { min-height: calc(100% - 88px); max-width: 1180px; margin: 0 auto; padding: 22px 24px 32px; display: flex; flex-direction: column; }
 .stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .stat-card { padding: 14px 16px; border: 1px solid var(--border-default); border-radius: 10px; background: var(--bg-surface); }
 .stat-card span { color: var(--text-tertiary); font-size: 11px; }
 .stat-card strong { display: block; margin-top: 4px; color: var(--text-primary); font-size: 22px; line-height: 1.1; }
 .stat-card.running strong { color: var(--success); }.stat-card.error strong { color: var(--error); }
 .project-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
-.activity-panel { margin-top: 12px; overflow: hidden; border: 1px solid var(--border-default); border-radius: 10px; background: var(--bg-surface); }
-.activity-panel > header { display: flex; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border-muted); }
-.activity-panel h2 { margin: 0; font-size: 12px; }.activity-panel header span { color: var(--text-tertiary); font-size: 10px; }
+.overview-lower-grid { flex: 1; min-height: 230px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(260px, .85fr); gap: 10px; margin-top: 12px; }
+.activity-panel,.workspace-guide { min-height: 0; overflow: hidden; border: 1px solid var(--border-default); border-radius: 10px; background: var(--bg-surface); }
+.activity-panel { display: flex; flex-direction: column; }
+.activity-panel > header,.workspace-guide > header { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--border-muted); }
+.activity-panel h2,.workspace-guide h2 { margin: 0; font-size: 12px; }.activity-panel header span,.workspace-guide header span { display: block; margin-top: 2px; color: var(--text-tertiary); font-size: 9px; }
+.activity-clear { min-height: 28px; padding: 0 9px; border: 1px solid transparent; border-radius: 6px; color: var(--text-tertiary); font-size: 10px; }.activity-clear:hover:not(:disabled) { color: var(--error); border-color: var(--border-default); background: var(--error-bg); }
+.activity-list { overflow-y: auto; }
 .activity-row { display: grid; grid-template-columns: 82px minmax(120px, 180px) 1fr; gap: 12px; padding: 8px 14px; color: var(--text-secondary); font-size: 11px; }
 .activity-row time { color: var(--text-tertiary); font-family: var(--font-mono); }.activity-row .started { color: var(--success); }.activity-row .error { color: var(--error); }
-.activity-empty { padding: 24px; color: var(--text-tertiary); font-size: 12px; text-align: center; }
+.activity-empty { flex: 1; min-height: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; color: var(--text-tertiary); text-align: center; }.activity-empty svg { margin-bottom: 9px; opacity: .72; }.activity-empty strong { color: var(--text-secondary); font-size: 12px; font-weight: 650; }.activity-empty span { margin-top: 4px; font-size: 10px; }
+.workspace-guide { display: flex; flex-direction: column; }.status-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 12px; }.status-summary > div { min-width: 0; padding: 9px; border-radius: 8px; background: var(--bg-subtle); }.status-summary i { display: block; width: 7px; height: 7px; margin-bottom: 8px; border-radius: 50%; background: var(--text-tertiary); }.status-summary i.running { background: var(--success); }.status-summary i.error { background: var(--error); }.status-summary span { display: block; overflow: hidden; color: var(--text-tertiary); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }.status-summary strong { display: block; margin-top: 2px; color: var(--text-primary); font: 700 16px var(--font-mono); }
+.guide-divider { height: 1px; margin: 0 12px; background: var(--border-muted); }.quick-guide { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 15px; }.guide-label { margin: 0 0 1px; color: var(--text-tertiary); font-size: 9px; font-weight: 700; letter-spacing: .08em; }.quick-guide > div { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 10px; }.quick-guide b { width: 18px; height: 18px; display: grid; place-items: center; flex: none; border: 1px solid var(--border-default); border-radius: 5px; color: var(--accent-primary); background: var(--bg-subtle); font: 700 9px var(--font-mono); }
 .overview-empty { height: calc(100% - 88px); display: grid; place-content: center; justify-items: center; padding: 40px; text-align: center; }
 .empty-icon { display: grid; place-items: center; width: 54px; height: 54px; border: 1px solid var(--border-default); border-radius: 14px; color: var(--accent-primary); background: var(--bg-surface); font: 700 20px var(--font-mono); }
 .overview-empty h2 { margin: 16px 0 6px; font-size: 18px; }.overview-empty p { max-width: 420px; margin: 0 0 18px; color: var(--text-secondary); font-size: 13px; }
-@media (max-width: 860px) { .project-grid { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .project-grid,.overview-lower-grid { grid-template-columns: 1fr; }.overview-lower-grid { flex: none; }.workspace-guide { min-height: 230px; } }
 </style>

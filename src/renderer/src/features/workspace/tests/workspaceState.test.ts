@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { activityFromStatus, appendActivity, getOverviewCounts } from '../model/workspaceState'
+import { activityFromStatus, appendActivity, clearActivities, getOverviewCounts } from '../model/workspaceState'
 
 const projects = [
   { id: 'admin', name: 'Admin', path: '/admin', command: 'dev' },
@@ -46,4 +46,16 @@ test('activity history keeps the newest twenty entries', () => {
   assert.equal(next.length, 20)
   assert.equal(next[0].id, 'new')
   assert.equal(next.some(item => item.id === '19'), false)
+})
+
+test('clearing activities returns an empty history without mutating the current list', () => {
+  const current = [{
+    id: '1',
+    projectId: 'admin',
+    type: 'started' as const,
+    timestamp: 1
+  }]
+
+  assert.deepEqual(clearActivities(current), [])
+  assert.equal(current.length, 1)
 })

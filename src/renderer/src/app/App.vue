@@ -4,7 +4,7 @@ import ErrorAnalysisDialog from '../features/error-analysis/ErrorAnalysisDialog.
 import ProjectOverview from '../features/projects/components/ProjectOverview.vue'
 import WorkspaceSidebar from '../features/projects/components/WorkspaceSidebar.vue'
 import ProjectWorkspace from '../features/workspace/components/ProjectWorkspace.vue'
-import { activityFromStatus, appendActivity } from '../features/workspace/model/workspaceState'
+import { activityFromStatus, appendActivity, clearActivities } from '../features/workspace/model/workspaceState'
 import Toast from '../shared/ui/Toast.vue'
 import AppHeader from '../shared/window/AppHeader.vue'
 import type { ActiveView, ActivityItem, AppConfig, ErrorAnalysis, Folder, ProcessStatus, Project } from '../shared/types'
@@ -124,6 +124,10 @@ function handleStatus(status: ProcessStatus) {
   const previous = processStatuses.value[status.projectId]
   activities.value = appendActivity(activities.value, activityFromStatus(previous, status))
   processStatuses.value[status.projectId] = status
+}
+
+function clearRecentActivities() {
+  activities.value = clearActivities(activities.value)
 }
 
 function handleErrorAnalysis(analysis: ErrorAnalysis) {
@@ -254,6 +258,7 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
         <ProjectOverview
           v-if="activeView === 'overview'" :projects="config?.projects || []" :statuses="processStatuses" :activities="activities" :node-version="nodeVersion"
           @select="selectProject" @start="startProjectById" @stop="stopProjectById" @start-all="startAllProjects" @stop-all="stopAllProjects" @add-project="openAddProject"
+          @clear-activities="clearRecentActivities"
         />
         <ProjectWorkspace
           v-else-if="selectedProject" :project="selectedProject" :status="currentStatus" :active-tab="activeTab" :edit-trigger="editTrigger"
