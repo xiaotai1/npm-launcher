@@ -2,6 +2,15 @@
 
 一个基于 Electron + Vue 3 的桌面项目工作台，用于集中管理多个 NPM 项目的启动、停止、日志和终端，并集成 nvm Node.js 版本管理。
 
+<p align="center">
+  <img src="docs/images/npm-launcher-cover.webp" alt="NPM Launcher 浅色与深色主题项目总览" width="100%">
+</p>
+
+<p align="center">
+  <a href="docs/images/npm-launcher-light.webp">查看浅色主题</a> ·
+  <a href="docs/images/npm-launcher-dark.webp">查看深色主题</a>
+</p>
+
 ## 功能特性
 
 ### 项目管理
