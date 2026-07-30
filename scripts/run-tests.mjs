@@ -20,9 +20,9 @@ async function findTests(directory) {
   return tests
 }
 
-const testFiles = await findTests('src/renderer/src')
+const testFiles = await findTests('src')
 if (testFiles.length === 0) {
-  console.error('No renderer tests found')
+  console.error('No tests found')
   process.exit(1)
 }
 

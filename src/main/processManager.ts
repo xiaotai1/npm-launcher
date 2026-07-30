@@ -249,11 +249,12 @@ export async function startProject(
 
   try {
     let child: ChildProcess
+    const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
     if (process.platform === 'win32') {
       // Windows: 使用项目级环境
-      const projectEnv = await getProjectEnv(nodeVersion)
-      child = spawn('cmd.exe', ['/c', `npm run ${command} 2>&1`], {
+      const projectEnv = await getProjectEnv(nodeVersion, projectPath)
+      child = spawn(npmCommand, ['run', command], {
         cwd: projectPath,
         windowsHide: true,
         env: {
@@ -265,10 +266,9 @@ export async function startProject(
       })
     } else {
       // Unix/macOS: 使用项目级环境
-      const projectEnv = await getProjectEnv(nodeVersion)
-      child = spawn('npm', ['run', command], {
+      const projectEnv = await getProjectEnv(nodeVersion, projectPath)
+      child = spawn(npmCommand, ['run', command], {
         cwd: projectPath,
-        shell: true,
         detached: true,
         env: {
           ...projectEnv,

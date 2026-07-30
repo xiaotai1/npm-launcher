@@ -1,7 +1,7 @@
 import { app, ipcMain, dialog, BrowserWindow, nativeTheme, shell } from 'electron'
 import { exec, spawn } from 'child_process'
 import { promisify } from 'util'
-import { readdirSync, readFileSync, readlinkSync, existsSync, writeFileSync, mkdirSync, promises as fsp } from 'fs'
+import { readdirSync, readlinkSync, existsSync, promises as fsp } from 'fs'
 import { join, basename } from 'path'
 import * as os from 'os'
 import {
@@ -33,6 +33,8 @@ import { isWindows, getShellEnv, getNvmPaths, clearShellEnvCache } from './platf
 import type { Project, AppConfig } from './configManager'
 import { getLogFiles, getLogContent, getLogDirPath, analyzeErrors } from './logManager'
 import type { ErrorAnalysis } from './logManager'
+import { readPackageScripts } from './packageScripts'
+import { resolveProjectRunRequest } from './projectRunRequest'
 
 const execAsync = promisify(exec)
 
@@ -255,18 +257,7 @@ export function setupIpc(): void {
 
   // 读取 package.json 的 scripts
   ipcMain.handle('get-package-scripts', async (_event, dir: string): Promise<{ scripts: string[]; error?: string }> => {
-    try {
-      const pkgPath = join(dir, 'package.json')
-      if (!existsSync(pkgPath)) {
-        return { scripts: [], error: '该目录下没有 package.json' }
-      }
-      const content = readFileSync(pkgPath, 'utf-8')
-      const pkg = JSON.parse(content)
-      const scripts = pkg.scripts ? Object.keys(pkg.scripts) : []
-      return { scripts }
-    } catch (error: any) {
-      return { scripts: [], error: error.message }
-    }
+    return readPackageScripts(dir)
   })
 
   // 在系统文件管理器中打开文件夹
@@ -319,8 +310,15 @@ export function setupIpc(): void {
   // ===== 进程管理 =====
 
   // 启动项目
-  ipcMain.handle('start-project', async (_event, projectId: string, projectPath: string, command: string, nodeVersion?: string): Promise<boolean> => {
-    return await startProject(getMainWindow(), projectId, projectPath, command, nodeVersion)
+  ipcMain.handle('start-project', async (_event, projectId: string): Promise<boolean> => {
+    const config = getConfig()
+    const configuredProject = config.projects.find(project => project.id === projectId)
+    if (!configuredProject) return false
+
+    const target = resolveProjectRunRequest(config, projectId, readPackageScripts(configuredProject.path).scripts)
+    if (!target) return false
+
+    return await startProject(getMainWindow(), target.id, target.path, target.command, target.nodeVersion)
   })
 
   // 停止项目
@@ -335,10 +333,22 @@ export function setupIpc(): void {
 
   // 批量启动所有项目
   ipcMain.handle('start-all-projects', async (_event, projects: Array<{ id: string; path: string; command: string; nodeVersion?: string }>): Promise<{ success: number; failed: number }> => {
+    const config = getConfig()
     let success = 0
     let failed = 0
-    for (const project of projects) {
-      const result = await startProject(getMainWindow(), project.id, project.path, project.command, project.nodeVersion)
+
+    for (const request of projects) {
+      const configuredProject = config.projects.find(project => project.id === request.id)
+      const target = configuredProject
+        ? resolveProjectRunRequest(config, request.id, readPackageScripts(configuredProject.path).scripts)
+        : null
+
+      if (!target) {
+        failed++
+        continue
+      }
+
+      const result = await startProject(getMainWindow(), target.id, target.path, target.command, target.nodeVersion)
       if (result) {
         success++
       } else {
