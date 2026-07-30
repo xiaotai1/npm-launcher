@@ -6,12 +6,14 @@ const props = defineProps<{
   project: Project
   status?: ProcessStatus
   globalNodeVersion: string | null
+  localUrl?: string | null
 }>()
 
 const emit = defineEmits<{
   select: [id: string]
   start: [id: string]
   stop: [id: string]
+  'open-url': [url: string]
 }>()
 
 const statusLabel = computed(() => {
@@ -32,6 +34,12 @@ const statusLabel = computed(() => {
     <footer class="project-card-footer">
       <span class="meta-chip">Node {{ project.nodeVersion || globalNodeVersion || '系统' }}</span>
       <span class="meta-chip">npm run {{ project.command }}</span>
+      <button
+        v-if="localUrl"
+        class="card-action link"
+        :aria-label="`打开 ${project.name} 页面`"
+        @click.stop="emit('open-url', localUrl)"
+      >打开页面</button>
       <button
         v-if="status?.status === 'running'"
         class="card-action danger"
@@ -64,6 +72,8 @@ const statusLabel = computed(() => {
 .project-card-footer { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .meta-chip { max-width: 38%; overflow: hidden; padding: 4px 7px; border-radius: 6px; color: var(--text-secondary); background: var(--bg-subtle); font: 10px/1.2 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
 .card-action { min-height: 30px; margin-left: auto; padding: 0 12px; border-radius: 7px; color: #fff; font-size: 11px; font-weight: 700; }
+.card-action + .card-action { margin-left: 0; }
 .card-action.primary { background: var(--accent-primary); }
 .card-action.danger { background: var(--error); }
+.card-action.link { color: var(--accent-primary); border: 1px solid var(--accent-border); background: var(--accent-glow); }
 </style>

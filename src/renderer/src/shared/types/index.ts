@@ -88,7 +88,8 @@ declare global {
       getPackageScripts: (dir: string) => Promise<{ scripts: string[]; error?: string }>
       openInFileManager: (folderPath: string) => Promise<{ success: boolean; error?: string }>
       openInVscode: (folderPath: string) => Promise<{ success: boolean; error?: string }>
-      startProject: (projectId: string, projectPath: string, command: string, nodeVersion?: string) => Promise<boolean>
+      openLocalUrl: (url: string) => Promise<{ success: boolean; error?: string }>
+      startProject: (projectId: string, projectPath: string, command: string, nodeVersion?: string) => Promise<{ success: boolean; error?: string }>
       stopProject: (projectId: string) => Promise<boolean>
       getProcessStatus: (projectId: string) => Promise<ProcessStatus>
       startAllProjects: (projects: Array<{ id: string; path: string; command: string; nodeVersion?: string }>) => Promise<{ success: number; failed: number }>

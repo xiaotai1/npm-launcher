@@ -12,6 +12,7 @@ const props = defineProps<{
   editTrigger: number
   nodeVersions: string[]
   globalNodeVersion: string | null
+  localUrl: string | null
 }>()
 
 const emit = defineEmits<{
@@ -23,6 +24,8 @@ const emit = defineEmits<{
   edit: []
   toast: [message: string, type: 'success' | 'error' | 'warning']
   'set-node-version': [projectId: string, version: string | null]
+  'set-command': [projectId: string, command: string]
+  'open-url': [url: string]
   'analyze-errors': []
   'export-result': [success: boolean, message: string]
 }>()
@@ -49,11 +52,14 @@ function editProject() {
       :project="project"
       :status="status"
       :global-node-version="globalNodeVersion"
+      :local-url="localUrl"
       @start="emit('start')"
       @stop="emit('stop')"
       @edit="editProject"
       @open-folder="openFolder"
       @open-vscode="openInVscode"
+      @open-url="emit('open-url', $event)"
+      @set-command="command => emit('set-command', project.id, command)"
     />
     <nav class="workspace-tabs" aria-label="项目工作区">
       <button :class="{ active: activeTab === 'logs' }" @click="emit('update:activeTab', 'logs')">运行日志</button>

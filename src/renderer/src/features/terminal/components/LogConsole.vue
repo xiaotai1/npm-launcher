@@ -3,6 +3,9 @@ import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
+import type { LogEntry } from '../../../shared/types'
+import { clearLogHistory, getLogHistory, subscribeLogHistory } from '../model/logHistory'
+import { formatLogForView, type LogFilter } from '../model/logView'
 import { currentTerminalTheme } from '../terminalTheme'
 
 const props = defineProps<{
@@ -19,22 +22,34 @@ const emit = defineEmits<{
 
 const terminalContainer = ref<HTMLDivElement>()
 const exporting = ref(false)
+const searchQuery = ref('')
+const logFilter = ref<LogFilter>('all')
 let terminal: Terminal | null = null
 let fitAddon: FitAddon | null = null
-let globalCleanup: (() => void) | null = null
+let cleanupHistory: (() => void) | null = null
 let resizeObserver: ResizeObserver | null = null
 let themeObserver: MutationObserver | null = null
 
-// 按项目缓存日志历史，切换项目时回放
-const logHistory = new Map<string, string[]>()
-const MAX_HISTORY = 500
-
 function clear() {
   terminal?.clear()
-  logHistory.delete(props.projectId)
+  clearLogHistory(props.projectId)
 }
 
 defineExpose({ clear })
+
+function writeLogEntry(log: LogEntry) {
+  const data = formatLogForView(log, logFilter.value, searchQuery.value)
+  if (data) terminal?.write(data + '\r\n')
+}
+
+function replayCurrentProjectLogs() {
+  if (!terminal) return
+  terminal.clear()
+  const history = getLogHistory(props.projectId)
+  for (const log of history) {
+    writeLogEntry(log)
+  }
+}
 
 function initTerminal() {
   if (!terminalContainer.value || terminal) return
@@ -60,10 +75,7 @@ function initTerminal() {
   })
 
   // 回放当前项目的历史日志
-  const history = logHistory.get(props.projectId)
-  if (history && history.length > 0) {
-    terminal.write(history.join('\r\n') + '\r\n')
-  }
+  replayCurrentProjectLogs()
 
   // 监听容器大小变化（防抖，避免对话框弹出/关闭时瞬间重排）
   let resizeTimer: ReturnType<typeof setTimeout> | null = null
@@ -92,21 +104,12 @@ function disposeTerminal() {
 }
 
 // 全局日志监听 — 缓存所有项目的日志，仅实时写入当前项目
-function setupGlobalListener() {
-  if (globalCleanup) return
-  globalCleanup = window.electronAPI.onLogData((log) => {
-    // 缓存所有项目的日志（带类型）
-    if (!logHistory.has(log.projectId)) {
-      logHistory.set(log.projectId, [])
-    }
-    const buf = logHistory.get(log.projectId)!
-    buf.push(log.data)
-    if (buf.length > MAX_HISTORY) {
-      buf.splice(0, buf.length - MAX_HISTORY)
-    }
+function setupHistoryListener() {
+  if (cleanupHistory) return
+  cleanupHistory = subscribeLogHistory((log) => {
     // 仅当前项目实时写入 xterm
     if (log.projectId === props.projectId && terminal) {
-      terminal.write(log.data + '\r\n')
+      writeLogEntry(log)
     }
   })
 }
@@ -117,6 +120,10 @@ watch(() => props.projectId, (newId, oldId) => {
     disposeTerminal()
     nextTick(() => initTerminal())
   }
+})
+
+watch([searchQuery, logFilter], () => {
+  replayCurrentProjectLogs()
 })
 
 // 主题切换时更新终端配色
@@ -131,14 +138,14 @@ onMounted(() => {
     attributes: true,
     attributeFilter: ['data-theme']
   })
-  setupGlobalListener()
+  setupHistoryListener()
   nextTick(() => initTerminal())
 })
 
 onBeforeUnmount(() => {
   themeObserver?.disconnect()
-  globalCleanup?.()
-  globalCleanup = null
+  cleanupHistory?.()
+  cleanupHistory = null
   disposeTerminal()
 })
 
@@ -174,6 +181,17 @@ async function exportLog() {
         </span>
       </div>
       <div class="flex items-center gap-2">
+        <div v-if="hasLogs" class="log-tools">
+          <select v-model="logFilter" aria-label="日志类型过滤">
+            <option value="all">全部</option>
+            <option value="stdout">输出</option>
+            <option value="stderr">警告</option>
+            <option value="error">错误</option>
+            <option value="info">信息</option>
+          </select>
+          <input v-model="searchQuery" aria-label="搜索日志" placeholder="搜索日志" />
+          <button v-if="searchQuery" type="button" aria-label="清空搜索" @click="searchQuery = ''">清空</button>
+        </div>
         <button
           v-if="hasError"
           class="flex items-center gap-1 py-0.5 px-2 text-[10px] font-medium text-error border border-error/30 rounded hover:bg-error/10 transition-colors"
@@ -207,6 +225,46 @@ async function exportLog() {
 <style scoped>
 .running-dot {
   box-shadow: 0 0 6px var(--success);
+}
+
+.log-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.log-tools select,
+.log-tools input {
+  height: 26px;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  font-size: 11px;
+}
+
+.log-tools select {
+  max-width: 74px;
+  padding: 0 5px;
+}
+
+.log-tools input {
+  width: 150px;
+  padding: 0 8px;
+}
+
+.log-tools button {
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+}
+
+.log-tools button:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
 }
 
 :deep(.xterm),

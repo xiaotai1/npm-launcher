@@ -4,6 +4,7 @@ import * as iconv from 'iconv-lite'
 import { deleteProject } from './configManager'
 import { getProjectEnv } from './platform'
 import { startLogFile, writeLog, endLogFile, analyzeErrors } from './logManager'
+import { detectPackageManager, getPackageManagerCommand } from './packageManager'
 
 // 运行中的进程
 const runningProcesses: Map<string, ChildProcess> = new Map()
@@ -249,12 +250,13 @@ export async function startProject(
 
   try {
     let child: ChildProcess
-    const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+    const packageManager = detectPackageManager(projectPath)
+    const packageManagerCommand = getPackageManagerCommand(packageManager)
 
     if (process.platform === 'win32') {
       // Windows: 使用项目级环境
       const projectEnv = await getProjectEnv(nodeVersion, projectPath)
-      child = spawn(npmCommand, ['run', command], {
+      child = spawn(packageManagerCommand, ['run', command], {
         cwd: projectPath,
         windowsHide: true,
         env: {
@@ -267,7 +269,7 @@ export async function startProject(
     } else {
       // Unix/macOS: 使用项目级环境
       const projectEnv = await getProjectEnv(nodeVersion, projectPath)
-      child = spawn(npmCommand, ['run', command], {
+      child = spawn(packageManagerCommand, ['run', command], {
         cwd: projectPath,
         detached: true,
         env: {
@@ -354,7 +356,7 @@ export async function startProject(
 
     // 通知已启动
     sendStatus(mainWindow, projectId, 'running', { pid: child.pid })
-    sendLog(mainWindow, projectId, 'info', processLogLine(`启动: npm run ${command}`, 'info', Date.now()))
+    sendLog(mainWindow, projectId, 'info', processLogLine(`启动: ${packageManager} run ${command}`, 'info', Date.now()))
     sendLog(mainWindow, projectId, 'info', processLogLine(`目录: ${projectPath}`, 'info', Date.now()))
 
     return true

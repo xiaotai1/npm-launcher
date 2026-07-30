@@ -7,8 +7,10 @@ import ProjectWorkspace from '../features/workspace/components/ProjectWorkspace.
 import { activityFromStatus, appendActivity, clearActivities } from '../features/workspace/model/workspaceState'
 import Toast from '../shared/ui/Toast.vue'
 import AppHeader from '../shared/window/AppHeader.vue'
-import type { ActiveView, ActivityItem, AppConfig, ErrorAnalysis, Folder, ProcessStatus, Project } from '../shared/types'
+import type { ActiveView, ActivityItem, AppConfig, ErrorAnalysis, Folder, LogEntry, ProcessStatus, Project } from '../shared/types'
 import { applyTheme, installSystemThemeListener } from './useAppTheme'
+import { findLocalUrls } from '../features/workspace/model/localUrls'
+import { appendLogEntry } from '../features/terminal/model/logHistory'
 
 const config = ref<AppConfig | null>(null)
 const nodeVersion = ref<string | null>(null)
@@ -17,6 +19,7 @@ const currentNodeVersion = ref<string | null>(null)
 const switchingVersion = ref(false)
 const selectedProjectId = ref<string | null>(null)
 const processStatuses = ref<Record<string, ProcessStatus>>({})
+const projectUrls = ref<Record<string, string>>({})
 const activities = ref<ActivityItem[]>([])
 const activeView = ref<ActiveView>('overview')
 const activeTab = ref<'logs' | 'terminal' | 'info'>('logs')
@@ -33,6 +36,7 @@ const isResizing = ref(false)
 const workspaceSidebarRef = ref<InstanceType<typeof WorkspaceSidebar> | null>(null)
 
 let cleanupStatus: (() => void) | null = null
+let cleanupLogs: (() => void) | null = null
 let cleanupErrorAnalysis: (() => void) | null = null
 let cleanupSystemTheme: (() => void) | null = null
 
@@ -110,7 +114,8 @@ async function moveToFolder(projectId: string, folderId: string | null) { await 
 async function startProjectById(projectId: string) {
   const project = config.value?.projects.find(item => item.id === projectId)
   if (!project) return
-  await window.electronAPI.startProject(project.id, project.path, project.command, project.nodeVersion)
+  const result = await window.electronAPI.startProject(project.id, project.path, project.command, project.nodeVersion)
+  if (!result.success) showToast(result.error || '启动前检查未通过', 'error')
 }
 
 async function stopProjectById(projectId: string) {
@@ -126,6 +131,14 @@ function handleStatus(status: ProcessStatus) {
   processStatuses.value[status.projectId] = status
 }
 
+function handleLogData(log: LogEntry) {
+  appendLogEntry(log)
+  const urls = findLocalUrls(log.data)
+  if (urls[0]) {
+    projectUrls.value[log.projectId] = urls[0]
+  }
+}
+
 function clearRecentActivities() {
   activities.value = clearActivities(activities.value)
 }
@@ -137,6 +150,11 @@ function handleErrorAnalysis(analysis: ErrorAnalysis) {
 
 function closeErrorAnalysis() { showErrorAnalysis.value = false; errorAnalysis.value = null }
 async function openLogDir(projectId: string) { await window.electronAPI.openLogDir(projectId) }
+
+async function openProjectUrl(url: string) {
+  const result = await window.electronAPI.openLocalUrl(url)
+  if (!result.success) showToast(result.error || '打开页面失败', 'error')
+}
 
 async function handleAnalyzeErrors() {
   if (!selectedProjectId.value) return
@@ -178,6 +196,14 @@ async function setProjectNodeVersion(projectId: string, version: string | null) 
   await loadConfig()
 }
 
+async function setProjectCommand(projectId: string, command: string) {
+  const project = config.value?.projects.find(item => item.id === projectId)
+  if (!project || project.command === command) return
+  await window.electronAPI.updateProject(toRaw({ ...project, command }))
+  await loadConfig()
+  showToast(`已切换启动方案: ${command}`, 'success')
+}
+
 async function refreshVersions() { await Promise.all([loadNodeVersion(), loadNodeVersions()]) }
 
 async function toggleTheme() {
@@ -215,11 +241,12 @@ onMounted(async () => {
   await Promise.all([loadConfig(), loadNodeVersion(), loadNodeVersions()])
   applyTheme(config.value?.theme || 'system')
   cleanupStatus = window.electronAPI.onProcessStatus(handleStatus)
+  cleanupLogs = window.electronAPI.onLogData(handleLogData)
   cleanupErrorAnalysis = window.electronAPI.onErrorAnalysis?.(handleErrorAnalysis) || null
   cleanupSystemTheme = installSystemThemeListener(() => config.value?.theme || 'system')
 })
 
-onUnmounted(() => { cleanupStatus?.(); cleanupErrorAnalysis?.(); cleanupSystemTheme?.() })
+onUnmounted(() => { cleanupStatus?.(); cleanupLogs?.(); cleanupErrorAnalysis?.(); cleanupSystemTheme?.() })
 watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
 </script>
 
@@ -257,14 +284,16 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
       <section class="app-content">
         <ProjectOverview
           v-if="activeView === 'overview'" :projects="config?.projects || []" :statuses="processStatuses" :activities="activities" :node-version="nodeVersion"
+          :project-urls="projectUrls"
           @select="selectProject" @start="startProjectById" @stop="stopProjectById" @start-all="startAllProjects" @stop-all="stopAllProjects" @add-project="openAddProject"
-          @clear-activities="clearRecentActivities"
+          @clear-activities="clearRecentActivities" @open-url="openProjectUrl"
         />
         <ProjectWorkspace
           v-else-if="selectedProject" :project="selectedProject" :status="currentStatus" :active-tab="activeTab" :edit-trigger="editTrigger"
+          :local-url="projectUrls[selectedProject.id] || null"
           :node-versions="nodeVersions" :global-node-version="nodeVersion" @update:active-tab="activeTab = $event"
           @start="startSelectedProject" @stop="stopSelectedProject" @edit="startEditProject(selectedProject.id)" @update="updateProject"
-          @delete="deleteProject" @toast="showToast" @set-node-version="setProjectNodeVersion" @analyze-errors="handleAnalyzeErrors" @export-result="handleExportResult"
+          @delete="deleteProject" @toast="showToast" @set-node-version="setProjectNodeVersion" @set-command="setProjectCommand" @open-url="openProjectUrl" @analyze-errors="handleAnalyzeErrors" @export-result="handleExportResult"
         />
       </section>
     </main>

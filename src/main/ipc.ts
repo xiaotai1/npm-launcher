@@ -35,6 +35,12 @@ import { getLogFiles, getLogContent, getLogDirPath, analyzeErrors } from './logM
 import type { ErrorAnalysis } from './logManager'
 import { readPackageScripts } from './packageScripts'
 import { resolveProjectRunRequest } from './projectRunRequest'
+import { inspectProjectHealth } from './projectHealth'
+
+interface StartProjectResult {
+  success: boolean
+  error?: string
+}
 
 const execAsync = promisify(exec)
 
@@ -302,6 +308,22 @@ export function setupIpc(): void {
     }
   })
 
+  // 打开运行日志中识别到的本地访问地址
+  ipcMain.handle('open-local-url', async (_event, url: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const parsed = new URL(url)
+      const isLocal = ['localhost', '127.0.0.1'].includes(parsed.hostname)
+      if (!['http:', 'https:'].includes(parsed.protocol) || !isLocal) {
+        return { success: false, error: '仅支持打开本地访问地址' }
+      }
+
+      await shell.openExternal(parsed.toString())
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message || '打开地址失败' }
+    }
+  })
+
   // ===== 原生主题 =====
   ipcMain.handle('set-native-theme', (_event, theme: 'light' | 'dark' | 'system') => {
     nativeTheme.themeSource = theme
@@ -310,15 +332,21 @@ export function setupIpc(): void {
   // ===== 进程管理 =====
 
   // 启动项目
-  ipcMain.handle('start-project', async (_event, projectId: string): Promise<boolean> => {
+  ipcMain.handle('start-project', async (_event, projectId: string): Promise<StartProjectResult> => {
     const config = getConfig()
     const configuredProject = config.projects.find(project => project.id === projectId)
-    if (!configuredProject) return false
+    if (!configuredProject) return { success: false, error: '项目配置不存在' }
+
+    const health = inspectProjectHealth(configuredProject)
+    if (!health.ok) {
+      return { success: false, error: health.issues[0]?.message || '启动前检查未通过' }
+    }
 
     const target = resolveProjectRunRequest(config, projectId, readPackageScripts(configuredProject.path).scripts)
-    if (!target) return false
+    if (!target) return { success: false, error: '项目启动配置已失效' }
 
-    return await startProject(getMainWindow(), target.id, target.path, target.command, target.nodeVersion)
+    const success = await startProject(getMainWindow(), target.id, target.path, target.command, target.nodeVersion)
+    return success ? { success: true } : { success: false, error: '项目启动失败' }
   })
 
   // 停止项目
@@ -339,10 +367,18 @@ export function setupIpc(): void {
 
     for (const request of projects) {
       const configuredProject = config.projects.find(project => project.id === request.id)
-      const target = configuredProject
-        ? resolveProjectRunRequest(config, request.id, readPackageScripts(configuredProject.path).scripts)
-        : null
+      if (!configuredProject) {
+        failed++
+        continue
+      }
 
+      const health = inspectProjectHealth(configuredProject)
+      if (!health.ok) {
+        failed++
+        continue
+      }
+
+      const target = resolveProjectRunRequest(config, request.id, readPackageScripts(configuredProject.path).scripts)
       if (!target) {
         failed++
         continue

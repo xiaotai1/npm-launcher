@@ -9,6 +9,7 @@ const props = defineProps<{
   statuses: Record<string, ProcessStatus>
   activities: ActivityItem[]
   nodeVersion: string | null
+  projectUrls: Record<string, string>
 }>()
 
 const emit = defineEmits<{
@@ -19,6 +20,7 @@ const emit = defineEmits<{
   'stop-all': []
   'add-project': []
   'clear-activities': []
+  'open-url': [url: string]
 }>()
 
 const counts = computed(() => getOverviewCounts(props.projects, props.statuses))
@@ -64,9 +66,11 @@ function activityLabel(type: ActivityItem['type']) {
           :project="project"
           :status="statuses[project.id]"
           :global-node-version="nodeVersion"
+          :local-url="projectUrls[project.id] || null"
           @select="emit('select', $event)"
           @start="emit('start', $event)"
           @stop="emit('stop', $event)"
+          @open-url="emit('open-url', $event)"
         />
       </div>
 

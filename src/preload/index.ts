@@ -45,9 +45,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('open-in-file-manager', folderPath),
   openInVscode: (folderPath: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('open-in-vscode', folderPath),
+  openLocalUrl: (url: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('open-local-url', url),
 
   // 进程管理
-  startProject: (projectId: string, projectPath: string, command: string, nodeVersion?: string): Promise<boolean> =>
+  startProject: (projectId: string, projectPath: string, command: string, nodeVersion?: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('start-project', projectId, projectPath, command, nodeVersion),
   stopProject: (projectId: string): Promise<boolean> =>
     ipcRenderer.invoke('stop-project', projectId),

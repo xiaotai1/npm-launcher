@@ -13,5 +13,5 @@ test('项目启动环境使用项目目录读取项目级 npm 配置', () => {
 test('项目启动命令不通过 shell 拼接用户可控命令', () => {
   assert.equal(source.includes("spawn('cmd.exe', ['/c', `npm run ${command} 2>&1`]"), false)
   assert.equal(source.includes('shell: true'), false)
-  assert.match(source, /spawn\(npmCommand,\s*\['run',\s*command\]/)
+  assert.match(source, /spawn\(packageManagerCommand,\s*\['run',\s*command\]/)
 })
