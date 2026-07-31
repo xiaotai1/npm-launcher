@@ -3,13 +3,24 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import type { ActiveView, Project, Folder, ProcessStatus } from '../../../shared/types'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
 import CreateProjectDialog from './CreateProjectDialog.vue'
-import { filterProjects, getFolderProjects, getRootFavorites, getRootProjects } from '../model/projectFilters'
+import {
+  canReorderProjects,
+  filterProjects,
+  getFolderProjects,
+  getRootFavorites,
+  getRootProjects,
+  reorderProjectIds,
+  type ProjectDropPlacement
+} from '../model/projectFilters'
+import { clampContextMenuPosition } from '../model/contextMenuPosition'
+import { projectDisplayMeta } from '../model/projectDisplay'
 
 const props = defineProps<{
   projects: Project[]
   folders: Folder[]
   selectedId: string | null
   statuses: Record<string, ProcessStatus>
+  projectUrls: Record<string, string>
   activeView: ActiveView
 }>()
 
@@ -44,12 +55,21 @@ const renameInput = ref('')
 // 拖拽状态
 const dragProjectId = ref<string | null>(null)
 const dragFolderId = ref<string | null>(null)
-const dropTarget = ref<{ type: 'project' | 'folder' | 'root'; id?: string } | null>(null)
+const dropTarget = ref<{
+  type: 'project' | 'folder' | 'root'
+  id?: string
+  placement?: ProjectDropPlacement
+} | null>(null)
 
 // 右键菜单
 const contextMenu = ref<{ visible: boolean; x: number; y: number; target: Project | Folder | null; type: 'project' | 'folder' | null }>({
   visible: false, x: 0, y: 0, target: null, type: null
 })
+
+const contextMenuSizes = {
+  project: { width: 176, height: 188 },
+  folder: { width: 176, height: 104 }
+}
 
 // 删除确认
 const confirmState = ref<{ visible: boolean; type: 'project' | 'folder'; id: string; name: string }>({ visible: false, type: 'project', id: '', name: '' })
@@ -91,6 +111,10 @@ function getStatusInfo(projectId: string) {
   return { text: '未启动', color: 'var(--text-tertiary)' }
 }
 
+function projectMeta(project: Project) {
+  return projectDisplayMeta(project, props.projectUrls[project.id])
+}
+
 function openAddForm() {
   createDialogVisible.value = true
 }
@@ -110,6 +134,10 @@ function onToggleFavorite(projectId: string, e: Event) {
 
 // 拖拽
 function onProjectDragStart(e: DragEvent, projectId: string) {
+  if (searchQuery.value.trim()) {
+    e.preventDefault()
+    return
+  }
   dragProjectId.value = projectId
   if (e.dataTransfer) {
     e.dataTransfer.effectAllowed = 'move'
@@ -117,9 +145,46 @@ function onProjectDragStart(e: DragEvent, projectId: string) {
   }
 }
 
-function onProjectDragOver(e: DragEvent) {
+function projectDropPlacement(e: DragEvent): ProjectDropPlacement {
+  const target = e.currentTarget as HTMLElement
+  const bounds = target.getBoundingClientRect()
+  return e.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after'
+}
+
+function onProjectDragOver(e: DragEvent, targetProjectId: string) {
+  if (!dragProjectId.value || !canReorderProjects(props.projects, dragProjectId.value, targetProjectId)) return
   e.preventDefault()
+  dropTarget.value = {
+    type: 'project',
+    id: targetProjectId,
+    placement: projectDropPlacement(e)
+  }
   if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+}
+
+function onProjectDrop(e: DragEvent, targetProjectId: string) {
+  e.preventDefault()
+  if (dragProjectId.value && canReorderProjects(props.projects, dragProjectId.value, targetProjectId)) {
+    const projectIds = reorderProjectIds(
+      props.projects,
+      dragProjectId.value,
+      targetProjectId,
+      projectDropPlacement(e)
+    )
+    if (projectIds.some((id, index) => id !== props.projects[index]?.id)) {
+      emit('reorder', projectIds)
+    }
+  }
+  onDragEnd()
+}
+
+function projectDragClass(projectId: string) {
+  const isTarget = dropTarget.value?.type === 'project' && dropTarget.value.id === projectId
+  return {
+    dragging: dragProjectId.value === projectId,
+    'drop-before': isTarget && dropTarget.value?.placement === 'before',
+    'drop-after': isTarget && dropTarget.value?.placement === 'after'
+  }
 }
 
 function onFolderDragOver(e: DragEvent, folderId: string) {
@@ -201,12 +266,22 @@ function onFolderDropForSort(e: DragEvent, targetFolderId: string) {
 function onProjectContextMenu(e: MouseEvent, project: Project) {
   e.preventDefault()
   emit('select', project.id)
-  contextMenu.value = { visible: true, x: e.clientX, y: e.clientY, target: project, type: 'project' }
+  const position = clampContextMenuPosition(
+    { x: e.clientX, y: e.clientY },
+    { width: window.innerWidth, height: window.innerHeight },
+    contextMenuSizes.project
+  )
+  contextMenu.value = { visible: true, x: position.x, y: position.y, target: project, type: 'project' }
 }
 
 function onFolderContextMenu(e: MouseEvent, folder: Folder) {
   e.preventDefault()
-  contextMenu.value = { visible: true, x: e.clientX, y: e.clientY, target: folder, type: 'folder' }
+  const position = clampContextMenuPosition(
+    { x: e.clientX, y: e.clientY },
+    { width: window.innerWidth, height: window.innerHeight },
+    contextMenuSizes.folder
+  )
+  contextMenu.value = { visible: true, x: position.x, y: position.y, target: folder, type: 'folder' }
 }
 
 function closeContextMenu() {
@@ -338,7 +413,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
     </div>
 
     <!-- 项目列表 -->
-    <div class="flex-1 overflow-y-auto px-2 pt-1 pb-2 project-list-scroll" @dragover="onRootDragOver" @drop="onRootDrop">
+    <div :class="['flex-1 overflow-y-auto px-2 pt-1 pb-2 project-list-scroll', { 'is-searching': searchQuery.trim() }]" @dragover="onRootDragOver" @drop="onRootDrop">
 
       <!-- 根级别收藏项目 -->
       <template v-if="rootFavorites.length">
@@ -349,12 +424,13 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
         <div
           v-for="project in rootFavorites"
           :key="project.id"
-          :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }]"
-          draggable="true"
+          :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }, projectDragClass(project.id)]"
+          :draggable="!searchQuery.trim()"
           @click="emit('select', project.id)"
           @contextmenu="onProjectContextMenu($event, project)"
           @dragstart="onProjectDragStart($event, project.id)"
-          @dragover="onProjectDragOver"
+          @dragover.stop="onProjectDragOver($event, project.id)"
+          @drop.stop="onProjectDrop($event, project.id)"
           @dragend="onDragEnd"
         >
           <div class="shrink-0 w-3.5 flex items-center justify-center text-ttertiary opacity-0 transition-opacity duration-200 ease-out cursor-grab card-drag-handle" title="拖拽排序">
@@ -370,7 +446,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
               <span class="w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-300" :style="{ background: getStatusInfo(project.id).color }"></span>
             </div>
             <div class="flex items-center justify-between gap-2">
-              <span class="text-[10px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command">npm run {{ project.command }}</span>
+              <span class="text-[10px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command" :title="project.path">{{ projectMeta(project) }}</span>
               <span class="text-[9px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
             </div>
           </div>
@@ -387,8 +463,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
           :class="['flex items-center gap-1.75 py-1.75 px-2 mb-0.5 rounded-lg cursor-default transition-all duration-150 ease-out folder-row', { 'drop-highlight': dropTarget?.type === 'folder' && dropTarget?.id === folder.id, dragging: dragFolderId === folder.id }]"
           draggable="true"
           @dragstart="onFolderDragStart($event, folder.id)"
-          @dragover="dragFolderId ? onFolderDragOverForSort($event, folder.id) : onFolderDragOver($event, folder.id)"
-          @drop="dragFolderId ? onFolderDropForSort($event, folder.id) : onFolderDrop($event, folder.id)"
+          @dragover.stop="dragFolderId ? onFolderDragOverForSort($event, folder.id) : onFolderDragOver($event, folder.id)"
+          @drop.stop="dragFolderId ? onFolderDropForSort($event, folder.id) : onFolderDrop($event, folder.id)"
           @dragend="onDragEnd"
           @contextmenu="onFolderContextMenu($event, folder)"
         >
@@ -421,12 +497,13 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
           <div
             v-for="project in folderProjects(folder.id)"
             :key="project.id"
-            :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }]"
-            draggable="true"
+            :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }, projectDragClass(project.id)]"
+            :draggable="!searchQuery.trim()"
             @click="emit('select', project.id)"
             @contextmenu="onProjectContextMenu($event, project)"
             @dragstart="onProjectDragStart($event, project.id)"
-            @dragover="onProjectDragOver"
+            @dragover.stop="onProjectDragOver($event, project.id)"
+            @drop.stop="onProjectDrop($event, project.id)"
             @dragend="onDragEnd"
           >
             <div class="shrink-0 w-3.5 flex items-center justify-center text-ttertiary opacity-0 transition-opacity duration-200 ease-out cursor-grab card-drag-handle" title="拖拽排序">
@@ -442,7 +519,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
                 <span class="w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-300" :style="{ background: getStatusInfo(project.id).color }"></span>
               </div>
               <div class="flex items-center justify-between gap-2">
-                <span class="text-[10px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command">npm run {{ project.command }}</span>
+                <span class="text-[10px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command" :title="project.path">{{ projectMeta(project) }}</span>
                 <span class="text-[9px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
               </div>
             </div>
@@ -461,12 +538,13 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       <div
         v-for="project in rootNormal"
         :key="project.id"
-        :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }]"
-        draggable="true"
+        :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }, projectDragClass(project.id)]"
+        :draggable="!searchQuery.trim()"
         @click="emit('select', project.id)"
         @contextmenu="onProjectContextMenu($event, project)"
         @dragstart="onProjectDragStart($event, project.id)"
-        @dragover="onProjectDragOver"
+        @dragover.stop="onProjectDragOver($event, project.id)"
+        @drop.stop="onProjectDrop($event, project.id)"
         @dragend="onDragEnd"
       >
         <div class="shrink-0 w-3.5 flex items-center justify-center text-ttertiary opacity-0 transition-opacity duration-200 ease-out cursor-grab card-drag-handle" title="拖拽排序">
@@ -482,7 +560,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
             <span class="w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-300" :style="{ background: getStatusInfo(project.id).color }"></span>
           </div>
           <div class="flex items-center justify-between gap-2">
-            <span class="text-[10px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command">npm run {{ project.command }}</span>
+            <span class="text-[10px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command" :title="project.path">{{ projectMeta(project) }}</span>
             <span class="text-[9px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
           </div>
         </div>
@@ -768,10 +846,22 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   background: var(--bg-hover);
 }
 
+.project-card.dragging {
+  opacity: 0.48;
+}
+
 .project-card.active {
   background: var(--project-active-bg);
   border-color: var(--project-active-border);
   box-shadow: var(--project-active-shadow);
+}
+
+.project-card.drop-before {
+  box-shadow: inset 0 2px 0 var(--accent-primary);
+}
+
+.project-card.drop-after {
+  box-shadow: inset 0 -2px 0 var(--accent-primary);
 }
 
 .project-card.active::before {
@@ -782,12 +872,20 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   bottom: 6px;
   width: 2px;
   border-radius: 1px;
-  background: var(--indicator);
+  background: var(--accent-primary);
   animation: barGrow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.project-card .card-drag-handle {
+  opacity: 0.24;
 }
 
 .project-card:hover .card-drag-handle {
   opacity: 0.4;
+}
+
+.project-list-scroll.is-searching .card-drag-handle {
+  opacity: 0;
 }
 
 .card-drag-handle:hover {

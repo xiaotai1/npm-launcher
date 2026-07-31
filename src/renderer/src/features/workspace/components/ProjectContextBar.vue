@@ -137,9 +137,9 @@ h1 { min-width: 0; margin: 0; overflow: hidden; color: var(--text-primary); font
 .command-picker:hover:not(:disabled), .command-picker[aria-expanded='true'] { border-color: var(--accent-border); background: var(--bg-hover); }
 .command-picker:disabled { cursor: default; opacity: 1; }
 .command-picker-label { flex: none; color: var(--text-tertiary); font-family: var(--font-sans); font-size: 11px; font-weight: 700; }
-.command-picker strong { min-width: 0; overflow: hidden; color: var(--accent-primary); font: 700 13px/1 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
-.command-picker svg { flex: none; color: var(--accent-primary); opacity: .85; }
-.command-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 50; min-width: 140px; padding: 5px; border: 1px solid var(--border-default); border-radius: 8px; background: var(--bg-surface); box-shadow: var(--shadow-lg); }
+.command-picker strong { flex: 1; min-width: 0; overflow: hidden; color: var(--accent-primary); font: 700 13px/1 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.command-picker svg { flex: none; margin-left: auto; color: var(--accent-primary); opacity: .85; }
+.command-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 50; width: 100%; min-width: 140px; padding: 5px; border: 1px solid var(--border-default); border-radius: 8px; background: var(--bg-surface); box-shadow: var(--shadow-lg); }
 .command-option { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 8px; border-radius: 6px; color: var(--text-secondary); background: transparent; font: 700 12px/1 var(--font-mono); text-align: left; }
 .command-option:hover { color: var(--accent-primary); background: var(--bg-hover); }
 .command-option.active { color: var(--accent-primary); background: var(--accent-glow); }

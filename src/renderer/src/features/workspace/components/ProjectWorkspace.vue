@@ -61,10 +61,10 @@ function editProject() {
       @open-url="emit('open-url', $event)"
       @set-command="command => emit('set-command', project.id, command)"
     />
-    <nav class="workspace-tabs" aria-label="项目工作区">
+    <nav class="workspace-tabs workspace-tab-strip" aria-label="项目工作区">
       <button :class="{ active: activeTab === 'logs' }" @click="emit('update:activeTab', 'logs')">运行日志</button>
       <button :class="{ active: activeTab === 'terminal' }" @click="emit('update:activeTab', 'terminal')">交互终端</button>
-      <button :class="{ active: activeTab === 'info' }" @click="emit('update:activeTab', 'info')">项目信息</button>
+      <button :class="{ active: activeTab === 'info' }" @click="emit('update:activeTab', 'info')">项目设置</button>
     </nav>
     <div class="workspace-panels">
       <div v-show="activeTab === 'logs'" class="workspace-panel">
@@ -98,7 +98,18 @@ function editProject() {
 
 <style scoped>
 .project-workspace { height: 100%; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-app); }
-.workspace-tabs { height: 40px; display: flex; align-items: end; gap: 4px; padding: 0 14px; border-bottom: 1px solid var(--border-default); background: var(--bg-surface); }
-.workspace-tabs button { height: 40px; padding: 0 13px; border-bottom: 2px solid transparent; color: var(--text-tertiary); font-size: 12px; font-weight: 650; }.workspace-tabs button:hover { color: var(--text-primary); }.workspace-tabs button.active { color: var(--accent-primary); border-bottom-color: var(--accent-primary); }
-.workspace-panels { position: relative; flex: 1; min-height: 0; overflow: hidden; }.workspace-panel { position: absolute; inset: 0; display: flex; flex-direction: column; }.workspace-panel.hidden { visibility: hidden; pointer-events: none; }.info-panel { overflow-y: auto; background: var(--bg-app); }.info-panel :deep(.detail) { max-width: 860px; width: calc(100% - 40px); margin: 20px auto; border: 1px solid var(--border-default); border-radius: 12px; box-shadow: var(--shadow-card); }
+
+.workspace-tabs { min-height: 46px; display: flex; align-items: center; gap: 6px; padding: 7px 14px 8px; background: var(--bg-surface); }
+
+.workspace-tabs button { min-height: 31px; padding: 0 13px; border: 1px solid transparent; border-radius: 8px; color: var(--text-tertiary); font-size: 12px; font-weight: 650; transition: color 160ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+
+.workspace-tabs button:hover { color: var(--text-primary); background: var(--bg-hover); }
+
+.workspace-tabs button.active { color: var(--accent-primary); border-color: var(--nav-active-border); background: var(--nav-active-bg); box-shadow: var(--shadow-sm); }
+
+.workspace-panels { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.workspace-panel { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.workspace-panel.hidden { visibility: hidden; pointer-events: none; }
+.info-panel { overflow-y: auto; background: var(--bg-app); }
+.info-panel :deep(.settings-page) { flex: none; width: 100%; min-height: 100%; }
 </style>

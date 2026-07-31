@@ -27,7 +27,7 @@
 
 ### 日志与错误分析
 - 实时彩色日志流，按项目保留会话内日志历史
-- 每次启动自动写入日志文件，支持导出并自动清理 30 天前的记录
+- 日志仅保留在本次会话内，避免历史文件堆积，需要时可按需导出
 - 异常退出时识别端口占用、依赖缺失、编译错误等常见问题并给出建议
 
 ### Node.js 版本管理
@@ -79,7 +79,6 @@ npm run dev
 npm run build      # 编译应用
 npm run test       # 运行测试
 npm run typecheck  # TypeScript 类型检查
-npm run lint       # ESLint 检查
 ```
 
 ### 打包发布
@@ -111,7 +110,7 @@ src/
 │   ├── configManager.ts     # 项目、文件夹与主题配置持久化
 │   ├── processManager.ts    # NPM 进程启停、状态与实时日志
 │   ├── ptyManager.ts        # PTY 终端管理
-│   ├── logManager.ts        # 日志文件、导出与错误分析
+│   ├── logManager.ts        # 会话日志、导出与错误分析
 │   ├── platform.ts          # 跨平台 shell、nvm 与项目环境
 │   └── sudoExecutor.ts      # Windows 命令执行与 UAC 提权
 ├── preload/

@@ -29,10 +29,12 @@ const emit = defineEmits<{
 
 const counts = computed(() => getOverviewCounts(props.projects, props.statuses))
 const hasRunningProjects = computed(() => counts.value.running > 0)
-const stoppedCount = computed(() => Math.max(0, counts.value.total - counts.value.running - counts.value.error))
 const failureItems = computed(() => Object.values(props.launchFailures)
   .filter(failure => props.projects.some(project => project.id === failure.projectId))
   .sort((a, b) => b.timestamp - a.timestamp))
+const localUrlItems = computed(() => props.projects
+  .map(project => ({ project, url: props.projectUrls[project.id] }))
+  .filter((item): item is { project: Project; url: string } => Boolean(item.url)))
 
 function projectName(projectId: string) {
   return props.projects.find(project => project.id === projectId)?.name || '已删除项目'
@@ -42,6 +44,10 @@ function activityLabel(type: ActivityItem['type']) {
   if (type === 'started') return '已启动'
   if (type === 'error') return '异常退出'
   return '已停止'
+}
+
+function formatLocalUrl(url: string) {
+  return url.replace(/^https?:\/\//, '')
 }
 </script>
 
@@ -128,18 +134,18 @@ function activityLabel(type: ActivityItem['type']) {
         </section>
 
         <aside class="workspace-guide">
-          <header><h2>工作概览</h2><span>实时状态</span></header>
-          <div class="status-summary">
-            <div><i class="running"></i><span>运行中</span><strong>{{ counts.running }}</strong></div>
-            <div><i></i><span>待启动</span><strong>{{ stoppedCount }}</strong></div>
-            <div><i class="error"></i><span>异常</span><strong>{{ counts.error }}</strong></div>
-          </div>
-          <div class="guide-divider"></div>
-          <div class="quick-guide">
-            <p class="guide-label">快速开始</p>
-            <div><b>1</b><span>点击项目卡片进入专注工作区</span></div>
-            <div><b>2</b><span>启动项目后查看实时运行日志</span></div>
-            <div><b>3</b><span>需要交互命令时切换到终端</span></div>
+          <header><h2>本地页面</h2><span>已识别 {{ localUrlItems.length }} 个地址</span></header>
+          <div class="local-url-panel">
+            <div v-if="localUrlItems.length" class="local-url-list">
+              <button v-for="item in localUrlItems" :key="item.project.id" type="button" class="local-url-item" :title="item.url" @click="emit('open-url', item.url)">
+                <span>{{ item.project.name }}</span>
+                <code>{{ formatLocalUrl(item.url) }}</code>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>
+              </button>
+            </div>
+            <div v-else class="local-url-empty">
+              <span>运行项目后会自动显示本地访问地址。</span>
+            </div>
           </div>
         </aside>
       </div>
@@ -166,7 +172,7 @@ function activityLabel(type: ActivityItem['type']) {
 .overview-header h1 { margin: 0; color: var(--text-primary); font-size: 20px; letter-spacing: -.03em; }
 .overview-header p:not(.section-eyebrow) { margin: 4px 0 0; color: var(--text-secondary); font-size: 12px; }
 .overview-actions { display: flex; gap: 8px; }
-.overview-content { min-height: calc(100% - 88px); max-width: 1180px; margin: 0 auto; padding: 22px 24px 32px; display: flex; flex-direction: column; }
+.overview-content { min-height: calc(100% - 88px); max-width: 1180px; margin: 0 auto 0 0; padding: 22px 24px 32px; display: flex; flex-direction: column; }
 .stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .stat-card { padding: 14px 16px; border: 1px solid var(--border-default); border-radius: 10px; background: var(--bg-surface); }
 .stat-card span { color: var(--text-tertiary); font-size: 11px; }
@@ -180,7 +186,7 @@ function activityLabel(type: ActivityItem['type']) {
 .launch-failure-row strong { display: block; color: var(--text-primary); font-size: 12px; }.launch-failure-row span { display: block; margin-top: 3px; overflow: hidden; color: var(--text-secondary); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .failure-actions { display: flex; align-items: center; gap: 6px; }.failure-actions button { min-height: 28px; padding: 0 9px; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-secondary); background: var(--bg-surface); font-size: 10px; font-weight: 700; }.failure-actions button:hover { color: var(--error); border-color: color-mix(in srgb, var(--error) 36%, var(--border-default)); background: var(--error-bg); }
 .project-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
-.overview-lower-grid { flex: 1; min-height: 230px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(260px, .85fr); gap: 10px; margin-top: 12px; }
+.overview-lower-grid { height: clamp(220px, 28vh, 320px); min-height: 220px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(260px, .85fr); gap: 10px; margin-top: 12px; }
 .activity-panel,.workspace-guide { min-height: 0; overflow: hidden; border: 1px solid var(--border-default); border-radius: 10px; background: var(--bg-surface); }
 .activity-panel { display: flex; flex-direction: column; }
 .activity-panel > header,.workspace-guide > header { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--border-muted); }
@@ -189,12 +195,20 @@ function activityLabel(type: ActivityItem['type']) {
 .activity-list { overflow-y: auto; }
 .activity-row { display: grid; grid-template-columns: 82px minmax(120px, 180px) 1fr; gap: 12px; padding: 8px 14px; color: var(--text-secondary); font-size: 11px; }
 .activity-row time { color: var(--text-tertiary); font-family: var(--font-mono); }.activity-row .started { color: var(--success); }.activity-row .error { color: var(--error); }
-.activity-empty { flex: 1; min-height: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; color: var(--text-tertiary); text-align: center; }.activity-empty svg { margin-bottom: 9px; opacity: .72; }.activity-empty strong { color: var(--text-secondary); font-size: 12px; font-weight: 650; }.activity-empty span { margin-top: 4px; font-size: 10px; }
-.workspace-guide { display: flex; flex-direction: column; }.status-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 12px; }.status-summary > div { min-width: 0; padding: 9px; border-radius: 8px; background: var(--bg-subtle); }.status-summary i { display: block; width: 7px; height: 7px; margin-bottom: 8px; border-radius: 50%; background: var(--text-tertiary); }.status-summary i.running { background: var(--success); }.status-summary i.error { background: var(--error); }.status-summary span { display: block; overflow: hidden; color: var(--text-tertiary); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }.status-summary strong { display: block; margin-top: 2px; color: var(--text-primary); font: 700 16px var(--font-mono); }
-.guide-divider { height: 1px; margin: 0 12px; background: var(--border-muted); }.quick-guide { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 15px; }.guide-label { margin: 0 0 1px; color: var(--text-tertiary); font-size: 9px; font-weight: 700; letter-spacing: .08em; }.quick-guide > div { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 10px; }.quick-guide b { width: 18px; height: 18px; display: grid; place-items: center; flex: none; border: 1px solid var(--border-default); border-radius: 5px; color: var(--accent-primary); background: var(--bg-subtle); font: 700 9px var(--font-mono); }
+.activity-empty { flex: 1; min-height: 112px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 18px 24px; color: var(--text-tertiary); text-align: center; }.activity-empty svg { margin-bottom: 9px; opacity: .72; }.activity-empty strong { color: var(--text-secondary); font-size: 12px; font-weight: 650; }.activity-empty span { margin-top: 4px; font-size: 10px; }
+.workspace-guide { display: flex; flex-direction: column; }
+.local-url-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 12px 14px 15px; }
+.local-url-list { min-height: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; padding-right: 2px; }
+.local-url-item { width: 100%; min-height: 36px; display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr) auto; align-items: center; gap: 8px; padding: 0 9px; border: 1px solid var(--border-muted); border-radius: 7px; color: var(--text-secondary); background: var(--bg-subtle); text-align: left; }
+.local-url-item:hover { color: var(--accent-primary); border-color: var(--accent-border); background: var(--bg-hover); }
+.local-url-item span,.local-url-item code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.local-url-item span { font-size: 10px; font-weight: 700; }
+.local-url-item code { color: var(--text-tertiary); font: 10px/1 var(--font-mono); }
+.local-url-item svg { flex: none; }
+.local-url-empty { flex: 1; min-height: 112px; display: flex; align-items: center; justify-content: center; padding: 0 16px; border: 1px dashed var(--border-default); border-radius: 8px; color: var(--text-tertiary); background: var(--bg-subtle); font-size: 10px; text-align: center; }
 .overview-empty { height: calc(100% - 88px); display: grid; place-content: center; justify-items: center; padding: 40px; text-align: center; }
 .empty-icon { display: grid; place-items: center; width: 54px; height: 54px; border: 1px solid var(--border-default); border-radius: 14px; color: var(--accent-primary); background: var(--bg-surface); font: 700 20px var(--font-mono); }
 .overview-empty h2 { margin: 16px 0 6px; font-size: 18px; }.overview-empty p { max-width: 420px; margin: 0 0 18px; color: var(--text-secondary); font-size: 13px; }
-@media (max-width: 900px) { .project-grid,.overview-lower-grid { grid-template-columns: 1fr; }.overview-lower-grid { flex: none; }.workspace-guide { min-height: 230px; } }
+@media (max-width: 900px) { .project-grid,.overview-lower-grid { grid-template-columns: 1fr; }.overview-lower-grid { height: auto; min-height: 0; }.workspace-guide { min-height: 170px; } }
 @media (max-width: 700px) { .launch-failure-row { grid-template-columns: 1fr; gap: 8px; }.failure-actions { flex-wrap: wrap; } }
 </style>

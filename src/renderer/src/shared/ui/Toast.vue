@@ -5,13 +5,14 @@ const props = defineProps<{
   message: string
   type?: 'success' | 'error' | 'warning'
   duration?: number
+  sequence?: number
 }>()
 
 const visible = ref(false)
 let timer: ReturnType<typeof setTimeout> | null = null
 
-watch(() => props.message, (val) => {
-  if (!val) return
+watch(() => [props.message, props.sequence] as const, ([message]) => {
+  if (!message) return
   visible.value = true
   if (timer) clearTimeout(timer)
   timer = setTimeout(() => {

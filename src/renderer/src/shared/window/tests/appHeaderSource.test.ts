@@ -9,7 +9,7 @@ test('mac 标题栏使用独立安全区对齐系统交通灯', () => {
   assert.match(headerSource, /mac-titlebar/)
   assert.match(headerSource, /mac-title-area/)
   assert.match(headerSource, /app-title/)
-  assert.match(mainSource, /trafficLightPosition: isMac \? \{ x: 18, y: 16 \}/)
+  assert.match(mainSource, /trafficLightPosition: isMac \? \{ x: 18, y: 15 \}/)
 })
 
 test('标题文字不使用负字距挤压', () => {

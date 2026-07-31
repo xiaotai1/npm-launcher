@@ -29,6 +29,7 @@ const editTrigger = ref(0)
 
 const toastMessage = ref('')
 const toastType = ref<'success' | 'error' | 'warning'>('error')
+const toastSequence = ref(0)
 const errorAnalysis = ref<ErrorAnalysis | null>(null)
 const showErrorAnalysis = ref(false)
 
@@ -98,9 +99,20 @@ async function addProject(project: Project) {
 }
 
 async function updateProject(project: Project) {
-  await window.electronAPI.updateProject(project)
-  launchFailures.value = clearLaunchFailure(launchFailures.value, project.id)
-  await loadConfig()
+  try {
+    const saved = await window.electronAPI.updateProject(project)
+    if (!saved) {
+      showToast('项目设置保存失败', 'error')
+      return
+    }
+
+    launchFailures.value = clearLaunchFailure(launchFailures.value, project.id)
+    await loadConfig()
+    showToast('项目设置已保存', 'success')
+  } catch (error) {
+    console.error('保存项目设置失败:', error)
+    showToast('项目设置保存失败', 'error')
+  }
 }
 
 async function deleteProject(id: string) {
@@ -182,7 +194,11 @@ async function handleAnalyzeErrors() {
   if (result) handleErrorAnalysis(result)
 }
 
-function showToast(message: string, type: 'success' | 'error' | 'warning') { toastMessage.value = message; toastType.value = type }
+function showToast(message: string, type: 'success' | 'error' | 'warning') {
+  toastMessage.value = message
+  toastType.value = type
+  toastSequence.value += 1
+}
 function handleExportResult(success: boolean, message: string) { showToast(message, success ? 'success' : 'error') }
 
 async function exportConfig() {
@@ -265,6 +281,19 @@ function getStatusColor(projectId: string) {
   return status === 'running' ? 'var(--success)' : status === 'error' ? 'var(--error)' : 'var(--text-tertiary)'
 }
 
+function getStatusLabel(projectId: string) {
+  const status = processStatuses.value[projectId]?.status
+  return status === 'running' ? '运行中' : status === 'error' ? '异常' : '未启动'
+}
+
+function getProjectInitial(name: string) {
+  return Array.from(name.trim())[0]?.toUpperCase() || '?'
+}
+
+function getCollapsedProjectTooltip(project: Project) {
+  return `${project.name}\n脚本: npm run ${project.command}\n状态: ${getStatusLabel(project.id)}`
+}
+
 function toggleSidebar() { sidebarCollapsed.value = !sidebarCollapsed.value }
 
 function onResizeStart(event: MouseEvent) {
@@ -298,7 +327,7 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
 
 <template>
   <div class="app-shell">
-    <Toast :message="toastMessage" :type="toastType" />
+        <Toast :message="toastMessage" :type="toastType" :sequence="toastSequence" />
     <ErrorAnalysisDialog :visible="showErrorAnalysis" :analysis="errorAnalysis" @close="closeErrorAnalysis" />
     <AppHeader
       :node-version="nodeVersion" :available-versions="nodeVersions" :current-version="currentNodeVersion"
@@ -311,6 +340,7 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
         <WorkspaceSidebar
           ref="workspaceSidebarRef" v-show="!sidebarCollapsed" :active-view="activeView"
           :projects="config?.projects || []" :folders="config?.folders || []" :selected-id="selectedProjectId" :statuses="processStatuses"
+          :project-urls="projectUrls"
           @select-overview="showOverview" @select="selectProject" @add="addProject" @reorder="reorderProjects"
           @edit="startEditProject" @delete="deleteProject" @toggle-favorite="toggleFavorite" @add-folder="addFolder"
           @reorder-folders="reorderFolders" @delete-folder="deleteFolder" @rename-folder="renameFolder" @move-to-folder="moveToFolder"
@@ -319,8 +349,17 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
           <button :class="{ active: activeView === 'overview' }" aria-label="项目总览" @click="showOverview">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
           </button>
-          <button v-for="project in config?.projects || []" :key="project.id" :class="{ active: activeView === 'project' && selectedProjectId === project.id }" :aria-label="`${project.name}，${processStatuses[project.id]?.status || '未启动'}`" @click="selectProject(project.id)">
-            <span class="collapsed-dot" :style="{ background: getStatusColor(project.id) }"></span>
+          <button
+            v-for="project in config?.projects || []"
+            :key="project.id"
+            class="collapsed-project-button"
+            :class="{ active: activeView === 'project' && selectedProjectId === project.id }"
+            :title="getCollapsedProjectTooltip(project)"
+            :aria-label="getCollapsedProjectTooltip(project)"
+            @click="selectProject(project.id)"
+          >
+            <span class="collapsed-project-mark">{{ getProjectInitial(project.name) }}</span>
+            <span class="collapsed-status-dot" :style="{ background: getStatusColor(project.id) }"></span>
           </button>
         </div>
         <button class="sidebar-toggle" :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'" @click="toggleSidebar">
@@ -352,5 +391,10 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
 .app-main { flex: 1; display: flex; min-height: 0; overflow: hidden; }.app-sidebar { position: relative; flex: none; min-width: 0; border-right: 1px solid var(--border-default); background: var(--bg-sidebar); transition: width 220ms ease; }.app-sidebar.resizing { transition: none; }.app-content { flex: 1; min-width: 0; overflow: hidden; }
 .sidebar-resizer { width: 3px; margin-left: -2px; z-index: 4; cursor: col-resize; }.sidebar-resizer:hover,.sidebar-resizer.active { background: var(--accent-primary); }
 .sidebar-toggle { position: absolute; top: 50%; right: -12px; z-index: 8; width: 24px; height: 24px; display: grid; place-items: center; transform: translateY(-50%); border: 1px solid var(--border-default); border-radius: 50%; color: var(--text-tertiary); background: var(--bg-surface); box-shadow: var(--shadow-sm); }.sidebar-toggle:hover { color: var(--accent-primary); border-color: var(--accent-border); }
-.collapsed-navigation { height: 100%; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 6px; overflow-y: auto; }.collapsed-navigation button { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; color: var(--text-tertiary); }.collapsed-navigation button:hover,.collapsed-navigation button.active { color: var(--accent-primary); background: var(--bg-selected); }.collapsed-dot { width: 8px; height: 8px; border-radius: 50%; }
+.collapsed-navigation { height: 100%; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 6px; overflow-y: auto; }
+.collapsed-navigation button { position: relative; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; color: var(--text-tertiary); }
+.collapsed-navigation button:hover,.collapsed-navigation button.active { color: var(--accent-primary); background: var(--bg-selected); }
+.collapsed-project-mark { width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-secondary); background: var(--bg-surface); font-size: 11px; font-weight: 700; line-height: 1; }
+.collapsed-project-button:hover .collapsed-project-mark,.collapsed-project-button.active .collapsed-project-mark { color: var(--accent-primary); border-color: var(--accent-border); }
+.collapsed-status-dot { position: absolute; right: 4px; bottom: 4px; width: 7px; height: 7px; border: 2px solid var(--bg-sidebar); border-radius: 50%; box-sizing: content-box; }
 </style>

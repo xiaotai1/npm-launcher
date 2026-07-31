@@ -6,6 +6,7 @@ import {
   buildProject,
   canCreateFolder,
   canCreateProject,
+  packageScriptsMessage,
   projectNameFromPath,
   type CreateMode,
   type ProjectDraft
@@ -110,10 +111,8 @@ async function selectFolder() {
 
     if (scripts.scripts.length) {
       projectDraft.value.command = scripts.scripts[0]
-      scriptMessage.value = `发现 ${scripts.scripts.length} 个可用命令`
-    } else {
-      scriptMessage.value = '未找到 package.json 或可用 scripts'
     }
+    scriptMessage.value = packageScriptsMessage(scripts)
   } catch {
     scriptMessage.value = '读取 package.json 失败，请重新选择目录'
   } finally {

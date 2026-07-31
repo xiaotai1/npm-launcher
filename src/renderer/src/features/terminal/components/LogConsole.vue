@@ -182,7 +182,7 @@ async function exportLog() {
 
 <template>
   <div class="flex-1 flex flex-col min-h-50 overflow-hidden">
-    <div class="flex items-center justify-between px-4 py-2 border-b border-border-muted bg-surface console-header">
+    <div class="flex items-center justify-between px-4 py-2 bg-surface console-header">
       <div class="flex items-center gap-2.5">
         <span class="text-[10px] font-semibold text-ttertiary uppercase tracking-[0.8px]">控制台</span>
         <span v-if="isRunning" class="flex items-center gap-1.25 text-[10px] font-semibold text-success-c">
@@ -239,6 +239,8 @@ async function exportLog() {
 
 .console-header {
   gap: 10px;
+  min-height: 42px;
+  border-bottom: 1px solid var(--border-muted);
 }
 
 .console-header > div:last-child {

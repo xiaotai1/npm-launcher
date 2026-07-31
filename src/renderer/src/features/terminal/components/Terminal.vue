@@ -20,6 +20,38 @@ let cleanupExit: (() => void) | null = null
 let resizeObserver: ResizeObserver | null = null
 let contextMenuHandler: ((e: MouseEvent) => void) | null = null
 
+function writeToPty(data: string) {
+  window.electronAPI.ptyWrite(props.id, data)
+}
+
+function copySelection() {
+  const selection = terminal?.getSelection()
+  if (selection) {
+    navigator.clipboard.writeText(selection)
+  }
+  terminal?.focus()
+}
+
+async function pasteClipboard() {
+  const text = await navigator.clipboard.readText()
+  if (text) {
+    writeToPty(text)
+  }
+  terminal?.focus()
+}
+
+function clearTerminal() {
+  terminal?.clear()
+  terminal?.focus()
+}
+
+function restartTerminal() {
+  dispose()
+  nextTick(() => {
+    if (props.visible) initTerminal()
+  })
+}
+
 function initTerminal() {
   if (!terminalContainer.value || terminal) return
 
@@ -46,7 +78,7 @@ function initTerminal() {
 
   // 用户输入 → PTY
   terminal.onData((data) => {
-    window.electronAPI.ptyWrite(props.id, data)
+    writeToPty(data)
   })
 
   // 复制粘贴：Ctrl+Shift+C 复制，Ctrl+Shift+V / 右键 粘贴
@@ -56,36 +88,22 @@ function initTerminal() {
 
     // Ctrl+Shift+C → 复制选中文字
     if (event.ctrlKey && event.shiftKey && (event.key === 'C' || event.key === 'c')) {
-      const selection = terminal?.getSelection()
-      if (selection) {
-        navigator.clipboard.writeText(selection)
-      }
+      copySelection()
       return false
     }
     // Ctrl+Shift+V → 粘贴
     if (event.ctrlKey && event.shiftKey && (event.key === 'V' || event.key === 'v')) {
-      navigator.clipboard.readText().then((text) => {
-        if (text) {
-          window.electronAPI.ptyWrite(props.id, text)
-        }
-      })
+      void pasteClipboard()
       return false
     }
     // Ctrl+Insert → 复制
     if (event.ctrlKey && event.key === 'Insert') {
-      const selection = terminal?.getSelection()
-      if (selection) {
-        navigator.clipboard.writeText(selection)
-      }
+      copySelection()
       return false
     }
     // Shift+Insert → 粘贴
     if (event.shiftKey && event.key === 'Insert') {
-      navigator.clipboard.readText().then((text) => {
-        if (text) {
-          window.electronAPI.ptyWrite(props.id, text)
-        }
-      })
+      void pasteClipboard()
       return false
     }
 
@@ -99,14 +117,10 @@ function initTerminal() {
     const selection = terminal?.getSelection()
     if (selection) {
       // 有选中文字 → 复制
-      navigator.clipboard.writeText(selection)
+      copySelection()
     } else {
       // 无选中 → 粘贴
-      navigator.clipboard.readText().then((text) => {
-        if (text) {
-          window.electronAPI.ptyWrite(props.id, text)
-        }
-      })
+      void pasteClipboard()
     }
   }
   container?.addEventListener('contextmenu', onContextMenu)
@@ -209,10 +223,122 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="terminalContainer" class="w-full h-full bg-console-bg border-none outline-none"></div>
+  <div class="terminal-shell">
+    <div class="terminal-toolbar" aria-label="终端工具">
+      <span class="terminal-path" :title="cwd">{{ cwd }}</span>
+      <div class="terminal-actions">
+        <div class="terminal-primary-actions">
+          <button type="button" class="terminal-action primary" aria-label="复制选中内容" title="复制选中内容" @click="copySelection">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>复制</span>
+          </button>
+          <button type="button" class="terminal-action primary" aria-label="粘贴剪贴板内容" title="粘贴剪贴板内容" @click="pasteClipboard">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 4h8a2 2 0 0 1 2 2v1H6V6a2 2 0 0 1 2-2z"/><path d="M6 7h12v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z"/><path d="M9 3h6"/></svg>
+            <span>粘贴</span>
+          </button>
+        </div>
+        <div class="terminal-secondary-actions">
+          <button type="button" class="terminal-action secondary" aria-label="清空终端显示" title="清空终端显示" @click="clearTerminal">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><path d="M10 11v5M14 11v5"/></svg>
+            <span>清空</span>
+          </button>
+          <button type="button" class="terminal-action secondary" aria-label="重启交互终端" title="重启交互终端" @click="restartTerminal">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+            <span>重启</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div ref="terminalContainer" class="terminal-container"></div>
+  </div>
 </template>
 
 <style scoped>
+.terminal-shell {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--console-bg);
+}
+
+.terminal-toolbar {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px 0 12px;
+  border-bottom: 1px solid var(--border-muted);
+  background: var(--bg-surface);
+}
+
+.terminal-path {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font: 11px/1 var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  margin-left: auto;
+}
+
+.terminal-primary-actions,
+.terminal-secondary-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.terminal-secondary-actions {
+  padding-left: 8px;
+  border-left: 1px solid var(--border-muted);
+}
+
+.terminal-action {
+  min-width: 0;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  border-radius: 7px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.terminal-action.primary {
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+}
+
+.terminal-action:hover {
+  color: var(--accent-primary);
+  background: var(--bg-hover);
+}
+
+.terminal-action.secondary:hover {
+  color: var(--text-primary);
+}
+
+.terminal-container {
+  flex: 1;
+  min-height: 0;
+  background: var(--console-bg);
+  border: none;
+  outline: none;
+}
+
 :deep(.xterm),
 :deep(.xterm-screen),
 :deep(.xterm-viewport),

@@ -5,6 +5,7 @@ import {
   buildProject,
   canCreateFolder,
   canCreateProject,
+  packageScriptsMessage,
   projectNameFromPath
 } from '../model/createProjectForm'
 
@@ -37,4 +38,11 @@ test('creation payloads trim user-entered values', () => {
     id: 'folder-1',
     name: '业务应用'
   })
+})
+
+test('package scripts discovery gives actionable messages', () => {
+  assert.equal(packageScriptsMessage({ scripts: ['dev', 'build'] }), '发现 2 个可用命令')
+  assert.equal(packageScriptsMessage({ scripts: [] }), 'package.json 中没有 scripts，请先添加启动命令')
+  assert.equal(packageScriptsMessage({ scripts: [], error: '该目录下没有 package.json' }), '该目录下没有 package.json，请选择 NPM 项目根目录')
+  assert.equal(packageScriptsMessage({ scripts: [], error: 'Unexpected token }' }), '读取 package.json 失败：Unexpected token }')
 })

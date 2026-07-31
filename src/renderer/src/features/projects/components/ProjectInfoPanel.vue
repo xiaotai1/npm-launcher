@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, watch, toRaw, onMounted, onBeforeUnmount } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import type { Project } from '../../../shared/types'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
+
+type ProjectSettingsDraft = Omit<Project, 'nodeVersion'> & { nodeVersion: string }
 
 const props = defineProps<{
   project: Project
@@ -17,63 +19,90 @@ const emit = defineEmits<{
   'set-node-version': [projectId: string, version: string | null]
 }>()
 
-const isEditing = ref(false)
-const editForm = ref({ ...props.project })
+function toDraft(project: Project): ProjectSettingsDraft {
+  return { ...project, nodeVersion: project.nodeVersion || '' }
+}
+
+const editForm = ref<ProjectSettingsDraft>(toDraft(props.project))
 const editScripts = ref<string[]>([])
 const showDeleteConfirm = ref(false)
-const canSave = computed(() => Boolean(
-  editForm.value.name.trim() && editForm.value.path.trim() && editForm.value.command.trim()
+
+const commandOptions = computed(() => Array.from(new Set([
+  editForm.value.command,
+  ...editScripts.value
+].filter(Boolean))))
+
+const isDirty = computed(() => (
+  editForm.value.name.trim() !== props.project.name
+  || editForm.value.path.trim() !== props.project.path
+  || editForm.value.command.trim() !== props.project.command
+  || editForm.value.nodeVersion !== (props.project.nodeVersion || '')
 ))
 
-watch(() => props.project, (p) => {
-  editForm.value = { ...p }
-  isEditing.value = false
-})
+const canSave = computed(() => Boolean(
+  isDirty.value
+  && editForm.value.name.trim()
+  && editForm.value.path.trim()
+  && editForm.value.command.trim()
+))
 
-watch(() => props.editTrigger, (val) => {
-  if (val && val > 0) {
-    editForm.value = { ...props.project }
-    isEditing.value = true
-  }
-})
-
-watch(isEditing, async (val) => {
-  if (val && editForm.value.path) {
-    const result = await window.electronAPI.getPackageScripts(editForm.value.path)
-    editScripts.value = result.scripts
-  } else {
+async function loadScripts(path = editForm.value.path) {
+  if (!path) {
     editScripts.value = []
+    return
+  }
+  const result = await window.electronAPI.getPackageScripts(path)
+  editScripts.value = result.scripts
+}
+
+watch(() => props.project, (project) => {
+  editForm.value = toDraft(project)
+  loadScripts(project.path)
+})
+
+watch(() => props.editTrigger, (value) => {
+  if (value && value > 0) {
+    editForm.value = toDraft(props.project)
+    loadScripts(props.project.path)
   }
 })
+
+onMounted(() => loadScripts())
 
 async function selectFolder() {
   const result = await window.electronAPI.selectFolder()
   if (result.canceled || !result.path) return
+
   editForm.value.path = result.path
-  // 自动用文件夹名作为项目名称
-  if (!editForm.value.name) {
+  if (!editForm.value.name.trim()) {
     const parts = result.path.replace(/\\/g, '/').split('/')
     editForm.value.name = parts[parts.length - 1] || ''
   }
-  // 读取 scripts
-  editForm.value.command = ''
+
   const scripts = await window.electronAPI.getPackageScripts(result.path)
   editScripts.value = scripts.scripts
-  if (scripts.scripts.length > 0) {
-    editForm.value.command = scripts.scripts[0]
-  }
+  editForm.value.command = scripts.scripts[0] || ''
 }
 
 function save() {
   if (!canSave.value) return
-  emit('update', toRaw(editForm.value))
-  isEditing.value = false
+
+  const nextProject: Project = {
+    ...editForm.value,
+    name: editForm.value.name.trim(),
+    path: editForm.value.path.trim(),
+    command: editForm.value.command.trim()
+  }
+  if (!editForm.value.nodeVersion) delete nextProject.nodeVersion
+
+  emit('update', nextProject)
 }
 
 function cancelEdit() {
-  editForm.value = { ...props.project }
-  editScripts.value = []
-  isEditing.value = false
+  if (!isDirty.value) return
+  editForm.value = toDraft(props.project)
+  loadScripts(props.project.path)
+  emit('toast', '已还原未保存的修改', 'success')
 }
 
 function remove() {
@@ -84,140 +113,88 @@ function onConfirmDelete() {
   emit('delete', props.project.id)
   showDeleteConfirm.value = false
 }
-
-async function openFolder() {
-  const result = await window.electronAPI.openInFileManager(props.project.path)
-  if (!result.success) {
-    emit('toast', result.error || '打开文件夹失败', 'error')
-  }
-}
-
-async function openInVscode() {
-  const result = await window.electronAPI.openInVscode(props.project.path)
-  if (!result.success) {
-    emit('toast', result.error || '未找到 VS Code', 'warning')
-  }
-}
-
-const showVersionDropdown = ref(false)
-const versionDropdownRef = ref<HTMLElement>()
-
-function handleClickOutside(e: MouseEvent) {
-  if (showVersionDropdown.value && versionDropdownRef.value && !versionDropdownRef.value.contains(e.target as Node)) {
-    showVersionDropdown.value = false
-  }
-}
-
-onMounted(() => document.addEventListener('click', handleClickOutside))
-onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
-
-function selectNodeVersion(version: string | null) {
-  emit('set-node-version', props.project.id, version)
-  showVersionDropdown.value = false
-}
 </script>
 
 <template>
-  <div class="relative px-5.5 py-4.5 bg-surface detail">
-    <template v-if="!isEditing">
-      <div class="flex items-start justify-between mb-4.5">
-        <h2 class="text-[17px] font-bold tracking-[-0.3px] text-tprimary">项目信息</h2>
-        <div class="flex gap-1">
-          <button class="py-1.75 px-3.5 text-xs text-tsecondary border border-border rounded-lg transition-all duration-200 ease-out btn-ghost" @click="isEditing = true">编辑</button>
-          <button class="py-1.75 px-3.5 text-xs text-ttertiary border border-transparent rounded-lg transition-all duration-200 ease-out btn-danger-ghost" @click="remove">删除</button>
-        </div>
+  <div class="settings-page">
+    <header class="settings-header">
+      <div>
+        <h2>项目设置</h2>
+        <p>调整项目名称、启动脚本和运行环境。</p>
       </div>
+      <div class="settings-actions">
+        <button type="button" class="settings-secondary" :disabled="!isDirty" @click="cancelEdit">还原修改</button>
+        <button type="submit" form="project-settings-form" class="settings-primary" :disabled="!canSave">保存设置</button>
+      </div>
+    </header>
 
-      <div class="flex flex-col gap-3 mb-4.5">
-        <div class="flex items-center gap-3 min-w-0">
-          <span class="w-14 shrink-0 text-[11px] font-medium text-ttertiary">路径</span>
-          <span class="font-mono text-[11px] text-tsecondary overflow-hidden text-ellipsis whitespace-nowrap" :title="project.path">{{ project.path }}</span>
-          <div class="flex gap-1 shrink-0 ml-auto">
-            <button class="flex items-center gap-1 py-1 px-2.5 text-[11px] font-medium text-ttertiary border border-border rounded-lg transition-all duration-200 ease-out whitespace-nowrap btn-quick-action" @click="openFolder" title="在文件管理器中打开">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-              </svg>
-              <span>打开</span>
-            </button>
-            <button class="flex items-center gap-1 py-1 px-2.5 text-[11px] font-medium text-ttertiary border border-border rounded-lg transition-all duration-200 ease-out whitespace-nowrap btn-quick-action" @click="openInVscode" title="在 VS Code 中打开">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="16 18 22 12 16 6"/>
-                <polyline points="8 6 2 12 8 18"/>
-              </svg>
-              <span>VS Code</span>
-            </button>
-          </div>
-        </div>
-        <div class="flex items-center gap-3 min-w-0">
-          <span class="w-14 shrink-0 text-[11px] font-medium text-ttertiary">命令</span>
-          <span class="font-mono text-[11px] py-0.5 px-2 rounded text-accent border border-accent-border transition-all duration-200 ease-out info-code">{{ project.command ? 'npm run ' + project.command : '' }}</span>
-        </div>
-        <div class="flex items-center gap-3 min-w-0">
-          <span class="w-14 shrink-0 text-[11px] font-medium text-ttertiary">Node</span>
-          <div ref="versionDropdownRef" class="relative">
-            <button class="flex items-center gap-1.5 py-0.5 px-2 text-[11px] rounded-[5px] text-tsecondary border border-border transition-all duration-200 ease-out version-btn" @click="showVersionDropdown = !showVersionDropdown">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
-              <span :class="['font-mono text-[11px] version-text', { custom: project.nodeVersion }]">{{ project.nodeVersion || '跟随系统 (' + (globalNodeVersion || '--') + ')' }}</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-            <div v-if="showVersionDropdown" class="absolute left-0 top-full mt-1 min-w-45 bg-surface border border-border rounded-xl p-1 z-100 animate-scale-in origin-top-left version-dropdown">
-              <div class="px-2.5 pt-1.5 pb-1 text-[10px] text-blue-500 font-medium">仅识别 nvm 管理的版本</div>
-              <button :class="['flex items-center gap-1.5 w-full py-1.5 px-2.5 text-[11px] rounded-[5px] text-left transition-all duration-150 ease-out font-mono version-option', { active: !project.nodeVersion }]" @click="selectNodeVersion(null)">
-                跟随系统{{ globalNodeVersion ? ' (' + globalNodeVersion + ')' : '' }}
-              </button>
-              <div v-if="nodeVersions.length" class="h-px mx-1.5 my-0.75 version-divider"></div>
-              <button
-                v-for="v in nodeVersions" :key="v"
-                :class="['flex items-center gap-1.5 w-full py-1.5 px-2.5 text-[11px] rounded-[5px] text-left transition-all duration-150 ease-out font-mono version-option', { active: project.nodeVersion === v }]"
-                @click="selectNodeVersion(v)"
-              >
-                <svg v-if="project.nodeVersion === v" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                <span v-else class="w-3 h-3"></span>
-                {{ v }}
-              </button>
+    <form id="project-settings-form" class="settings-content" @submit.prevent="save">
+      <section class="settings-section" aria-labelledby="basic-settings-title">
+        <header class="settings-section-heading">
+          <h3 id="basic-settings-title">基础设置</h3>
+          <p>用于识别项目并决定默认启动方式。</p>
+        </header>
+
+        <div class="settings-fields">
+          <label class="settings-field">
+            <span>项目名称</span>
+            <input v-model="editForm.name" autocomplete="off" />
+          </label>
+
+          <label class="settings-field">
+            <span>项目路径</span>
+            <div class="path-picker">
+              <input v-model="editForm.path" readonly :title="editForm.path" />
+              <button type="button" @click="selectFolder">浏览</button>
             </div>
-          </div>
-        </div>
-      </div>
+          </label>
 
-    </template>
+          <label class="settings-field">
+            <span>默认启动脚本</span>
+            <div class="settings-select">
+              <select v-model="editForm.command" :disabled="commandOptions.length === 0">
+                <option value="" disabled>选择脚本</option>
+                <option v-for="script in commandOptions" :key="script" :value="script">{{ script }}</option>
+              </select>
+              <svg class="settings-select-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+            <small v-if="editScripts.length === 0 && editForm.path">未找到 package.json 或没有可用 scripts</small>
+          </label>
 
-    <template v-else>
-      <div class="flex items-start justify-between mb-4.5">
-        <h2 class="text-[17px] font-bold tracking-[-0.3px] text-tprimary">编辑项目</h2>
+          <label class="settings-field">
+            <span>Node 版本</span>
+            <div class="settings-select">
+              <select v-model="editForm.nodeVersion">
+                <option value="">跟随系统{{ globalNodeVersion ? ` (${globalNodeVersion})` : '' }}</option>
+                <option v-for="version in nodeVersions" :key="version" :value="version">{{ version }}</option>
+              </select>
+              <svg class="settings-select-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+            <small>仅识别 nvm 管理的版本；留空时使用顶部当前系统版本。</small>
+          </label>
+        </div>
+      </section>
+    </form>
+
+    <footer class="settings-remove-row">
+      <div class="settings-remove-heading">
+        <strong>从启动器移除</strong>
       </div>
-      <div class="flex flex-col gap-3.5">
-        <div class="flex flex-col gap-1.25">
-          <label class="text-xs font-medium text-tsecondary">名称</label>
-          <input v-model="editForm.name" />
-        </div>
-        <div class="flex flex-col gap-1.25">
-          <label class="text-xs font-medium text-tsecondary">路径</label>
-          <div class="flex gap-1.5">
-            <input v-model="editForm.path" readonly class="flex-1 cursor-pointer path-input" />
-            <button class="shrink-0 py-1.75 px-3.5 text-xs font-medium text-accent border border-accent-border rounded-md bg-transparent transition-all duration-200 ease-out btn-browse" @click="selectFolder">浏览</button>
-          </div>
-        </div>
-        <div class="flex flex-col gap-1.25">
-          <label class="text-xs font-medium text-tsecondary">命令</label>
-          <select v-model="editForm.command" class="cursor-pointer appearance-auto">
-            <option value="" disabled>选择命令</option>
-            <option v-for="script in editScripts" :key="script" :value="script">{{ script }}</option>
-          </select>
-          <span v-if="editScripts.length === 0 && editForm.path" class="text-[11px] text-ttertiary">未找到 package.json 或无 scripts</span>
-        </div>
-        <div class="flex gap-2 justify-end mt-2">
-          <button class="py-1.75 px-3.5 text-xs text-tsecondary border border-border rounded-lg transition-all duration-200 ease-out btn-ghost" @click="cancelEdit">取消</button>
-          <button class="py-1.75 px-5 text-xs font-semibold text-white rounded-lg btn-primary" :disabled="!canSave" @click="save">保存</button>
-        </div>
+      <div class="settings-remove-content">
+        <span>只会移除当前项目配置，不会删除本地目录。</span>
+        <button type="button" @click="remove">移除项目</button>
       </div>
-    </template>
+    </footer>
 
     <ConfirmDialog
       :visible="showDeleteConfirm"
-      title="删除项目"
-      :message="`确定要删除「${project.name}」吗？此操作不可撤销。`"
-      confirm-text="删除"
+      title="移除项目"
+      :message="`确定要从启动器移除「${project.name}」吗？本地目录和文件会保留。`"
+      confirm-text="移除"
       :danger="true"
       @confirm="onConfirmDelete"
       @cancel="showDeleteConfirm = false"
@@ -226,94 +203,289 @@ function selectNodeVersion(version: string | null) {
 </template>
 
 <style scoped>
-/* Info value code — CSS variable backgrounds/borders */
-.info-code {
-  background: var(--accent-glow);
-  color: var(--accent-primary);
-  border-color: var(--accent-border);
+.settings-page {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 32px 32px;
+  background: var(--bg-app);
 }
 
-.info-code:hover {
-  background: rgba(59, 130, 246, 0.12);
-  border-color: var(--accent-primary);
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 24px;
 }
 
-/* Quick action buttons — hover states with CSS variables */
-.btn-quick-action:hover {
-  background: var(--bg-hover);
-  color: var(--accent-primary);
-  border-color: var(--accent-border);
-}
-
-.btn-quick-action:active {
-  transform: scale(0.97);
-}
-
-/* Ghost button hover — CSS variables */
-.btn-ghost:hover {
-  background: var(--bg-hover);
+.settings-header h2 {
+  margin: 0;
   color: var(--text-primary);
-  border-color: var(--text-tertiary);
+  font-size: 18px;
+  letter-spacing: 0;
 }
 
-/* Danger ghost button — hover with CSS variables */
-.btn-danger-ghost:hover {
+.settings-header p {
+  margin: 5px 0 0;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-content {
+  width: 100%;
+}
+
+.settings-section,
+.settings-remove-row {
+  display: grid;
+  grid-template-columns: 180px minmax(320px, 760px);
+  gap: 36px;
+  width: 100%;
+  max-width: 976px;
+  border-top: 1px solid var(--border-muted);
+}
+
+.settings-section {
+  padding: 26px 0 32px;
+}
+
+.settings-section-heading h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.settings-section-heading p {
+  margin: 6px 0 0;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.settings-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.settings-field > span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.settings-field input,
+.settings-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  font-size: 12px;
+}
+
+.settings-field input[readonly] {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+
+.settings-select {
+  position: relative;
+  min-width: 0;
+}
+
+.settings-select select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 40px;
+  cursor: pointer;
+}
+
+.settings-select-icon {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  color: var(--text-secondary);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.settings-select:focus-within .settings-select-icon {
+  color: var(--accent-primary);
+}
+
+.settings-select select:disabled {
+  cursor: not-allowed;
+}
+
+.settings-select select:disabled + .settings-select-icon {
+  opacity: .45;
+}
+
+.settings-field input:focus,
+.settings-field select:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+  outline: none;
+}
+
+.settings-field small {
+  margin-top: -1px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.path-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.path-picker button,
+.settings-secondary,
+.settings-primary,
+.settings-remove-content button {
+  min-height: 36px;
+  padding: 0 13px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.path-picker button,
+.settings-secondary,
+.settings-remove-content button {
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.path-picker button {
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-border);
+  background: var(--bg-surface);
+}
+
+.path-picker button:hover,
+.settings-secondary:hover {
+  background: var(--accent-glow);
+}
+
+.settings-secondary {
+  color: var(--text-secondary);
+}
+
+.settings-secondary:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.settings-primary {
+  color: #fff;
+  background: var(--accent-primary);
+  box-shadow: 0 3px 10px var(--accent-glow);
+}
+
+.settings-primary:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+}
+
+.settings-primary:disabled {
+  opacity: .45;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.settings-secondary:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.settings-remove-row {
+  padding-top: 22px;
+}
+
+.settings-remove-heading strong {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.settings-remove-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.settings-remove-content span {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.settings-remove-content button {
+  flex: none;
   color: var(--error);
+}
+
+.settings-remove-content button:hover {
   background: var(--error-bg);
 }
 
-
-/* Primary button — CSS variable gradient */
-.btn-primary {
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover));
-  box-shadow: 0 2px 8px var(--accent-glow);
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+@media (max-width: 900px) {
+  .settings-section,
+  .settings-remove-row {
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: 24px;
+  }
 }
 
-.btn-primary:hover {
-  box-shadow: 0 4px 16px var(--accent-glow);
-  transform: translateY(-1px);
-}
+@media (max-width: 720px) {
+  .settings-page {
+    padding: 20px;
+  }
 
-/* Path input — CSS variable color override */
-.path-input {
-  color: var(--text-secondary) !important;
-}
+  .settings-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 
-/* Browse button — hover with CSS variables */
-.btn-browse:hover {
-  background: var(--accent-glow);
-  border-color: var(--accent-primary);
-}
+  .settings-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 
-/* Version button hover — CSS variables */
-.version-btn:hover {
-  background: var(--bg-hover);
-  border-color: var(--accent-border);
-}
+  .settings-section,
+  .settings-remove-row {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
 
-/* Version text custom state — CSS variable */
-.version-text.custom {
-  color: var(--accent-primary);
-}
-
-/* Version dropdown — CSS variable shadow */
-.version-dropdown {
-  box-shadow: var(--shadow-lg);
-}
-
-/* Version option states — CSS variables */
-.version-option:hover {
-  background: var(--bg-hover);
-}
-
-.version-option.active {
-  color: var(--accent-primary);
-  font-weight: 600;
-}
-
-/* Version divider — CSS variable gradient */
-.version-divider {
-  background: var(--divider);
+  .settings-remove-content {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 </style>
