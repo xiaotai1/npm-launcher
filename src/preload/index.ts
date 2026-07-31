@@ -7,6 +7,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 配置
   getConfig: (): Promise<AppConfig> => ipcRenderer.invoke('get-config'),
   saveConfig: (config: AppConfig): Promise<boolean> => ipcRenderer.invoke('save-config', config),
+  exportConfig: (): Promise<{ success: boolean; path?: string; error?: string }> =>
+    ipcRenderer.invoke('export-config'),
+  importConfig: (): Promise<{ success: boolean; path?: string; error?: string }> =>
+    ipcRenderer.invoke('import-config'),
   addProject: (project: Project): Promise<boolean> => ipcRenderer.invoke('add-project', project),
   updateProject: (project: Project): Promise<boolean> => ipcRenderer.invoke('update-project', project),
   deleteProject: (projectId: string): Promise<boolean> => ipcRenderer.invoke('delete-project', projectId),
@@ -49,14 +53,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('open-local-url', url),
 
   // 进程管理
-  startProject: (projectId: string, projectPath: string, command: string, nodeVersion?: string): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke('start-project', projectId, projectPath, command, nodeVersion),
+  startProject: (projectId: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('start-project', projectId),
   stopProject: (projectId: string): Promise<boolean> =>
     ipcRenderer.invoke('stop-project', projectId),
   getProcessStatus: (projectId: string): Promise<ProcessStatus> =>
     ipcRenderer.invoke('get-process-status', projectId),
-  startAllProjects: (projects: Array<{ id: string; path: string; command: string; nodeVersion?: string }>): Promise<{ success: number; failed: number }> =>
-    ipcRenderer.invoke('start-all-projects', projects),
+  startAllProjects: (projectIds: string[]): Promise<{ success: number; failed: number; failures: Array<{ projectId: string; projectName: string; message: string }> }> =>
+    ipcRenderer.invoke('start-all-projects', projectIds),
   stopAllProjects: (): Promise<boolean> =>
     ipcRenderer.invoke('stop-all-projects'),
 
@@ -74,16 +78,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // 日志管理
-  getLogFiles: (projectId: string): Promise<string[]> =>
-    ipcRenderer.invoke('get-log-files', projectId),
-  getLogContent: (projectId: string, filename: string): Promise<string> =>
-    ipcRenderer.invoke('get-log-content', projectId, filename),
-  exportLog: (projectId: string): Promise<{ success: boolean; path?: string; error?: string }> =>
-    ipcRenderer.invoke('export-log', projectId),
+  exportLog: (filename: string, content: string): Promise<{ success: boolean; path?: string; error?: string }> =>
+    ipcRenderer.invoke('export-log', filename, content),
   analyzeErrors: (projectId: string, exitCode: number): Promise<any> =>
     ipcRenderer.invoke('analyze-errors', projectId, exitCode),
-  openLogDir: (projectId: string): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke('open-log-dir', projectId),
   onErrorAnalysis: (callback: (analysis: any) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, analysis: any) => callback(analysis)
     ipcRenderer.on('error-analysis', handler)

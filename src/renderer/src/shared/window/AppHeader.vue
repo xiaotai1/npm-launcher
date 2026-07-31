@@ -14,6 +14,8 @@ const emit = defineEmits<{
   'toggle-theme': []
   'switch-version': [version: string]
   'refresh-versions': []
+  'export-config': []
+  'import-config': []
 }>()
 
 const isMac = window.electronAPI.platform === 'darwin'
@@ -22,7 +24,9 @@ const nvmListCommand = isMac ? 'nvm ls-remote' : 'nvm list available'
 const themeLabel: Record<string, string> = { light: '浅色', dark: '深色', system: '系统' }
 
 const showDropdown = ref(false)
+const showConfigMenu = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
+const configMenuRef = ref<HTMLElement | null>(null)
 
 function toggleDropdown() {
   if (props.switching) return
@@ -46,6 +50,15 @@ function onClickOutside(e: MouseEvent) {
   if (dropdownRef.value && !dropdownRef.value.contains(e.target as Node)) {
     showDropdown.value = false
   }
+  if (configMenuRef.value && !configMenuRef.value.contains(e.target as Node)) {
+    showConfigMenu.value = false
+  }
+}
+
+function selectConfigAction(action: 'export' | 'import') {
+  showConfigMenu.value = false
+  if (action === 'export') emit('export-config')
+  else emit('import-config')
 }
 
 onMounted(() => document.addEventListener('click', onClickOutside))
@@ -53,9 +66,9 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 </script>
 
 <template>
-  <header class="flex items-center justify-between border-b border-border bg-surface relative select-none app-header">
-    <div class="flex items-center header-left" :class="{ 'mac-traffic-light': isMac }">
-      <span class="text-[13px] font-semibold tracking-[-0.3px] text-tsecondary">NPM Launcher</span>
+  <header class="flex items-center justify-between border-b border-border bg-surface relative select-none app-header" :class="{ 'mac-titlebar': isMac }">
+    <div class="flex items-center header-left" :class="{ 'mac-title-area': isMac }">
+      <span v-if="!isMac" class="text-[13px] font-semibold text-tsecondary app-title">NPM Launcher</span>
     </div>
     <div class="flex items-center">
       <div class="flex items-center gap-1.5 header-right" :class="{ 'mac-header-right': isMac }">
@@ -112,6 +125,21 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
         <svg v-else-if="theme === 'dark'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20.5 14.1A8.5 8.5 0 0 1 9.9 3.5 8.5 8.5 0 1 0 20.5 14.1z"/></svg>
         <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg>
       </button>
+      <div ref="configMenuRef" class="relative">
+        <button class="w-8 h-8 flex items-center justify-center rounded-lg text-ttertiary text-sm transition-all duration-200 ease-out config-btn" :class="{ open: showConfigMenu }" title="配置导入导出" aria-label="配置导入导出" :aria-expanded="showConfigMenu" aria-haspopup="menu" @click="showConfigMenu = !showConfigMenu">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        </button>
+        <Transition name="dropdown">
+          <div v-if="showConfigMenu" class="absolute top-full mt-2 right-0 w-42 bg-surface border border-border rounded-xl p-1 z-100 animate-scale-in config-menu" role="menu">
+            <button class="config-menu-item" type="button" role="menuitem" @click="selectConfigAction('export')">
+              <span>导出配置</span>
+            </button>
+            <button class="config-menu-item" type="button" role="menuitem" @click="selectConfigAction('import')">
+              <span>导入配置</span>
+            </button>
+          </div>
+        </Transition>
+      </div>
       </div>
       <WindowControls v-if="!isMac" />
     </div>
@@ -123,20 +151,34 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   height: 44px;
   min-height: 44px;
   -webkit-app-region: drag;
+  overflow: visible;
 }
 
 .header-left {
-  -webkit-app-region: no-drag;
+  height: 100%;
+  min-width: 0;
+  -webkit-app-region: drag;
   padding-left: 20px;
 }
 
-.header-left.mac-traffic-light {
-  padding-left: 80px;
+.header-left.mac-title-area {
+  padding-left: 88px;
+}
+
+.app-title {
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: nowrap;
 }
 
 .header-right {
+  height: 100%;
   padding-right: 12px;
   -webkit-app-region: no-drag;
+}
+
+.header-right.mac-header-right {
+  padding-right: 14px;
 }
 
 .node-badge {
@@ -190,8 +232,36 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   animation: scaleIn 0.15s cubic-bezier(0.4, 0, 0.2, 1) reverse;
 }
 
-.theme-btn:hover {
+.theme-btn:hover,
+.config-btn:hover,
+.config-btn.open {
   background: var(--bg-hover);
   color: var(--accent-primary);
+}
+
+.config-menu {
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--accent-glow);
+}
+
+.config-menu-item {
+  width: 100%;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 650;
+  text-align: left;
+}
+
+.config-menu-item:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.config-menu-divider {
+  background: var(--border-muted);
 }
 </style>

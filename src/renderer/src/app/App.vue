@@ -10,7 +10,8 @@ import AppHeader from '../shared/window/AppHeader.vue'
 import type { ActiveView, ActivityItem, AppConfig, ErrorAnalysis, Folder, LogEntry, ProcessStatus, Project } from '../shared/types'
 import { applyTheme, installSystemThemeListener } from './useAppTheme'
 import { findLocalUrls } from '../features/workspace/model/localUrls'
-import { appendLogEntry } from '../features/terminal/model/logHistory'
+import { appendSessionLogEntry } from '../features/terminal/model/sessionLogs'
+import { clearLaunchFailure, mergeLaunchFailures, setLaunchFailure, type LaunchFailureState } from '../features/workspace/model/launchFailures'
 
 const config = ref<AppConfig | null>(null)
 const nodeVersion = ref<string | null>(null)
@@ -20,6 +21,7 @@ const switchingVersion = ref(false)
 const selectedProjectId = ref<string | null>(null)
 const processStatuses = ref<Record<string, ProcessStatus>>({})
 const projectUrls = ref<Record<string, string>>({})
+const launchFailures = ref<LaunchFailureState>({})
 const activities = ref<ActivityItem[]>([])
 const activeView = ref<ActiveView>('overview')
 const activeTab = ref<'logs' | 'terminal' | 'info'>('logs')
@@ -50,8 +52,12 @@ const currentStatus = computed(() => selectedProjectId.value
   : null)
 
 async function loadConfig() {
-  config.value = await window.electronAPI.getConfig()
-  if (config.value.projects.length && !selectedProjectId.value) selectedProjectId.value = config.value.projects[0].id
+  const nextConfig = await window.electronAPI.getConfig()
+  config.value = nextConfig
+  if (!selectedProjectId.value || !nextConfig.projects.some(project => project.id === selectedProjectId.value)) {
+    selectedProjectId.value = nextConfig.projects[0]?.id || null
+  }
+  if (!selectedProjectId.value) activeView.value = 'overview'
 }
 
 async function loadNodeVersion() {
@@ -93,11 +99,13 @@ async function addProject(project: Project) {
 
 async function updateProject(project: Project) {
   await window.electronAPI.updateProject(project)
+  launchFailures.value = clearLaunchFailure(launchFailures.value, project.id)
   await loadConfig()
 }
 
 async function deleteProject(id: string) {
   await window.electronAPI.deleteProject(id)
+  launchFailures.value = clearLaunchFailure(launchFailures.value, id)
   await loadConfig()
   if (selectedProjectId.value === id) selectedProjectId.value = config.value?.projects[0]?.id || null
   if (!selectedProjectId.value) activeView.value = 'overview'
@@ -114,8 +122,18 @@ async function moveToFolder(projectId: string, folderId: string | null) { await 
 async function startProjectById(projectId: string) {
   const project = config.value?.projects.find(item => item.id === projectId)
   if (!project) return
-  const result = await window.electronAPI.startProject(project.id, project.path, project.command, project.nodeVersion)
-  if (!result.success) showToast(result.error || '启动前检查未通过', 'error')
+  const result = await window.electronAPI.startProject(project.id)
+  if (result.success) {
+    launchFailures.value = clearLaunchFailure(launchFailures.value, project.id)
+    return
+  }
+  const message = result.error || '启动前检查未通过'
+  launchFailures.value = setLaunchFailure(launchFailures.value, {
+    projectId: project.id,
+    projectName: project.name,
+    message
+  })
+  showToast(message, 'error')
 }
 
 async function stopProjectById(projectId: string) {
@@ -129,10 +147,13 @@ function handleStatus(status: ProcessStatus) {
   const previous = processStatuses.value[status.projectId]
   activities.value = appendActivity(activities.value, activityFromStatus(previous, status))
   processStatuses.value[status.projectId] = status
+  if (status.status === 'running') {
+    launchFailures.value = clearLaunchFailure(launchFailures.value, status.projectId)
+  }
 }
 
 function handleLogData(log: LogEntry) {
-  appendLogEntry(log)
+  appendSessionLogEntry(log)
   const urls = findLocalUrls(log.data)
   if (urls[0]) {
     projectUrls.value[log.projectId] = urls[0]
@@ -149,8 +170,6 @@ function handleErrorAnalysis(analysis: ErrorAnalysis) {
 }
 
 function closeErrorAnalysis() { showErrorAnalysis.value = false; errorAnalysis.value = null }
-async function openLogDir(projectId: string) { await window.electronAPI.openLogDir(projectId) }
-
 async function openProjectUrl(url: string) {
   const result = await window.electronAPI.openLocalUrl(url)
   if (!result.success) showToast(result.error || '打开页面失败', 'error')
@@ -166,6 +185,24 @@ async function handleAnalyzeErrors() {
 function showToast(message: string, type: 'success' | 'error' | 'warning') { toastMessage.value = message; toastType.value = type }
 function handleExportResult(success: boolean, message: string) { showToast(message, success ? 'success' : 'error') }
 
+async function exportConfig() {
+  const result = await window.electronAPI.exportConfig()
+  if (result.success) showToast(`配置已导出到: ${result.path}`, 'success')
+  else if (result.error) showToast(result.error, 'error')
+}
+
+async function importConfig() {
+  const result = await window.electronAPI.importConfig()
+  if (result.success) {
+    launchFailures.value = {}
+    projectUrls.value = {}
+    await loadConfig()
+    showToast('配置已导入', 'success')
+  } else if (result.error) {
+    showToast(result.error, 'error')
+  }
+}
+
 async function switchNodeVersion(version: string) {
   switchingVersion.value = true
   const result = await window.electronAPI.switchNodeVersion(version)
@@ -180,8 +217,9 @@ async function switchNodeVersion(version: string) {
 
 async function startAllProjects() {
   if (!config.value) return
-  const projects = config.value.projects.map(project => ({ id: project.id, path: project.path, command: project.command, nodeVersion: project.nodeVersion }))
-  const result = await window.electronAPI.startAllProjects(projects)
+  const projectIds = config.value.projects.map(project => project.id)
+  const result = await window.electronAPI.startAllProjects(projectIds)
+  launchFailures.value = mergeLaunchFailures(launchFailures.value, result.failures, projectIds)
   showToast(result.failed ? `已启动 ${result.success} 个项目，${result.failed} 个失败` : `已启动 ${result.success} 个项目`, result.failed ? 'warning' : 'success')
 }
 
@@ -201,7 +239,15 @@ async function setProjectCommand(projectId: string, command: string) {
   if (!project || project.command === command) return
   await window.electronAPI.updateProject(toRaw({ ...project, command }))
   await loadConfig()
+  launchFailures.value = clearLaunchFailure(launchFailures.value, projectId)
   showToast(`已切换启动方案: ${command}`, 'success')
+}
+
+async function openProjectFolderById(projectId: string) {
+  const project = config.value?.projects.find(item => item.id === projectId)
+  if (!project) return
+  const result = await window.electronAPI.openInFileManager(project.path)
+  if (!result.success) showToast(result.error || '打开文件夹失败', 'error')
 }
 
 async function refreshVersions() { await Promise.all([loadNodeVersion(), loadNodeVersions()]) }
@@ -253,11 +299,12 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
 <template>
   <div class="app-shell">
     <Toast :message="toastMessage" :type="toastType" />
-    <ErrorAnalysisDialog :visible="showErrorAnalysis" :analysis="errorAnalysis" @close="closeErrorAnalysis" @open-log-dir="openLogDir" />
+    <ErrorAnalysisDialog :visible="showErrorAnalysis" :analysis="errorAnalysis" @close="closeErrorAnalysis" />
     <AppHeader
       :node-version="nodeVersion" :available-versions="nodeVersions" :current-version="currentNodeVersion"
       :switching="switchingVersion" :theme="config?.theme || 'system'"
       @toggle-theme="toggleTheme" @switch-version="switchNodeVersion" @refresh-versions="refreshVersions"
+      @export-config="exportConfig" @import-config="importConfig"
     />
     <main class="app-main">
       <aside class="app-sidebar" :class="{ collapsed: sidebarCollapsed, resizing: isResizing }" :style="{ width: sidebarCollapsed ? '48px' : `${sidebarWidth}px` }">
@@ -284,9 +331,9 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
       <section class="app-content">
         <ProjectOverview
           v-if="activeView === 'overview'" :projects="config?.projects || []" :statuses="processStatuses" :activities="activities" :node-version="nodeVersion"
-          :project-urls="projectUrls"
+          :project-urls="projectUrls" :launch-failures="launchFailures"
           @select="selectProject" @start="startProjectById" @stop="stopProjectById" @start-all="startAllProjects" @stop-all="stopAllProjects" @add-project="openAddProject"
-          @clear-activities="clearRecentActivities" @open-url="openProjectUrl"
+          @clear-activities="clearRecentActivities" @open-url="openProjectUrl" @edit-project="startEditProject" @open-folder="openProjectFolderById"
         />
         <ProjectWorkspace
           v-else-if="selectedProject" :project="selectedProject" :status="currentStatus" :active-tab="activeTab" :edit-trigger="editTrigger"

@@ -33,7 +33,7 @@ const defaultConfig: AppConfig = {
   theme: 'system'
 }
 
-function getConfigPath(): string {
+export function getConfigPath(): string {
   const userDataPath = app.getPath('userData')
   if (!existsSync(userDataPath)) {
     mkdirSync(userDataPath, { recursive: true })

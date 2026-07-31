@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { ActivityItem, ProcessStatus, Project } from '../../../shared/types'
 import { getOverviewCounts } from '../../workspace/model/workspaceState'
+import type { LaunchFailureState } from '../../workspace/model/launchFailures'
 import ProjectCard from './ProjectCard.vue'
 
 const props = defineProps<{
@@ -10,6 +11,7 @@ const props = defineProps<{
   activities: ActivityItem[]
   nodeVersion: string | null
   projectUrls: Record<string, string>
+  launchFailures: LaunchFailureState
 }>()
 
 const emit = defineEmits<{
@@ -21,11 +23,16 @@ const emit = defineEmits<{
   'add-project': []
   'clear-activities': []
   'open-url': [url: string]
+  'edit-project': [id: string]
+  'open-folder': [id: string]
 }>()
 
 const counts = computed(() => getOverviewCounts(props.projects, props.statuses))
 const hasRunningProjects = computed(() => counts.value.running > 0)
 const stoppedCount = computed(() => Math.max(0, counts.value.total - counts.value.running - counts.value.error))
+const failureItems = computed(() => Object.values(props.launchFailures)
+  .filter(failure => props.projects.some(project => project.id === failure.projectId))
+  .sort((a, b) => b.timestamp - a.timestamp))
 
 function projectName(projectId: string) {
   return props.projects.find(project => project.id === projectId)?.name || '已删除项目'
@@ -59,6 +66,28 @@ function activityLabel(type: ActivityItem['type']) {
         <article class="stat-card error"><span>异常</span><strong>{{ counts.error }}</strong></article>
       </div>
 
+      <section v-if="failureItems.length" class="launch-failure-panel" aria-label="启动失败项目">
+        <header>
+          <div>
+            <h2>启动失败</h2>
+            <span>{{ failureItems.length }} 个项目需要处理</span>
+          </div>
+        </header>
+        <div class="launch-failure-list">
+          <article v-for="failure in failureItems" :key="failure.projectId" class="launch-failure-row">
+            <div>
+              <strong>{{ failure.projectName }}</strong>
+              <span>{{ failure.message }}</span>
+            </div>
+            <div class="failure-actions">
+              <button type="button" @click="emit('start', failure.projectId)">重试</button>
+              <button type="button" @click="emit('edit-project', failure.projectId)">编辑</button>
+              <button type="button" @click="emit('open-folder', failure.projectId)">打开目录</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <div class="project-grid">
         <ProjectCard
           v-for="project in projects"
@@ -67,6 +96,7 @@ function activityLabel(type: ActivityItem['type']) {
           :status="statuses[project.id]"
           :global-node-version="nodeVersion"
           :local-url="projectUrls[project.id] || null"
+          :launch-failure="launchFailures[project.id] || null"
           @select="emit('select', $event)"
           @start="emit('start', $event)"
           @stop="emit('stop', $event)"
@@ -142,6 +172,13 @@ function activityLabel(type: ActivityItem['type']) {
 .stat-card span { color: var(--text-tertiary); font-size: 11px; }
 .stat-card strong { display: block; margin-top: 4px; color: var(--text-primary); font-size: 22px; line-height: 1.1; }
 .stat-card.running strong { color: var(--success); }.stat-card.error strong { color: var(--error); }
+.launch-failure-panel { margin-top: 12px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--error) 26%, var(--border-default)); border-radius: 10px; background: color-mix(in srgb, var(--error-bg) 42%, var(--bg-surface)); }
+.launch-failure-panel > header { min-height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; border-bottom: 1px solid var(--border-muted); }
+.launch-failure-panel h2 { margin: 0; color: var(--text-primary); font-size: 12px; }.launch-failure-panel header span { display: block; margin-top: 2px; color: var(--error); font-size: 10px; }
+.launch-failure-list { display: grid; gap: 1px; }
+.launch-failure-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 10px 14px; background: color-mix(in srgb, var(--bg-surface) 72%, transparent); }
+.launch-failure-row strong { display: block; color: var(--text-primary); font-size: 12px; }.launch-failure-row span { display: block; margin-top: 3px; overflow: hidden; color: var(--text-secondary); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.failure-actions { display: flex; align-items: center; gap: 6px; }.failure-actions button { min-height: 28px; padding: 0 9px; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-secondary); background: var(--bg-surface); font-size: 10px; font-weight: 700; }.failure-actions button:hover { color: var(--error); border-color: color-mix(in srgb, var(--error) 36%, var(--border-default)); background: var(--error-bg); }
 .project-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
 .overview-lower-grid { flex: 1; min-height: 230px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(260px, .85fr); gap: 10px; margin-top: 12px; }
 .activity-panel,.workspace-guide { min-height: 0; overflow: hidden; border: 1px solid var(--border-default); border-radius: 10px; background: var(--bg-surface); }
@@ -159,4 +196,5 @@ function activityLabel(type: ActivityItem['type']) {
 .empty-icon { display: grid; place-items: center; width: 54px; height: 54px; border: 1px solid var(--border-default); border-radius: 14px; color: var(--accent-primary); background: var(--bg-surface); font: 700 20px var(--font-mono); }
 .overview-empty h2 { margin: 16px 0 6px; font-size: 18px; }.overview-empty p { max-width: 420px; margin: 0 0 18px; color: var(--text-secondary); font-size: 13px; }
 @media (max-width: 900px) { .project-grid,.overview-lower-grid { grid-template-columns: 1fr; }.overview-lower-grid { flex: none; }.workspace-guide { min-height: 230px; } }
+@media (max-width: 700px) { .launch-failure-row { grid-template-columns: 1fr; gap: 8px; }.failure-actions { flex-wrap: wrap; } }
 </style>

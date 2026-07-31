@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ProcessStatus, Project } from '../../../shared/types'
+import type { LaunchFailure } from '../../workspace/model/launchFailures'
 
 const props = defineProps<{
   project: Project
   status?: ProcessStatus
   globalNodeVersion: string | null
   localUrl?: string | null
+  launchFailure?: LaunchFailure | null
 }>()
 
 const emit = defineEmits<{
@@ -19,18 +21,26 @@ const emit = defineEmits<{
 const statusLabel = computed(() => {
   if (props.status?.status === 'running') return '运行中'
   if (props.status?.status === 'error') return '异常'
+  if (props.launchFailure) return '启动失败'
   return '未启动'
+})
+
+const statusClass = computed(() => {
+  if (props.status?.status) return props.status.status
+  if (props.launchFailure) return 'error'
+  return 'stopped'
 })
 </script>
 
 <template>
   <article class="project-overview-card" tabindex="0" @click="emit('select', project.id)" @keyup.enter="emit('select', project.id)">
     <header class="project-card-header">
-      <span :class="['project-status-dot', status?.status || 'stopped']" aria-hidden="true"></span>
+      <span :class="['project-status-dot', statusClass]" aria-hidden="true"></span>
       <strong :title="project.name">{{ project.name }}</strong>
-      <span :class="['project-status-label', status?.status || 'stopped']">{{ statusLabel }}</span>
+      <span :class="['project-status-label', statusClass]">{{ statusLabel }}</span>
     </header>
     <p class="project-card-path" :title="project.path">{{ project.path }}</p>
+    <p v-if="launchFailure && status?.status !== 'running'" class="project-card-failure" :title="launchFailure.message">{{ launchFailure.message }}</p>
     <footer class="project-card-footer">
       <span class="meta-chip">Node {{ project.nodeVersion || globalNodeVersion || '系统' }}</span>
       <span class="meta-chip">npm run {{ project.command }}</span>
@@ -69,6 +79,7 @@ const statusLabel = computed(() => {
 .project-status-label.running { color: var(--success); }
 .project-status-label.error { color: var(--error); }
 .project-card-path { margin: 9px 0 14px; overflow: hidden; color: var(--text-tertiary); font: 11px/1.5 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.project-card-failure { margin: -7px 0 12px; overflow: hidden; color: var(--error); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .project-card-footer { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .meta-chip { max-width: 38%; overflow: hidden; padding: 4px 7px; border-radius: 6px; color: var(--text-secondary); background: var(--bg-subtle); font: 10px/1.2 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
 .card-action { min-height: 30px; margin-left: auto; padding: 0 12px; border-radius: 7px; color: #fff; font-size: 11px; font-weight: 700; }

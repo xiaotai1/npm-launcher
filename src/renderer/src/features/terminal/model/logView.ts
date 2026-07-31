@@ -31,3 +31,15 @@ export function formatLogForView(log: Pick<LogEntry, 'type' | 'data'>, filter: L
   if (!logMatchesFilter(log, filter, query)) return null
   return highlightLogQuery(log.data, query)
 }
+
+export function formatLogsForExport(logs: Pick<LogEntry, 'data'>[]): string {
+  return logs
+    .map(log => stripLogAnsi(log.data).replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd())
+    .filter(Boolean)
+    .join('\n')
+}
+
+function stripLogAnsi(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '')
+}

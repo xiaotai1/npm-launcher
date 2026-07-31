@@ -52,7 +52,7 @@ function createWindow() {
     // macOS 保持原生标题栏样式，Windows 使用自定义
     frame: process.platform !== 'win32',
     titleBarStyle: isMac ? 'hidden' : undefined,
-    trafficLightPosition: isMac ? { x: 16, y: 17 } : undefined,
+    trafficLightPosition: isMac ? { x: 18, y: 16 } : undefined,
     icon: join(__dirname, '../../build/icon.png'),
     backgroundColor: '#0f172a',
     webPreferences: {

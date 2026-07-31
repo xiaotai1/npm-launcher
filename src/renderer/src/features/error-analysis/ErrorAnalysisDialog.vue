@@ -7,10 +7,7 @@ const props = defineProps<{
   analysis: ErrorAnalysis | null
 }>()
 
-const emit = defineEmits<{
-  close: []
-  'open-log-dir': [projectId: string]
-}>()
+const emit = defineEmits<{ close: [] }>()
 
 const show = ref(false)
 
@@ -26,13 +23,6 @@ function onClose() {
 }
 
 function onOverlayClick() {
-  onClose()
-}
-
-function openLogDir() {
-  if (props.analysis) {
-    emit('open-log-dir', props.analysis.projectId)
-  }
   onClose()
 }
 
@@ -88,15 +78,12 @@ function severityClass(severity: string): string {
             </div>
 
             <div v-else class="p-3 rounded-lg border border-border bg-elevated mb-5">
-              <p class="text-[12px] text-ttertiary">未匹配到已知错误模式，请查看完整日志排查问题。</p>
+              <p class="text-[12px] text-ttertiary">未匹配到已知错误模式，请查看运行日志面板排查问题。</p>
             </div>
 
             <div class="flex gap-2.5 justify-end">
               <button class="px-4 py-2 text-[13px] font-medium rounded-lg transition-all duration-180 ease-out modal-btn cancel" @click="onClose">
                 关闭
-              </button>
-              <button class="px-4 py-2 text-[13px] font-medium rounded-lg transition-all duration-180 ease-out modal-btn confirm" @click="openLogDir">
-                查看完整日志
               </button>
             </div>
           </div>

@@ -3,7 +3,7 @@ import { BrowserWindow } from 'electron'
 import * as iconv from 'iconv-lite'
 import { deleteProject } from './configManager'
 import { getProjectEnv } from './platform'
-import { startLogFile, writeLog, endLogFile, analyzeErrors } from './logManager'
+import { startLogSession, recordLogLine, finishLogSession, analyzeErrors } from './logManager'
 import { detectPackageManager, getPackageManagerCommand } from './packageManager'
 
 // 运行中的进程
@@ -119,7 +119,13 @@ function sendLog(
   type: LogEntry['type'],
   data: string
 ): void {
-  if (!mainWindow || mainWindow.isDestroyed() || !data.trim()) {
+  if (!data.trim()) {
+    return
+  }
+
+  recordLogLine(projectId, type, stripAnsi(data).replace(/\r\n/g, '\n').replace(/\r/g, '\n'))
+
+  if (!mainWindow || mainWindow.isDestroyed()) {
     return
   }
 
@@ -145,9 +151,6 @@ function bufferLog(
   data: string
 ): void {
   if (!data.trim()) return
-
-  // 同时写入日志文件（清理 ANSI 和 \r，保证文件内容可读）
-  writeLog(projectId, type, stripAnsi(data).replace(/\r\n/g, '\n').replace(/\r/g, '\n'))
 
   if (!logBuffers.has(projectId)) {
     logBuffers.set(projectId, [])
@@ -279,8 +282,8 @@ export async function startProject(
       })
     }
 
-    // 启动日志文件记录
-    startLogFile(projectId)
+    // 启动本次内存日志记录
+    startLogSession(projectId)
 
     runningProcesses.set(projectId, child)
 
@@ -313,9 +316,6 @@ export async function startProject(
       // 清理日志缓冲区，发送剩余日志
       cleanupLogBuffer(mainWindow, projectId)
 
-      // 结束日志文件记录
-      endLogFile(projectId, code ?? 0)
-
       runningProcesses.delete(projectId)
       // 如果是用户手动停止的，状态设为 stopped
       const wasManualStop = manualStopped.has(projectId)
@@ -339,6 +339,7 @@ export async function startProject(
           }
         }
       }
+      finishLogSession(projectId, code ?? 0)
     })
 
     // 进程错误
@@ -346,12 +347,10 @@ export async function startProject(
       // 清理日志缓冲区，发送剩余日志
       cleanupLogBuffer(mainWindow, projectId)
 
-      // 结束日志文件记录
-      endLogFile(projectId)
-
       runningProcesses.delete(projectId)
       sendStatus(mainWindow, projectId, 'error')
       sendLog(mainWindow, projectId, 'error', processLogLine(`进程错误: ${error.message}`, 'error', Date.now()))
+      finishLogSession(projectId)
     })
 
     // 通知已启动
@@ -414,7 +413,7 @@ export function stopProject(projectId: string, mainWindow: BrowserWindow | null 
     // 异步清理日志，不阻塞返回
     setImmediate(() => {
       cleanupLogBuffer(mainWindow, projectId)
-      endLogFile(projectId)
+      finishLogSession(projectId)
     })
 
     return true

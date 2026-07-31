@@ -31,14 +31,22 @@ import { execWithSudo } from './sudoExecutor'
 import { setupPtyIpc, broadcastToAllPty } from './ptyManager'
 import { isWindows, getShellEnv, getNvmPaths, clearShellEnvCache } from './platform'
 import type { Project, AppConfig } from './configManager'
-import { getLogFiles, getLogContent, getLogDirPath, analyzeErrors } from './logManager'
+import { analyzeErrors } from './logManager'
 import type { ErrorAnalysis } from './logManager'
 import { readPackageScripts } from './packageScripts'
 import { resolveProjectRunRequest } from './projectRunRequest'
 import { inspectProjectHealth } from './projectHealth'
+import { createStartAllProjectsResult, recordStartFailure, recordStartSuccess, type StartAllProjectsResult } from './projectStartResults'
+import { normalizeImportedConfig } from './configTransfer'
 
 interface StartProjectResult {
   success: boolean
+  error?: string
+}
+
+interface ConfigTransferResult {
+  success: boolean
+  path?: string
   error?: string
 }
 
@@ -56,6 +64,49 @@ export function setupIpc(): void {
   // 保存配置
   ipcMain.handle('save-config', (_event, config: AppConfig): boolean => {
     return saveConfig(config)
+  })
+
+  ipcMain.handle('export-config', async (event): Promise<ConfigTransferResult> => {
+    try {
+      const win = BrowserWindow.fromWebContents(event.sender) || BrowserWindow.getAllWindows()[0]
+      if (!win) return { success: false, error: '无法获取窗口' }
+
+      const defaultPath = join(app.getPath('desktop'), `npm-launcher-config-${new Date().toISOString().slice(0, 10)}.json`)
+      const result = await dialog.showSaveDialog(win, {
+        title: '导出配置',
+        defaultPath,
+        filters: [{ name: '配置文件', extensions: ['json'] }]
+      })
+      if (result.canceled || !result.filePath) return { success: false }
+
+      await fsp.writeFile(result.filePath, JSON.stringify(getConfig(), null, 2), 'utf-8')
+      return { success: true, path: result.filePath }
+    } catch (error: any) {
+      return { success: false, error: error.message || '导出配置失败' }
+    }
+  })
+
+  ipcMain.handle('import-config', async (event): Promise<ConfigTransferResult> => {
+    try {
+      const win = BrowserWindow.fromWebContents(event.sender) || BrowserWindow.getAllWindows()[0]
+      if (!win) return { success: false, error: '无法获取窗口' }
+
+      const result = await dialog.showOpenDialog(win, {
+        title: '导入配置',
+        properties: ['openFile'],
+        filters: [{ name: '配置文件', extensions: ['json'] }]
+      })
+      if (result.canceled || !result.filePaths[0]) return { success: false }
+
+      const content = await fsp.readFile(result.filePaths[0], 'utf-8')
+      const imported = normalizeImportedConfig(JSON.parse(content))
+      if (!imported) return { success: false, error: '配置文件格式不正确' }
+      if (!saveConfig(imported)) return { success: false, error: '保存导入配置失败' }
+
+      return { success: true, path: result.filePaths[0] }
+    } catch (error: any) {
+      return { success: false, error: error.message || '导入配置失败' }
+    }
   })
 
   // 添加项目
@@ -360,38 +411,37 @@ export function setupIpc(): void {
   })
 
   // 批量启动所有项目
-  ipcMain.handle('start-all-projects', async (_event, projects: Array<{ id: string; path: string; command: string; nodeVersion?: string }>): Promise<{ success: number; failed: number }> => {
+  ipcMain.handle('start-all-projects', async (_event, projectIds: string[]): Promise<StartAllProjectsResult> => {
     const config = getConfig()
-    let success = 0
-    let failed = 0
+    const result = createStartAllProjectsResult()
 
-    for (const request of projects) {
-      const configuredProject = config.projects.find(project => project.id === request.id)
+    for (const projectId of projectIds) {
+      const configuredProject = config.projects.find(project => project.id === projectId)
       if (!configuredProject) {
-        failed++
+        recordStartFailure(result, { id: projectId, name: '未知项目' }, '项目配置不存在')
         continue
       }
 
       const health = inspectProjectHealth(configuredProject)
       if (!health.ok) {
-        failed++
+        recordStartFailure(result, configuredProject, health.issues[0]?.message || '启动前检查未通过')
         continue
       }
 
-      const target = resolveProjectRunRequest(config, request.id, readPackageScripts(configuredProject.path).scripts)
+      const target = resolveProjectRunRequest(config, configuredProject.id, readPackageScripts(configuredProject.path).scripts)
       if (!target) {
-        failed++
+        recordStartFailure(result, configuredProject, '项目启动配置已失效')
         continue
       }
 
-      const result = await startProject(getMainWindow(), target.id, target.path, target.command, target.nodeVersion)
-      if (result) {
-        success++
+      const started = await startProject(getMainWindow(), target.id, target.path, target.command, target.nodeVersion)
+      if (started) {
+        recordStartSuccess(result)
       } else {
-        failed++
+        recordStartFailure(result, configuredProject, '项目启动失败')
       }
     }
-    return { success, failed }
+    return result
   })
 
   // 批量停止所有项目
@@ -402,33 +452,17 @@ export function setupIpc(): void {
 
   // ===== 日志管理 =====
 
-  // 获取项目的历史日志文件列表
-  ipcMain.handle('get-log-files', (_event, projectId: string): string[] => {
-    return getLogFiles(projectId)
-  })
-
-  // 读取指定日志文件内容
-  ipcMain.handle('get-log-content', (_event, projectId: string, filename: string): string => {
-    return getLogContent(projectId, filename)
-  })
-
-  // 导出日志到用户选择的目录
-  ipcMain.handle('export-log', async (event, projectId: string): Promise<{ success: boolean; path?: string; error?: string }> => {
+  ipcMain.handle('export-log', async (event, filename: string, content: string): Promise<{ success: boolean; path?: string; error?: string }> => {
     try {
-      const logDir = getLogDirPath(projectId)
-      const files = getLogFiles(projectId)
-      if (files.length === 0) {
-        return { success: false, error: '没有可导出的日志文件' }
-      }
+      if (!content.trim()) return { success: false, error: '没有可导出的日志内容' }
 
       const win = BrowserWindow.fromWebContents(event.sender) || BrowserWindow.getAllWindows()[0]
       if (!win) {
         return { success: false, error: '无法获取窗口' }
       }
 
-      // 拼接完整的默认保存路径（桌面 + 文件名）
-      const homeDir = app.getPath('home')
-      const defaultPath = join(homeDir, 'Desktop', files[0])
+      const safeName = (filename || `npm-launcher-log-${new Date().toISOString().slice(0, 10)}.log`).replace(/[\\/:*?"<>|]/g, '-')
+      const defaultPath = join(app.getPath('desktop'), safeName.endsWith('.log') ? safeName : `${safeName}.log`)
 
       const result = await dialog.showSaveDialog(win, {
         title: '导出日志',
@@ -439,8 +473,6 @@ export function setupIpc(): void {
         return { success: false }
       }
 
-      const latestLog = join(logDir, files[0])
-      const content = await fsp.readFile(latestLog, 'utf-8')
       await fsp.writeFile(result.filePath, content, 'utf-8')
       return { success: true, path: result.filePath }
     } catch (error: any) {
@@ -451,17 +483,6 @@ export function setupIpc(): void {
   // 手动触发错误分析
   ipcMain.handle('analyze-errors', (_event, projectId: string, exitCode: number): ErrorAnalysis | null => {
     return analyzeErrors(projectId, exitCode)
-  })
-
-  // 打开日志目录
-  ipcMain.handle('open-log-dir', async (_event, projectId: string): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const logDir = getLogDirPath(projectId)
-      await shell.openPath(logDir)
-      return { success: true }
-    } catch (error: any) {
-      return { success: false, error: error.message }
-    }
   })
 
   // ===== 窗口控制（自定义标题栏） =====

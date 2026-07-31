@@ -1,9 +1,11 @@
-import { app } from 'electron'
-import { join } from 'path'
-import { appendFileSync, mkdirSync, readdirSync, readFileSync, unlinkSync, existsSync, statSync } from 'fs'
+const MAX_SESSION_LOG_LINES = 800
 
-// 日志文件写入器
-const logWriters: Map<string, string> = new Map() // projectId → 当前日志文件路径
+interface SessionLogLine {
+  type: string
+  line: string
+}
+
+const sessionLogs = new Map<string, SessionLogLine[]>()
 
 // 错误分析结果
 export interface ErrorMatch {
@@ -80,202 +82,77 @@ const ERROR_PATTERNS: ErrorPattern[] = [
   }
 ]
 
-const LOG_RETENTION_DAYS = 30
-
-function getLogsDir(): string {
-  const userDataPath = app.getPath('userData')
-  return join(userDataPath, 'logs')
+export function startLogSession(projectId: string): void {
+  sessionLogs.set(projectId, [])
+  recordLogLine(projectId, 'info', `=== 启动于 ${new Date().toLocaleString()} ===`)
 }
 
-function getProjectLogDir(projectId: string): string {
-  const dir = join(getLogsDir(), projectId)
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true })
+export function recordLogLine(projectId: string, type: string, data: string): void {
+  if (!data.trim()) return
+  if (!sessionLogs.has(projectId)) {
+    sessionLogs.set(projectId, [])
   }
-  return dir
+
+  const lines = data.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(line => line.trim())
+  const current = sessionLogs.get(projectId)!
+  for (const line of lines) {
+    current.push({ type, line: line.trim() })
+  }
+  if (current.length > MAX_SESSION_LOG_LINES) {
+    current.splice(0, current.length - MAX_SESSION_LOG_LINES)
+  }
 }
 
-function formatTimestampForFilename(): string {
-  const now = new Date()
-  const y = now.getFullYear().toString()
-  const m = (now.getMonth() + 1).toString().padStart(2, '0')
-  const d = now.getDate().toString().padStart(2, '0')
-  const h = now.getHours().toString().padStart(2, '0')
-  const min = now.getMinutes().toString().padStart(2, '0')
-  const s = now.getSeconds().toString().padStart(2, '0')
-  return `${y}-${m}-${d}_${h}-${min}-${s}`
-}
-
-/**
- * 启动日志文件（每次项目启动时调用）
- */
-export function startLogFile(projectId: string): string {
-  // 清理旧日志
-  cleanOldLogs(projectId)
-
-  const dir = getProjectLogDir(projectId)
-  const filename = `${formatTimestampForFilename()}.log`
-  const filePath = join(dir, filename)
-  logWriters.set(projectId, filePath)
-
-  // 写入启动标记
-  appendFileSync(filePath, `=== 启动于 ${new Date().toLocaleString()} ===\n`)
-  return filePath
-}
-
-/**
- * 写入日志行
- */
-export function writeLog(projectId: string, type: string, data: string): void {
-  const filePath = logWriters.get(projectId)
-  if (!filePath) return
-
+export function finishLogSession(projectId: string, exitCode?: number): void {
   const timestamp = new Date().toISOString().replace('T', ' ').replace('Z', '')
-  const line = `[${timestamp}] [${type}] ${data}\n`
-  try {
-    appendFileSync(filePath, line)
-  } catch {
-    // 写入失败忽略（磁盘满等）
-  }
-}
-
-/**
- * 结束日志文件（进程退出时调用）
- */
-export function endLogFile(projectId: string, exitCode?: number): void {
-  const filePath = logWriters.get(projectId)
-  if (!filePath) return
-
-  const timestamp = new Date().toISOString().replace('T', ' ').replace('Z', '')
-  appendFileSync(filePath, `=== 退出于 ${timestamp} 代码: ${exitCode ?? 'N/A'} ===\n`)
-  logWriters.delete(projectId)
-}
-
-/**
- * 获取项目的历史日志文件列表
- */
-export function getLogFiles(projectId: string): string[] {
-  const dir = getProjectLogDir(projectId)
-  if (!existsSync(dir)) return []
-
-  try {
-    return readdirSync(dir)
-      .filter(f => f.endsWith('.log'))
-      .sort()
-      .reverse() // 最新的在前
-  } catch {
-    return []
-  }
-}
-
-/**
- * 读取指定日志文件内容
- */
-export function getLogContent(projectId: string, filename: string): string {
-  const filePath = join(getProjectLogDir(projectId), filename)
-  if (!existsSync(filePath)) return ''
-
-  try {
-    return readFileSync(filePath, 'utf-8')
-  } catch {
-    return ''
-  }
-}
-
-/**
- * 获取当前日志文件路径
- */
-export function getCurrentLogPath(projectId: string): string | null {
-  return logWriters.get(projectId) || null
-}
-
-/**
- * 获取日志目录路径（用于打开文件管理器）
- */
-export function getLogDirPath(projectId: string): string {
-  return getProjectLogDir(projectId)
+  recordLogLine(projectId, 'info', `=== 退出于 ${timestamp} 代码: ${exitCode ?? 'N/A'} ===`)
 }
 
 /**
  * 分析错误（进程异常退出时调用）
  */
 export function analyzeErrors(projectId: string, exitCode: number): ErrorAnalysis | null {
-  const filePath = logWriters.get(projectId)
-  if (!filePath || !existsSync(filePath)) return null
+  const lines = sessionLogs.get(projectId)?.map(item => `[${item.type}] ${item.line}`) || null
+  if (!lines) return null
 
-  try {
-    const content = readFileSync(filePath, 'utf-8')
-    const lines = content.split('\n')
-    const matches: ErrorMatch[] = []
+  const matches: ErrorMatch[] = []
 
-    for (const pattern of ERROR_PATTERNS) {
-      const matchedLines: string[] = []
-      for (const line of lines) {
-        for (const regex of pattern.patterns) {
-          if (regex.test(line)) {
-            matchedLines.push(line.trim())
-            if (matchedLines.length >= 3) break
-          }
+  for (const pattern of ERROR_PATTERNS) {
+    const matchedLines: string[] = []
+    for (const line of lines) {
+      for (const regex of pattern.patterns) {
+        if (regex.test(line)) {
+          matchedLines.push(line.trim())
+          if (matchedLines.length >= 3) break
         }
-        if (matchedLines.length >= 3) break
       }
-      if (matchedLines.length > 0) {
-        matches.push({
-          name: pattern.name,
-          severity: pattern.severity,
-          lines: matchedLines,
-          suggestion: pattern.suggestion
-        })
-      }
+      if (matchedLines.length >= 3) break
     }
-
-    // 生成摘要
-    let summary: string
-    if (matches.length === 0) {
-      summary = `进程异常退出（代码: ${exitCode}），未匹配到已知错误模式`
-    } else if (matches.length === 1) {
-      summary = `进程异常退出（代码: ${exitCode}），可能原因: ${matches[0].name}`
-    } else {
-      const names = matches.map(m => m.name).join('、')
-      summary = `进程异常退出（代码: ${exitCode}），发现 ${matches.length} 个问题: ${names}`
+    if (matchedLines.length > 0) {
+      matches.push({
+        name: pattern.name,
+        severity: pattern.severity,
+        lines: matchedLines,
+        suggestion: pattern.suggestion
+      })
     }
-
-    return {
-      projectId,
-      exitCode,
-      timestamp: Date.now(),
-      matches,
-      summary
-    }
-  } catch {
-    return null
   }
-}
 
-/**
- * 清理超过 30 天的旧日志文件
- */
-function cleanOldLogs(projectId: string): void {
-  const dir = getProjectLogDir(projectId)
-  if (!existsSync(dir)) return
+  let summary: string
+  if (matches.length === 0) {
+    summary = `进程异常退出（代码: ${exitCode}），未匹配到已知错误模式`
+  } else if (matches.length === 1) {
+    summary = `进程异常退出（代码: ${exitCode}），可能原因: ${matches[0].name}`
+  } else {
+    const names = matches.map(m => m.name).join('、')
+    summary = `进程异常退出（代码: ${exitCode}），发现 ${matches.length} 个问题: ${names}`
+  }
 
-  const now = Date.now()
-  const maxAge = LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000
-
-  try {
-    const files = readdirSync(dir).filter(f => f.endsWith('.log'))
-    for (const file of files) {
-      const filePath = join(dir, file)
-      try {
-        const stat = statSync(filePath)
-        if (now - stat.mtimeMs > maxAge) {
-          unlinkSync(filePath)
-        }
-      } catch {
-        // 忽略无法读取的文件
-      }
-    }
-  } catch {
-    // 忽略目录读取错误
+  return {
+    projectId,
+    exitCode,
+    timestamp: Date.now(),
+    matches,
+    summary
   }
 }

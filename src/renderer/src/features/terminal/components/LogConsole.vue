@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import type { LogEntry } from '../../../shared/types'
-import { clearLogHistory, getLogHistory, subscribeLogHistory } from '../model/logHistory'
-import { formatLogForView, type LogFilter } from '../model/logView'
+import { clearSessionLogs, getSessionLogs, subscribeSessionLogs } from '../model/sessionLogs'
+import { formatLogForView, formatLogsForExport, type LogFilter } from '../model/logView'
 import { currentTerminalTheme } from '../terminalTheme'
 
 const props = defineProps<{
@@ -24,15 +24,22 @@ const terminalContainer = ref<HTMLDivElement>()
 const exporting = ref(false)
 const searchQuery = ref('')
 const logFilter = ref<LogFilter>('all')
+const hasSessionLogs = ref(false)
+const canExport = computed(() => hasSessionLogs.value)
 let terminal: Terminal | null = null
 let fitAddon: FitAddon | null = null
-let cleanupHistory: (() => void) | null = null
+let cleanupSessionLogs: (() => void) | null = null
 let resizeObserver: ResizeObserver | null = null
 let themeObserver: MutationObserver | null = null
 
+function updateLogState() {
+  hasSessionLogs.value = getSessionLogs(props.projectId).length > 0
+}
+
 function clear() {
   terminal?.clear()
-  clearLogHistory(props.projectId)
+  clearSessionLogs(props.projectId)
+  updateLogState()
 }
 
 defineExpose({ clear })
@@ -45,8 +52,9 @@ function writeLogEntry(log: LogEntry) {
 function replayCurrentProjectLogs() {
   if (!terminal) return
   terminal.clear()
-  const history = getLogHistory(props.projectId)
-  for (const log of history) {
+  const logs = getSessionLogs(props.projectId)
+  hasSessionLogs.value = logs.length > 0
+  for (const log of logs) {
     writeLogEntry(log)
   }
 }
@@ -74,10 +82,8 @@ function initTerminal() {
     }
   })
 
-  // 回放当前项目的历史日志
   replayCurrentProjectLogs()
 
-  // 监听容器大小变化（防抖，避免对话框弹出/关闭时瞬间重排）
   let resizeTimer: ReturnType<typeof setTimeout> | null = null
   resizeObserver = new ResizeObserver(() => {
     if (resizeTimer) clearTimeout(resizeTimer)
@@ -103,20 +109,19 @@ function disposeTerminal() {
   resizeObserver = null
 }
 
-// 全局日志监听 — 缓存所有项目的日志，仅实时写入当前项目
-function setupHistoryListener() {
-  if (cleanupHistory) return
-  cleanupHistory = subscribeLogHistory((log) => {
-    // 仅当前项目实时写入 xterm
+function setupSessionLogListener() {
+  if (cleanupSessionLogs) return
+  cleanupSessionLogs = subscribeSessionLogs((log) => {
+    if (log.projectId === props.projectId) hasSessionLogs.value = true
     if (log.projectId === props.projectId && terminal) {
       writeLogEntry(log)
     }
   })
 }
 
-// 当 projectId 变化时，重建终端并回放历史
 watch(() => props.projectId, (newId, oldId) => {
   if (newId !== oldId) {
+    updateLogState()
     disposeTerminal()
     nextTick(() => initTerminal())
   }
@@ -126,7 +131,6 @@ watch([searchQuery, logFilter], () => {
   replayCurrentProjectLogs()
 })
 
-// 主题切换时更新终端配色
 themeObserver = new MutationObserver(() => {
   if (terminal) {
     terminal.options.theme = currentTerminalTheme()
@@ -138,28 +142,34 @@ onMounted(() => {
     attributes: true,
     attributeFilter: ['data-theme']
   })
-  setupHistoryListener()
+  setupSessionLogListener()
+  updateLogState()
   nextTick(() => initTerminal())
 })
 
 onBeforeUnmount(() => {
   themeObserver?.disconnect()
-  cleanupHistory?.()
-  cleanupHistory = null
+  cleanupSessionLogs?.()
+  cleanupSessionLogs = null
   disposeTerminal()
 })
+
+function buildExportFilename() {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+  return `${props.projectId}-${timestamp}.log`
+}
 
 async function exportLog() {
   if (exporting.value) return
   exporting.value = true
   try {
-    const result = await window.electronAPI.exportLog(props.projectId)
+    const content = formatLogsForExport(getSessionLogs(props.projectId))
+    const result = await window.electronAPI.exportLog(buildExportFilename(), content)
     if (result.success) {
       emit('export-result', true, `日志已导出到: ${result.path}`)
     } else if (result.error) {
       emit('export-result', false, result.error)
     } else {
-      // 用户取消了对话框
       exporting.value = false
     }
   } catch (error: any) {
@@ -181,7 +191,7 @@ async function exportLog() {
         </span>
       </div>
       <div class="flex items-center gap-2">
-        <div v-if="hasLogs" class="log-tools">
+        <div v-if="hasLogs || hasSessionLogs" class="log-tools">
           <select v-model="logFilter" aria-label="日志类型过滤">
             <option value="all">全部</option>
             <option value="stdout">输出</option>
@@ -201,7 +211,7 @@ async function exportLog() {
           分析错误
         </button>
         <button
-          v-if="hasLogs"
+          v-if="canExport"
           class="flex items-center gap-1 py-0.5 px-2 text-[10px] font-medium text-ttertiary border border-border rounded hover:bg-hover transition-colors"
           :disabled="exporting"
           @click="exportLog"
@@ -210,7 +220,7 @@ async function exportLog() {
           {{ exporting ? '导出中...' : '导出日志' }}
         </button>
         <button
-          v-if="hasLogs"
+          v-if="hasSessionLogs"
           class="flex items-center gap-1 py-1 px-2.5 min-h-7 text-[11px] font-medium text-ttertiary border border-border rounded-md hover:bg-hover transition-colors"
           @click="clear"
         >
@@ -225,6 +235,15 @@ async function exportLog() {
 <style scoped>
 .running-dot {
   box-shadow: 0 0 6px var(--success);
+}
+
+.console-header {
+  gap: 10px;
+}
+
+.console-header > div:last-child {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .log-tools {

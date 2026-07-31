@@ -317,7 +317,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       </button>
     </div>
 
-    <div class="px-2.5 pb-2">
+    <div class="sidebar-nav-block">
       <button
         class="overview-nav"
         :class="{ active: activeView === 'overview' }"
@@ -332,8 +332,13 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       </button>
     </div>
 
+    <div class="sidebar-list-heading">
+      <span>项目列表</span>
+      <i>{{ filteredProjects.length }}</i>
+    </div>
+
     <!-- 项目列表 -->
-    <div class="flex-1 overflow-y-auto px-2 py-1" @dragover="onRootDragOver" @drop="onRootDrop">
+    <div class="flex-1 overflow-y-auto px-2 pt-1 pb-2 project-list-scroll" @dragover="onRootDragOver" @drop="onRootDrop">
 
       <!-- 根级别收藏项目 -->
       <template v-if="rootFavorites.length">
@@ -572,14 +577,23 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 </template>
 
 <style scoped>
+.sidebar-nav-block {
+  margin: 0 10px 10px;
+  padding: 6px;
+  border: 1px solid var(--border-muted);
+  border-radius: 11px;
+  background: var(--sidebar-nav-bg);
+}
+
 .overview-nav {
   width: 100%;
-  min-height: 36px;
+  min-height: 38px;
   display: flex;
   align-items: center;
   gap: 9px;
   padding: 0 10px;
   border-radius: 8px;
+  border: 1px solid transparent;
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 650;
@@ -593,8 +607,9 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 .overview-nav.active {
   color: var(--accent-primary);
-  background: var(--bg-selected);
-  box-shadow: inset 2px 0 var(--accent-primary);
+  background: var(--nav-active-bg);
+  border-color: var(--nav-active-border);
+  box-shadow: var(--shadow-sm);
 }
 
 .overview-count {
@@ -605,6 +620,32 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   color: var(--text-tertiary);
   background: var(--bg-subtle);
   font-size: 10px;
+  text-align: center;
+}
+
+.sidebar-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 2px 12px 6px;
+  padding: 0 4px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.sidebar-list-heading span {
+  letter-spacing: 0;
+}
+
+.sidebar-list-heading i {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--text-tertiary);
+  background: var(--bg-subtle);
+  font-style: normal;
   text-align: center;
 }
 
@@ -728,9 +769,9 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .project-card.active {
-  background: var(--card-active-bg);
-  border-color: var(--card-active-border);
-  box-shadow: 0 0 16px var(--accent-glow), inset 0 1px 0 var(--accent-glow);
+  background: var(--project-active-bg);
+  border-color: var(--project-active-border);
+  box-shadow: var(--project-active-shadow);
 }
 
 .project-card.active::before {
@@ -742,7 +783,6 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   width: 2px;
   border-radius: 1px;
   background: var(--indicator);
-  box-shadow: 0 0 8px var(--accent-glow);
   animation: barGrow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

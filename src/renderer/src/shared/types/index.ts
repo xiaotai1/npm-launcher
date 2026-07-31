@@ -65,12 +65,31 @@ export interface ErrorAnalysis {
   summary: string
 }
 
+export interface ProjectStartFailure {
+  projectId: string
+  projectName: string
+  message: string
+}
+
+export interface StartProjectResult {
+  success: boolean
+  error?: string
+}
+
+export interface StartAllProjectsResult {
+  success: number
+  failed: number
+  failures: ProjectStartFailure[]
+}
+
 // Electron API 类型声明
 declare global {
   interface Window {
     electronAPI: {
       getConfig: () => Promise<AppConfig>
       saveConfig: (config: AppConfig) => Promise<boolean>
+      exportConfig: () => Promise<{ success: boolean; path?: string; error?: string }>
+      importConfig: () => Promise<{ success: boolean; path?: string; error?: string }>
       addProject: (project: Project) => Promise<boolean>
       updateProject: (project: Project) => Promise<boolean>
       deleteProject: (projectId: string) => Promise<boolean>
@@ -89,18 +108,15 @@ declare global {
       openInFileManager: (folderPath: string) => Promise<{ success: boolean; error?: string }>
       openInVscode: (folderPath: string) => Promise<{ success: boolean; error?: string }>
       openLocalUrl: (url: string) => Promise<{ success: boolean; error?: string }>
-      startProject: (projectId: string, projectPath: string, command: string, nodeVersion?: string) => Promise<{ success: boolean; error?: string }>
+      startProject: (projectId: string) => Promise<StartProjectResult>
       stopProject: (projectId: string) => Promise<boolean>
       getProcessStatus: (projectId: string) => Promise<ProcessStatus>
-      startAllProjects: (projects: Array<{ id: string; path: string; command: string; nodeVersion?: string }>) => Promise<{ success: number; failed: number }>
+      startAllProjects: (projectIds: string[]) => Promise<StartAllProjectsResult>
       stopAllProjects: () => Promise<boolean>
       onLogData: (callback: (log: LogEntry) => void) => () => void
       onProcessStatus: (callback: (status: ProcessStatus) => void) => () => void
-      getLogFiles: (projectId: string) => Promise<string[]>
-      getLogContent: (projectId: string, filename: string) => Promise<string>
-      exportLog: (projectId: string) => Promise<{ success: boolean; path?: string; error?: string }>
+      exportLog: (filename: string, content: string) => Promise<{ success: boolean; path?: string; error?: string }>
       analyzeErrors: (projectId: string, exitCode: number) => Promise<ErrorAnalysis | null>
-      openLogDir: (projectId: string) => Promise<{ success: boolean; error?: string }>
       onErrorAnalysis: (callback: (analysis: ErrorAnalysis) => void) => () => void
       platform: string
       setNativeTheme: (theme: 'light' | 'dark' | 'system') => Promise<void>
