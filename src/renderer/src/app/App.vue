@@ -13,6 +13,8 @@ import { findLocalUrls } from '../features/workspace/model/localUrls'
 import { appendSessionLogEntry } from '../features/terminal/model/sessionLogs'
 import { clearLaunchFailure, mergeLaunchFailures, setLaunchFailure, type LaunchFailureState } from '../features/workspace/model/launchFailures'
 
+type WorkspaceTab = 'logs' | 'terminal' | 'info'
+
 const config = ref<AppConfig | null>(null)
 const nodeVersion = ref<string | null>(null)
 const nodeVersions = ref<string[]>([])
@@ -24,7 +26,7 @@ const projectUrls = ref<Record<string, string>>({})
 const launchFailures = ref<LaunchFailureState>({})
 const activities = ref<ActivityItem[]>([])
 const activeView = ref<ActiveView>('overview')
-const activeTab = ref<'logs' | 'terminal' | 'info'>('logs')
+const projectTabs = ref<Record<string, WorkspaceTab>>({})
 const editTrigger = ref(0)
 
 const toastMessage = ref('')
@@ -51,6 +53,11 @@ const selectedProject = computed(() => {
 const currentStatus = computed(() => selectedProjectId.value
   ? processStatuses.value[selectedProjectId.value] || null
   : null)
+
+const activeProjectTab = computed<WorkspaceTab>(() => {
+  if (!selectedProjectId.value) return 'logs'
+  return projectTabs.value[selectedProjectId.value] || 'logs'
+})
 
 async function loadConfig() {
   const nextConfig = await window.electronAPI.getConfig()
@@ -88,8 +95,13 @@ function openAddProject() {
 function startEditProject(id: string) {
   selectedProjectId.value = id
   activeView.value = 'project'
-  activeTab.value = 'info'
+  projectTabs.value = { ...projectTabs.value, [id]: 'info' }
   editTrigger.value = Date.now()
+}
+
+function setActiveProjectTab(tab: WorkspaceTab) {
+  if (!selectedProjectId.value) return
+  projectTabs.value = { ...projectTabs.value, [selectedProjectId.value]: tab }
 }
 
 async function addProject(project: Project) {
@@ -118,6 +130,9 @@ async function updateProject(project: Project) {
 async function deleteProject(id: string) {
   await window.electronAPI.deleteProject(id)
   launchFailures.value = clearLaunchFailure(launchFailures.value, id)
+  const nextTabs = { ...projectTabs.value }
+  delete nextTabs[id]
+  projectTabs.value = nextTabs
   await loadConfig()
   if (selectedProjectId.value === id) selectedProjectId.value = config.value?.projects[0]?.id || null
   if (!selectedProjectId.value) activeView.value = 'overview'
@@ -375,9 +390,9 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
           @clear-activities="clearRecentActivities" @open-url="openProjectUrl" @edit-project="startEditProject" @open-folder="openProjectFolderById"
         />
         <ProjectWorkspace
-          v-else-if="selectedProject" :project="selectedProject" :status="currentStatus" :active-tab="activeTab" :edit-trigger="editTrigger"
+          v-else-if="selectedProject" :project="selectedProject" :status="currentStatus" :active-tab="activeProjectTab" :edit-trigger="editTrigger"
           :local-url="projectUrls[selectedProject.id] || null"
-          :node-versions="nodeVersions" :global-node-version="nodeVersion" @update:active-tab="activeTab = $event"
+          :node-versions="nodeVersions" :global-node-version="nodeVersion" @update:active-tab="setActiveProjectTab"
           @start="startSelectedProject" @stop="stopSelectedProject" @edit="startEditProject(selectedProject.id)" @update="updateProject"
           @delete="deleteProject" @toast="showToast" @set-node-version="setProjectNodeVersion" @set-command="setProjectCommand" @open-url="openProjectUrl" @analyze-errors="handleAnalyzeErrors" @export-result="handleExportResult"
         />

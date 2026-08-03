@@ -46,3 +46,15 @@ test('折叠侧栏使用项目首字和状态角标并提供悬浮说明', () =>
   assert.match(appSource, /\.collapsed-status-dot\s*\{/)
   assert.equal(appSource.includes('class="collapsed-dot"'), false)
 })
+
+test('右键菜单使用紧凑操作行并弱化危险操作', () => {
+  assert.match(sidebarSource, /class="context-menu"/)
+  assert.match(sidebarSource, /class="context-item"/)
+  assert.match(sidebarSource, /class="context-item danger"/)
+  assert.match(sidebarSource, /class="context-item-icon"/)
+  assert.match(sidebarSource, /\.context-menu\s*\{[^}]*min-width:\s*176px/)
+  assert.match(sidebarSource, /\.context-item\s*\{[^}]*min-height:\s*34px/)
+  assert.match(sidebarSource, /\.context-item-icon\s*\{[^}]*width:\s*24px/)
+  assert.match(sidebarSource, /\.context-item\.danger\s*\{[^}]*margin-top:\s*4px/)
+  assert.equal(sidebarSource.includes('min-w-37.5 border border-border rounded-xl p-1 context-menu'), false)
+})

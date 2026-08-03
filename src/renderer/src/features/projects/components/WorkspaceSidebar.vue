@@ -580,53 +580,64 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
     <Teleport to="body">
       <div
         v-if="contextMenu.visible"
-        class="fixed z-1000 min-w-37.5 border border-border rounded-xl p-1 context-menu"
+        class="context-menu"
         :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
+        role="menu"
       >
         <template v-if="contextMenu.type === 'project'">
-          <button class="flex items-center gap-2 w-full py-2 px-3 text-xs text-tprimary rounded-md text-left transition-all duration-150 ease-out context-item" @click="handleEdit">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
+          <button class="context-item" type="button" role="menuitem" @click="handleEdit">
+            <span class="context-item-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </span>
             <span>编辑</span>
           </button>
-          <button class="flex items-center gap-2 w-full py-2 px-3 text-xs text-tprimary rounded-md text-left transition-all duration-150 ease-out context-item" @click="handleOpenFolder">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-            </svg>
+          <button class="context-item" type="button" role="menuitem" @click="handleOpenFolder">
+            <span class="context-item-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+            </span>
             <span>打开文件夹</span>
           </button>
-          <button class="flex items-center gap-2 w-full py-2 px-3 text-xs text-tprimary rounded-md text-left transition-all duration-150 ease-out context-item" @click="handleOpenInVscode">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="16 18 22 12 16 6"/>
-              <polyline points="8 6 2 12 8 18"/>
-            </svg>
+          <button class="context-item" type="button" role="menuitem" @click="handleOpenInVscode">
+            <span class="context-item-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="16 18 22 12 16 6"/>
+                <polyline points="8 6 2 12 8 18"/>
+              </svg>
+            </span>
             <span>在 VS Code 中打开</span>
           </button>
-          <div class="h-px mx-2 my-0.75 context-divider"></div>
-          <button class="flex items-center gap-2 w-full py-2 px-3 text-xs rounded-md text-left transition-all duration-150 ease-out context-item danger" @click="handleDelete">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-            </svg>
+          <button class="context-item danger" type="button" role="menuitem" @click="handleDelete">
+            <span class="context-item-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </span>
             <span>删除</span>
           </button>
         </template>
         <template v-if="contextMenu.type === 'folder'">
-          <button class="flex items-center gap-2 w-full py-2 px-3 text-xs text-tprimary rounded-md text-left transition-all duration-150 ease-out context-item" @click="handleRenameFolder">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
+          <button class="context-item" type="button" role="menuitem" @click="handleRenameFolder">
+            <span class="context-item-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </span>
             <span>重命名</span>
           </button>
-          <div class="h-px mx-2 my-0.75 context-divider"></div>
-          <button class="flex items-center gap-2 w-full py-2 px-3 text-xs rounded-md text-left transition-all duration-150 ease-out context-item danger" @click="handleDelete">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-            </svg>
+          <button class="context-item danger" type="button" role="menuitem" @click="handleDelete">
+            <span class="context-item-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </span>
             <span>删除文件夹</span>
           </button>
         </template>
@@ -928,17 +939,59 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 /* 右键菜单 — CSS 变量 + animation */
 .context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 176px;
+  padding: 6px;
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
   background: var(--bg-surface);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12), var(--shadow-lg);
   animation: scaleIn 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   transform-origin: top left;
 }
 
+.context-item {
+  width: 100%;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 8px;
+  border-radius: 7px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1;
+  text-align: left;
+  transition: background 150ms ease, color 150ms ease;
+}
+
 .context-item:hover {
   background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.context-item-icon {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 6px;
+  color: var(--text-tertiary);
+  background: color-mix(in srgb, var(--bg-subtle) 64%, transparent);
+}
+
+.context-item:hover .context-item-icon {
+  color: var(--accent-primary);
+  background: var(--accent-glow);
 }
 
 .context-item.danger {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-muted);
   color: var(--text-tertiary);
 }
 
@@ -947,7 +1000,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   background: var(--error-bg);
 }
 
-.context-divider {
-  background: var(--divider);
+.context-item.danger:hover .context-item-icon {
+  color: var(--error);
+  background: var(--error-bg);
 }
 </style>
