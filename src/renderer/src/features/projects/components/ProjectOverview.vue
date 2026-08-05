@@ -97,7 +97,7 @@ const isMac = computed(() => window.electronAPI?.platform === 'darwin')
 // 预留：用于在 macOS / Windows / Linux 上扩展更多快捷键提示时统一判断修饰键。
 const modifierKey = computed(() => isMac.value ? 'mac' : 'win')
 
-const recentProjects = computed(() => props.projects.slice(0, 3))
+const recentProjects = computed(() => props.projects.slice(0, 2))
 
 function getStatusColor(projectId: string) {
   const status = props.statuses[projectId]?.status
@@ -459,12 +459,11 @@ function getStatusColor(projectId: string) {
 .overview-pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 0 var(--success); animation: dotPulse 1.5s ease-in-out infinite; color: var(--success); }
 .overview-actions { display: flex; gap: 8px; }
 
-.overview-content { position: relative; z-index: 1; min-height: calc(100% - 96px); max-width: 1180px; margin: 0 auto 0 0; padding: 24px 28px 36px; display: flex; flex-direction: column; }
+.overview-content { position: relative; z-index: 1; min-height: calc(100% - 96px); max-width: 1320px; margin: 0 auto; padding: 24px 28px 36px; display: flex; flex-direction: column; }
 
-/* 统计卡片升级 — 2:1:1 不等宽网格 */
-.stat-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
+/* 统计卡片 — 等宽 1:1:1，避免数字位差异造成的不协调 */
+.stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .stat-card { position: relative; padding: 16px 18px; border: 1px solid var(--border-default); border-radius: 14px; background: color-mix(in srgb, var(--bg-surface) 92%, transparent); box-shadow: var(--shadow-sm); transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 200ms ease, border-color 200ms ease; overflow: hidden; }
-.stat-card:first-child { grid-column: span 1; }
 .stat-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, transparent 60%, color-mix(in srgb, var(--accent-primary) 8%, transparent)); opacity: 0; transition: opacity 200ms ease; }
 .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--accent-border); }
 .stat-card:hover::before { opacity: 1; }
@@ -489,14 +488,14 @@ function getStatusColor(projectId: string) {
 .failure-actions button { min-height: 28px; padding: 0 9px; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-secondary); background: var(--bg-surface); font-size: 10px; font-weight: 700; }
 .failure-actions button:hover { color: var(--error); border-color: color-mix(in srgb, var(--error) 36%, var(--border-default)); background: var(--error-bg); }
 
-.overview-main-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 14px; align-items: start; margin-top: 14px; }
-.project-grid { grid-column: span 1; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; align-items: stretch; }
-.project-empty-slot { height: 100%; min-height: 208px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 18px; border: 1px dashed var(--border-default); border-radius: 14px; color: var(--text-tertiary); background: color-mix(in srgb, var(--bg-surface) 42%, transparent); text-align: center; }
+.overview-main-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; margin-top: 16px; }
+.project-grid { grid-column: span 1; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; align-items: stretch; }
+.project-empty-slot { height: 100%; min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 18px; border: 1px dashed var(--border-default); border-radius: 14px; color: var(--text-tertiary); background: color-mix(in srgb, var(--bg-surface) 42%, transparent); text-align: center; }
 .project-empty-slot:hover { color: var(--accent-primary); border-color: var(--accent-border); background: color-mix(in srgb, var(--accent-glow) 42%, transparent); }
 .project-empty-slot strong { color: var(--text-secondary); font-size: 12px; }
 .project-empty-slot span { font-size: 10px; }
 
-.overview-side-rail { min-width: 0; display: flex; flex-direction: column; gap: 14px; align-self: start; }
+.overview-side-rail { min-width: 0; display: flex; flex-direction: column; gap: 14px; align-self: start; position: sticky; top: 110px; }
 
 /* ===== 运行时面板 ===== */
 .runtime-panel { border: 1px solid var(--border-default); border-radius: 14px; background: var(--bg-surface); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; }
@@ -505,7 +504,7 @@ function getStatusColor(projectId: string) {
 .runtime-panel > header span { display: block; margin-top: 2px; color: var(--text-tertiary); font-size: 9px; }
 .runtime-version-tag { display: inline-flex; align-items: center; padding: 3px 8px; border: 1px solid var(--accent-border); border-radius: 999px; color: var(--accent-primary); background: var(--accent-glow); font: 700 10px/1 var(--font-mono); letter-spacing: 0.04em; }
 .runtime-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px 14px; }
-.runtime-cell { position: relative; display: flex; flex-direction: column; gap: 5px; padding: 10px 12px; border: 1px solid var(--border-muted); border-radius: 10px; background: color-mix(in srgb, var(--bg-subtle) 60%, transparent); overflow: hidden; }
+.runtime-cell { position: relative; display: flex; flex-direction: column; gap: 5px; padding: 10px 12px; border: 1px solid var(--border-muted); border-radius: 10px; background: color-mix(in srgb, var(--bg-subtle) 60%, transparent); overflow: hidden; min-width: 0; }
 .runtime-cell::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent-primary) 30%, transparent), transparent); opacity: 0; transition: opacity 200ms ease; }
 .runtime-cell:hover::after { opacity: 1; }
 .runtime-cell-label { color: var(--text-tertiary); font: 700 9px/1 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; }
@@ -518,7 +517,7 @@ function getStatusColor(projectId: string) {
 .runtime-recent { border-top: 1px solid var(--border-muted); padding: 10px 14px 12px; }
 .runtime-recent-label { display: block; margin-bottom: 6px; color: var(--text-tertiary); font: 700 9px/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; }
 .runtime-recent ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
-.runtime-recent-item button { width: 100%; display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-secondary); font-size: 11px; font-weight: 650; transition: border-color 160ms ease, background 160ms ease, transform 160ms ease; }
+.runtime-recent-item button { width: 100%; display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-secondary); font-size: 11px; font-weight: 650; transition: border-color 160ms ease, background 160ms ease, transform 160ms ease; min-width: 0; }
 .runtime-recent-item button:hover { border-color: var(--accent-border); background: var(--bg-hover); color: var(--text-primary); transform: translateX(1px); }
 .runtime-recent-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; box-shadow: 0 0 5px currentColor; }
 .runtime-recent-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
