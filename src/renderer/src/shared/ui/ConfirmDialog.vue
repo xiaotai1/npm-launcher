@@ -139,8 +139,9 @@ onBeforeUnmount(restorePreviousFocus)
   display: grid;
   place-items: center;
   padding: 28px;
-  background: rgba(4, 9, 17, .52);
-  backdrop-filter: blur(3px);
+  background: rgba(4, 9, 17, .42);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   -webkit-app-region: no-drag;
 }
 
@@ -148,10 +149,21 @@ onBeforeUnmount(restorePreviousFocus)
   width: min(420px, calc(100vw - 40px));
   overflow: hidden;
   color: var(--text-primary);
-  border: 1px solid var(--border-strong);
-  border-radius: 14px;
-  background: var(--bg-surface);
-  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  background: var(--glass-fill-strong);
+  backdrop-filter: blur(28px) saturate(170%);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  box-shadow: var(--glass-shadow);
+}
+
+.confirm-dialog::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-edge);
+  pointer-events: none;
 }
 
 .dialog-header {
