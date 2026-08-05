@@ -159,7 +159,7 @@ watch(() => props.status?.status, () => {
 </template>
 
 <style scoped>
-.project-context-bar { position: relative; min-height: 84px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px 22px; border-bottom: 1px solid var(--glass-border); background: var(--glass-fill); backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset; }
+.project-context-bar { position: relative; min-height: 84px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px 22px; border-bottom: 1px solid var(--glass-border); background: var(--glass-fill); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset; }
 .project-context-bar::after { content: ''; position: absolute; left: 22px; right: 22px; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent-primary) 30%, transparent) 30%, color-mix(in srgb, var(--accent-primary) 30%, transparent) 70%, transparent); pointer-events: none; }
 .project-context-main { position: relative; min-width: 0; }
 .project-title-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -179,7 +179,7 @@ h1 { min-width: 0; margin: 0; overflow: hidden; color: var(--text-primary); font
 .command-picker strong { flex: 1; min-width: 0; overflow: hidden; color: var(--accent-primary); font: 700 13px/1 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
 .command-picker svg { flex: none; margin-left: auto; color: var(--accent-primary); opacity: .85; }
 /* Teleport 到 body，position: fixed + viewport 坐标，脱离一切祖先裁切/堆叠上下文 */
-.command-menu { position: fixed; z-index: 10000; min-width: 140px; padding: 5px; border: 1px solid var(--glass-border); border-radius: 12px; background: var(--glass-fill-strong); backdrop-filter: blur(28px) saturate(170%); -webkit-backdrop-filter: blur(28px) saturate(170%); box-shadow: var(--glass-shadow); animation: glassIn 0.18s cubic-bezier(0.16, 1, 0.3, 1); }
+.command-menu { position: fixed; z-index: 10000; min-width: 140px; padding: 5px; border: 1px solid var(--glass-border); border-radius: 12px; background: var(--glass-fill-strong); backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(var(--glass-saturate)); box-shadow: var(--glass-shadow); animation: glassIn 0.18s cubic-bezier(0.16, 1, 0.3, 1); }
 .command-option { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 8px; border-radius: 6px; color: var(--text-secondary); background: transparent; font: 700 12px/1 var(--font-mono); text-align: left; }
 .command-option:hover { color: var(--accent-primary); background: var(--bg-hover); }
 .command-option.active { color: var(--accent-primary); background: var(--accent-glow); }

@@ -1,16 +1,16 @@
 import type { ITheme } from '@xterm/xterm'
 
 /**
- * 终端配色：浅色用清爽的米白底（不是纯白，减少视觉刺激），深色用深蓝黑（不是纯黑，更舒服）。
+ * 终端配色：浅色用清爽的中性浅灰底（不是纯白，减少视觉刺激），深色用深蓝黑（不是纯黑，更舒服）。
  * 调色板对齐 ANSI 16 色，方便各种 CLI 工具的彩色输出。
  */
 export function getTerminalTheme(theme: 'light' | 'dark'): ITheme {
   if (theme === 'light') {
     return {
-      background: '#f4f1ec',
+      background: '#f6f7f9',
       foreground: '#3a4252',
       cursor: '#2f6fed',
-      cursorAccent: '#f4f1ec',
+      cursorAccent: '#f6f7f9',
       selectionBackground: 'rgba(47, 111, 237, 0.22)',
       selectionForeground: undefined,
       // ANSI 标准 16 色：参考 iTerm2 Light、VS Code Light+ 调色板

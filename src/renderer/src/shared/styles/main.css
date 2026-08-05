@@ -450,17 +450,20 @@
   --card-active-border: var(--project-active-border);
   --indicator: linear-gradient(180deg, #15946c, #0f766e);
 
-  /* ===== iOS 液态玻璃 tokens（浅色） ===== */
-  --ios-app-bg: radial-gradient(1200px 800px at 8% -10%, rgba(47, 111, 237, 0.12), transparent 55%),
-                radial-gradient(1000px 700px at 108% 8%, rgba(124, 58, 237, 0.10), transparent 50%),
-                radial-gradient(900px 700px at 50% 112%, rgba(21, 148, 108, 0.08), transparent 55%),
-                #f4f6f9;
-  --glass-fill: rgba(255, 255, 255, 0.55);
-  --glass-fill-hover: rgba(255, 255, 255, 0.75);
+  /* ===== iOS 液态玻璃 tokens（浅色）—— 严格对齐 iOS 26 真实参数 ===== */
+  --ios-app-bg: radial-gradient(1200px 800px at 8% -10%, rgba(47, 111, 237, 0.14), transparent 55%),
+                radial-gradient(1000px 700px at 108% 8%, rgba(124, 58, 237, 0.11), transparent 50%),
+                radial-gradient(900px 700px at 50% 112%, rgba(21, 148, 108, 0.09), transparent 55%),
+                #f0f2f5;
+  --glass-fill: rgba(255, 255, 255, 0.58);
+  --glass-fill-hover: rgba(255, 255, 255, 0.72);
   --glass-fill-strong: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.65);
-  --glass-edge: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.30) 45%, transparent 75%);
-  --glass-shadow: 0 6px 24px rgba(30, 45, 65, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.45);
+  --glass-edge: inset 1px 1px 0 0 rgba(255, 255, 255, 0.5), inset -1px -1px 0 0 rgba(255, 255, 255, 0.6);
+  --glass-blur: 10px;
+  --glass-saturate: 180%;
+  --glass-radius: 24px;
+  --glass-shadow: 0 22px 70px rgba(30, 45, 65, 0.16), 0 2px 6px rgba(30, 45, 65, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 /* ===== iOS 液态玻璃 tokens（深色覆盖） ===== */
@@ -469,12 +472,15 @@
                 radial-gradient(1000px 700px at 108% 10%, rgba(124, 58, 237, 0.16), transparent 50%),
                 radial-gradient(900px 700px at 50% 110%, rgba(21, 148, 108, 0.14), transparent 55%),
                 #0b1018;
-  --glass-fill: rgba(255, 255, 255, 0.06);
-  --glass-fill-hover: rgba(255, 255, 255, 0.10);
-  --glass-fill-strong: rgba(255, 255, 255, 0.12);
+  --glass-fill: rgba(255, 255, 255, 0.10);
+  --glass-fill-hover: rgba(255, 255, 255, 0.14);
+  --glass-fill-strong: rgba(22, 28, 40, 0.72);
   --glass-border: rgba(255, 255, 255, 0.10);
-  --glass-edge: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04) 40%, transparent 70%);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --glass-edge: inset 1px 1px 0 0 rgba(255, 255, 255, 0.14), inset -1px -1px 0 0 rgba(255, 255, 255, 0.04);
+  --glass-blur: 10px;
+  --glass-saturate: 180%;
+  --glass-radius: 24px;
+  --glass-shadow: 0 22px 70px rgba(0, 0, 0, 0.60), 0 2px 6px rgba(0, 0, 0, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 /* ===== Collapse 折叠动画（侧边栏分组 / 设置页） ===== */
@@ -494,7 +500,7 @@
   opacity: 1;
 }
 
-html, body { font-family: var(--font-ui); background: var(--ios-app-bg); background-attachment: fixed; }
+
 
 button:focus-visible,
 input:focus-visible,
@@ -522,9 +528,10 @@ select:focus-visible,
 .glass-surface {
   position: relative;
   background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
   box-shadow: var(--glass-shadow);
 }
 
@@ -547,18 +554,30 @@ select:focus-visible,
 .glass-surface-strong {
   position: relative;
   background: var(--glass-fill-strong);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 2px)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(calc(var(--glass-blur) + 2px)) saturate(var(--glass-saturate));
   border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
   box-shadow: var(--glass-shadow);
+}
+
+.glass-surface-strong::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-edge);
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* 亚克力面板（无高光，用于内容容器内部） */
 .glass-panel {
   background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 4px)) saturate(calc(var(--glass-saturate) - 20%));
+  backdrop-filter: blur(calc(var(--glass-blur) + 4px)) saturate(calc(var(--glass-saturate) - 20%));
   border: 1px solid var(--glass-border);
+  border-radius: calc(var(--glass-radius) * 0.5);
 }
 
 @keyframes glassIn {

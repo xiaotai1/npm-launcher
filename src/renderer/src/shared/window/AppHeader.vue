@@ -153,8 +153,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   -webkit-app-region: drag;
   overflow: visible;
   background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   border-color: var(--glass-border);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
 }

@@ -102,7 +102,7 @@ function editProject() {
 <style scoped>
 .project-workspace { height: 100%; display: flex; flex-direction: column; overflow: hidden; background: transparent; }
 
-.workspace-tabs { min-height: 46px; display: flex; align-items: stretch; gap: 2px; padding: 6px 14px 0; background: var(--glass-fill); backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%); border-bottom: 1px solid var(--glass-border); position: relative; }
+.workspace-tabs { min-height: 46px; display: flex; align-items: stretch; gap: 2px; padding: 6px 14px 0; background: var(--glass-fill); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); border-bottom: 1px solid var(--glass-border); position: relative; }
 
 .workspace-tabs button { position: relative; min-height: 40px; padding: 0 14px; border: 1px solid transparent; border-radius: 8px 8px 0 0; color: var(--text-tertiary); font-size: 12px; font-weight: 650; transition: color 160ms ease, background 160ms ease; }
 

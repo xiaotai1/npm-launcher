@@ -281,8 +281,8 @@ onBeforeUnmount(() => {
   padding: 0 10px 0 14px;
   border-bottom: 1px solid var(--glass-border);
   background: var(--glass-fill);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }
 
 .terminal-path {
