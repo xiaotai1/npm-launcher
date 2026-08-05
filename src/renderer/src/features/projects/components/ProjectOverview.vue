@@ -505,6 +505,7 @@ function getStatusColor(projectId: string) {
 
 /* ===== 运行时面板 ===== */
 .runtime-panel { border: 1px solid var(--glass-border); border-radius: 16px; background: var(--glass-fill); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); box-shadow: var(--glass-shadow); display: flex; flex-direction: column; }
+:global(:root[data-theme='dark']) .runtime-panel { background: rgba(22, 28, 40, 0.85); border-color: rgba(255, 255, 255, 0.08); }
 .runtime-panel > header { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--border-muted); }
 .runtime-panel h2 { margin: 0; font-size: 12px; font-weight: 750; letter-spacing: -0.005em; }
 .runtime-panel > header span { display: block; margin-top: 2px; color: var(--text-tertiary); font-size: 9px; }
