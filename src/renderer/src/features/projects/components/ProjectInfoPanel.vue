@@ -27,6 +27,17 @@ const editForm = ref<ProjectSettingsDraft>(toDraft(props.project))
 const editScripts = ref<string[]>([])
 const showDeleteConfirm = ref(false)
 
+type SettingsSection = 'basic' | 'environment' | 'danger'
+const activeSection = ref<SettingsSection>('basic')
+
+const settingsNav: { id: SettingsSection; label: string; desc: string; icon: 'info' | 'runtime' | 'alert' }[] = [
+  { id: 'basic', label: '基础设置', desc: '名称、路径与启动脚本', icon: 'info' },
+  { id: 'environment', label: '运行环境', desc: 'Node 版本选择', icon: 'runtime' },
+  { id: 'danger', label: '危险操作', desc: '从启动器移除项目', icon: 'alert' }
+]
+
+const navItem = (id: SettingsSection) => settingsNav.find(n => n.id === id) || settingsNav[0]
+
 const commandOptions = computed(() => Array.from(new Set([
   editForm.value.command,
   ...editScripts.value
@@ -118,7 +129,7 @@ function onConfirmDelete() {
 <template>
   <div class="settings-page">
     <header class="settings-header">
-      <div>
+      <div class="settings-title-block">
         <h2>项目设置</h2>
         <p>调整项目名称、启动脚本和运行环境。</p>
       </div>
@@ -128,67 +139,94 @@ function onConfirmDelete() {
       </div>
     </header>
 
-    <form id="project-settings-form" class="settings-content" @submit.prevent="save">
-      <section class="settings-section" aria-labelledby="basic-settings-title">
-        <header class="settings-section-heading">
-          <h3 id="basic-settings-title">基础设置</h3>
-          <p>用于识别项目并决定默认启动方式。</p>
-        </header>
+    <div class="settings-body">
+      <nav class="settings-nav" aria-label="设置目录">
+        <button
+          v-for="item in settingsNav"
+          :key="item.id"
+          type="button"
+          class="settings-nav-item"
+          :class="{ active: activeSection === item.id }"
+          @click="activeSection = item.id"
+        >
+          <span class="settings-nav-icon">
+            <svg v-if="item.icon === 'info'" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
+            <svg v-else-if="item.icon === 'runtime'" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+            <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </span>
+          <span class="settings-nav-text">
+            <strong>{{ item.label }}</strong>
+            <small>{{ item.desc }}</small>
+          </span>
+        </button>
+      </nav>
 
-        <div class="settings-fields">
-          <label class="settings-field">
-            <span>项目名称</span>
-            <input v-model="editForm.name" autocomplete="off" />
-          </label>
+      <form id="project-settings-form" class="settings-content" @submit.prevent="save">
+        <Transition name="fade" mode="out-in">
+          <section v-if="activeSection === 'basic'" class="settings-section" aria-labelledby="basic-settings-title" key="basic">
+            <div class="settings-fields">
+              <label class="settings-field">
+                <span>项目名称</span>
+                <input v-model="editForm.name" autocomplete="off" />
+              </label>
 
-          <label class="settings-field">
-            <span>项目路径</span>
-            <div class="path-picker">
-              <input v-model="editForm.path" readonly :title="editForm.path" />
-              <button type="button" @click="selectFolder">浏览</button>
+              <label class="settings-field">
+                <span>项目路径</span>
+                <div class="path-picker">
+                  <input v-model="editForm.path" readonly :title="editForm.path" />
+                  <button type="button" @click="selectFolder">浏览</button>
+                </div>
+              </label>
+
+              <label class="settings-field">
+                <span>默认启动脚本</span>
+                <div class="settings-select">
+                  <select v-model="editForm.command" :disabled="commandOptions.length === 0">
+                    <option value="" disabled>选择脚本</option>
+                    <option v-for="script in commandOptions" :key="script" :value="script">{{ script }}</option>
+                  </select>
+                  <svg class="settings-select-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
+                <small v-if="editScripts.length === 0 && editForm.path">未找到 package.json 或没有可用 scripts</small>
+              </label>
             </div>
-          </label>
+          </section>
 
-          <label class="settings-field">
-            <span>默认启动脚本</span>
-            <div class="settings-select">
-              <select v-model="editForm.command" :disabled="commandOptions.length === 0">
-                <option value="" disabled>选择脚本</option>
-                <option v-for="script in commandOptions" :key="script" :value="script">{{ script }}</option>
-              </select>
-              <svg class="settings-select-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
+          <section v-else-if="activeSection === 'environment'" class="settings-section" aria-labelledby="env-settings-title" key="env">
+            <div class="settings-fields">
+              <label class="settings-field">
+                <span>Node 版本</span>
+                <div class="settings-select">
+                  <select v-model="editForm.nodeVersion">
+                    <option value="">跟随系统{{ globalNodeVersion ? ` (${globalNodeVersion})` : '' }}</option>
+                    <option v-for="version in nodeVersions" :key="version" :value="version">{{ version }}</option>
+                  </select>
+                  <svg class="settings-select-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
+                <small>仅识别 nvm 管理的版本；留空时使用顶部当前系统版本。</small>
+              </label>
             </div>
-            <small v-if="editScripts.length === 0 && editForm.path">未找到 package.json 或没有可用 scripts</small>
-          </label>
+          </section>
 
-          <label class="settings-field">
-            <span>Node 版本</span>
-            <div class="settings-select">
-              <select v-model="editForm.nodeVersion">
-                <option value="">跟随系统{{ globalNodeVersion ? ` (${globalNodeVersion})` : '' }}</option>
-                <option v-for="version in nodeVersions" :key="version" :value="version">{{ version }}</option>
-              </select>
-              <svg class="settings-select-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
+          <section v-else class="settings-section settings-danger" aria-labelledby="danger-settings-title" key="danger">
+            <div class="danger-zone">
+              <div class="danger-zone-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </div>
+              <div class="danger-zone-text">
+                <strong>从启动器移除</strong>
+                <span>只会移除当前项目配置，不会删除本地目录。</span>
+              </div>
+              <button type="button" class="danger-remove-btn" @click="remove">移除项目</button>
             </div>
-            <small>仅识别 nvm 管理的版本；留空时使用顶部当前系统版本。</small>
-          </label>
-        </div>
-      </section>
-    </form>
-
-    <footer class="settings-remove-row">
-      <div class="settings-remove-heading">
-        <strong>从启动器移除</strong>
-      </div>
-      <div class="settings-remove-content">
-        <span>只会移除当前项目配置，不会删除本地目录。</span>
-        <button type="button" @click="remove">移除项目</button>
-      </div>
-    </footer>
+          </section>
+        </Transition>
+      </form>
+    </div>
 
     <ConfirmDialog
       :visible="showDeleteConfirm"
@@ -208,7 +246,7 @@ function onConfirmDelete() {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 28px 32px 32px;
+  padding: 24px 32px 28px;
   background: var(--bg-app);
 }
 
@@ -217,13 +255,15 @@ function onConfirmDelete() {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-muted);
 }
 
 .settings-header h2 {
   margin: 0;
   color: var(--text-primary);
   font-size: 18px;
+  font-weight: 750;
   letter-spacing: 0;
 }
 
@@ -240,43 +280,116 @@ function onConfirmDelete() {
   gap: 8px;
 }
 
-.settings-content {
-  width: 100%;
+/* 左右两栏布局 */
+.settings-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+  padding-top: 22px;
 }
 
-.settings-section,
-.settings-remove-row {
-  display: grid;
-  grid-template-columns: 180px minmax(320px, 760px);
-  gap: 36px;
+/* 左侧目录导航 */
+.settings-nav {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--border-muted);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-surface) 78%, transparent);
+}
+
+.settings-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
   width: 100%;
-  max-width: 976px;
-  border-top: 1px solid var(--border-muted);
+  padding: 10px 12px;
+  border-radius: 9px;
+  color: var(--text-secondary);
+  text-align: left;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.settings-nav-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.settings-nav-item.active {
+  color: var(--accent-primary);
+  background: var(--accent-glow);
+}
+
+.settings-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 2.5px;
+  height: 18px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--accent-primary), var(--accent-primary-hover));
+  box-shadow: 0 0 8px var(--accent-glow);
+  transform: translateY(-50%);
+  animation: indicatorSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.settings-nav-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--text-tertiary);
+  background: var(--bg-subtle);
+}
+
+.settings-nav-item:hover .settings-nav-icon {
+  color: var(--accent-primary);
+  background: var(--accent-glow);
+}
+
+.settings-nav-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settings-nav-text strong {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.settings-nav-text small {
+  color: var(--text-tertiary);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+/* 右侧表单 */
+.settings-content {
+  width: 100%;
+  min-width: 0;
+  max-width: 600px;
 }
 
 .settings-section {
-  padding: 26px 0 32px;
-}
-
-.settings-section-heading h3 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0;
-}
-
-.settings-section-heading p {
-  margin: 6px 0 0;
-  color: var(--text-tertiary);
-  font-size: 10px;
-  line-height: 1.6;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .settings-fields {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
+  padding: 4px 0;
 }
 
 .settings-field {
@@ -296,13 +409,14 @@ function onConfirmDelete() {
 .settings-field select {
   width: 100%;
   min-width: 0;
-  min-height: 38px;
-  padding: 0 11px;
+  min-height: 40px;
+  padding: 0 12px;
   border: 1px solid var(--border-default);
-  border-radius: 8px;
+  border-radius: 12px;
   color: var(--text-primary);
   background: var(--bg-surface);
   font-size: 12px;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 
 .settings-field input[readonly] {
@@ -347,7 +461,7 @@ function onConfirmDelete() {
 .settings-field input:focus,
 .settings-field select:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 2px var(--accent-glow);
+  box-shadow: 0 0 0 3px var(--accent-glow), 0 0 12px color-mix(in srgb, var(--accent-glow) 80%, transparent);
   outline: none;
 }
 
@@ -366,18 +480,16 @@ function onConfirmDelete() {
 
 .path-picker button,
 .settings-secondary,
-.settings-primary,
-.settings-remove-content button {
+.settings-primary {
   min-height: 36px;
   padding: 0 13px;
-  border-radius: 8px;
+  border-radius: 9px;
   font-size: 12px;
   font-weight: 700;
 }
 
 .path-picker button,
-.settings-secondary,
-.settings-remove-content button {
+.settings-secondary {
   border: 1px solid transparent;
   background: transparent;
 }
@@ -423,48 +535,94 @@ function onConfirmDelete() {
   cursor: not-allowed;
 }
 
-.settings-remove-row {
-  padding-top: 22px;
-}
-
-.settings-remove-heading strong {
-  color: var(--text-secondary);
-  font-size: 11px;
-}
-
-.settings-remove-content {
+/* 危险操作 */
+.settings-danger .danger-zone {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--error) 30%, var(--border-default));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--error-bg) 40%, var(--bg-surface));
 }
 
-.settings-remove-content span {
+.danger-zone-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 14%, transparent);
+}
+
+.danger-zone-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.danger-zone-text strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.danger-zone-text span {
   color: var(--text-tertiary);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
-.settings-remove-content button {
+.danger-remove-btn {
   flex: none;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
+  border-radius: 9px;
   color: var(--error);
+  background: var(--bg-surface);
+  font-size: 12px;
+  font-weight: 700;
+  transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
 }
 
-.settings-remove-content button:hover {
-  background: var(--error-bg);
+.danger-remove-btn:hover {
+  color: #fff;
+  background: var(--error);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--error) 30%, transparent);
 }
 
 @media (max-width: 900px) {
-  .settings-section,
-  .settings-remove-row {
-    grid-template-columns: 140px minmax(0, 1fr);
-    gap: 24px;
+  .settings-body {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .settings-nav {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+  }
+  .settings-nav-item {
+    flex: 1;
+    min-width: max-content;
+  }
+  .settings-nav-item.active::before {
+    top: auto;
+    left: 50%;
+    bottom: 0;
+    width: 50%;
+    height: 2.5px;
+    transform: translateX(-50%);
   }
 }
 
 @media (max-width: 720px) {
   .settings-page {
-    padding: 20px;
+    padding: 18px;
   }
 
   .settings-header {
@@ -477,15 +635,8 @@ function onConfirmDelete() {
     justify-content: flex-end;
   }
 
-  .settings-section,
-  .settings-remove-row {
-    grid-template-columns: 1fr;
-    gap: 18px;
-  }
-
-  .settings-remove-content {
-    align-items: flex-start;
-    flex-direction: column;
+  .settings-nav-item.active::before {
+    width: 60%;
   }
 }
 </style>

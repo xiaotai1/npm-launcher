@@ -36,7 +36,7 @@ const errorAnalysis = ref<ErrorAnalysis | null>(null)
 const showErrorAnalysis = ref(false)
 
 const sidebarCollapsed = ref(false)
-const sidebarWidth = ref(parseInt(localStorage.getItem('sidebarWidth') || '260', 10))
+const sidebarWidth = ref(parseInt(localStorage.getItem('sidebarWidth') || '272', 10))
 const isResizing = ref(false)
 const workspaceSidebarRef = ref<InstanceType<typeof WorkspaceSidebar> | null>(null)
 
@@ -64,6 +64,8 @@ async function loadConfig() {
   config.value = nextConfig
   if (!selectedProjectId.value || !nextConfig.projects.some(project => project.id === selectedProjectId.value)) {
     selectedProjectId.value = nextConfig.projects[0]?.id || null
+    // 自动选中第一个项目时，切到项目视图，避免侧边栏同时高亮"项目总览"和该项目
+    if (selectedProjectId.value) activeView.value = 'project'
   }
   if (!selectedProjectId.value) activeView.value = 'overview'
 }
@@ -80,6 +82,8 @@ async function loadNodeVersions() {
 
 function showOverview() {
   activeView.value = 'overview'
+  // 切回总览时清除项目选中，避免侧边栏同时高亮"项目总览"和某个项目
+  selectedProjectId.value = null
 }
 
 function selectProject(id: string) {
@@ -388,6 +392,7 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
           :project-urls="projectUrls" :launch-failures="launchFailures"
           @select="selectProject" @start="startProjectById" @stop="stopProjectById" @start-all="startAllProjects" @stop-all="stopAllProjects" @add-project="openAddProject"
           @clear-activities="clearRecentActivities" @open-url="openProjectUrl" @edit-project="startEditProject" @open-folder="openProjectFolderById"
+          @import-config="importConfig"
         />
         <ProjectWorkspace
           v-else-if="selectedProject" :project="selectedProject" :status="currentStatus" :active-tab="activeProjectTab" :edit-trigger="editTrigger"
@@ -403,7 +408,7 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
 
 <style scoped>
 .app-shell { height: 100vh; display: flex; flex-direction: column; overflow: hidden; color: var(--text-primary); background: var(--bg-app); }
-.app-main { flex: 1; display: flex; min-height: 0; overflow: hidden; }.app-sidebar { position: relative; flex: none; min-width: 0; border-right: 1px solid var(--border-default); background: var(--bg-sidebar); transition: width 220ms ease; }.app-sidebar.resizing { transition: none; }.app-content { flex: 1; min-width: 0; overflow: hidden; }
+.app-main { flex: 1; display: flex; min-height: 0; overflow: hidden; }.app-sidebar { position: relative; flex: none; min-width: 0; border-right: 1px solid var(--border-default); background: var(--bg-sidebar); transition: width 250ms cubic-bezier(0.16, 1, 0.3, 1); }.app-sidebar.resizing { transition: none; }.app-content { flex: 1; min-width: 0; overflow: hidden; }
 .sidebar-resizer { width: 3px; margin-left: -2px; z-index: 4; cursor: col-resize; }.sidebar-resizer:hover,.sidebar-resizer.active { background: var(--accent-primary); }
 .sidebar-toggle { position: absolute; top: 50%; right: -12px; z-index: 8; width: 24px; height: 24px; display: grid; place-items: center; transform: translateY(-50%); border: 1px solid var(--border-default); border-radius: 50%; color: var(--text-tertiary); background: var(--bg-surface); box-shadow: var(--shadow-sm); }.sidebar-toggle:hover { color: var(--accent-primary); border-color: var(--accent-border); }
 .collapsed-navigation { height: 100%; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 6px; overflow-y: auto; }

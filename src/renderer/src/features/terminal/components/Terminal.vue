@@ -83,25 +83,20 @@ function initTerminal() {
 
   // 复制粘贴：Ctrl+Shift+C 复制，Ctrl+Shift+V / 右键 粘贴
   terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
-    // 只处理 keydown，其他事件类型一律放行
     if (event.type !== 'keydown') return true
 
-    // Ctrl+Shift+C → 复制选中文字
     if (event.ctrlKey && event.shiftKey && (event.key === 'C' || event.key === 'c')) {
       copySelection()
       return false
     }
-    // Ctrl+Shift+V → 粘贴
     if (event.ctrlKey && event.shiftKey && (event.key === 'V' || event.key === 'v')) {
       void pasteClipboard()
       return false
     }
-    // Ctrl+Insert → 复制
     if (event.ctrlKey && event.key === 'Insert') {
       copySelection()
       return false
     }
-    // Shift+Insert → 粘贴
     if (event.shiftKey && event.key === 'Insert') {
       void pasteClipboard()
       return false
@@ -116,10 +111,8 @@ function initTerminal() {
     e.preventDefault()
     const selection = terminal?.getSelection()
     if (selection) {
-      // 有选中文字 → 复制
       copySelection()
     } else {
-      // 无选中 → 粘贴
       void pasteClipboard()
     }
   }
@@ -249,26 +242,31 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
-    <div ref="terminalContainer" class="terminal-container"></div>
+    <div class="terminal-region">
+      <div class="terminal-region-glow" aria-hidden="true"></div>
+      <div ref="terminalContainer" class="terminal-container"></div>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .terminal-shell {
+  position: relative;
   width: 100%;
   height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
   background: var(--console-bg);
+  overflow: hidden;
 }
 
 .terminal-toolbar {
-  min-height: 36px;
+  min-height: 40px;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 10px 0 12px;
+  padding: 0 10px 0 14px;
   border-bottom: 1px solid var(--border-muted);
   background: var(--bg-surface);
 }
@@ -304,17 +302,18 @@ onBeforeUnmount(() => {
 
 .terminal-action {
   min-width: 0;
-  height: 28px;
+  height: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 0 8px;
-  border-radius: 7px;
+  padding: 0 10px;
+  border-radius: 8px;
   color: var(--text-tertiary);
   font-size: 11px;
   font-weight: 650;
   white-space: nowrap;
+  transition: color 160ms ease, background 160ms ease;
 }
 
 .terminal-action.primary {
@@ -331,6 +330,10 @@ onBeforeUnmount(() => {
   color: var(--text-primary);
 }
 
+/* 终端区域：科技感顶发光 */
+.terminal-region { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--console-bg); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent-primary) 14%, transparent); }
+.terminal-region-glow { position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent-primary) 50%, transparent), transparent); pointer-events: none; }
+
 .terminal-container {
   flex: 1;
   min-height: 0;
@@ -339,30 +342,35 @@ onBeforeUnmount(() => {
   outline: none;
 }
 
-:deep(.xterm),
-:deep(.xterm-screen),
-:deep(.xterm-viewport),
-:deep(.xterm-rows) {
+::deep(.xterm),
+::deep(.xterm-screen),
+::deep(.xterm-viewport),
+::deep(.xterm-rows) {
   background: var(--console-bg) !important;
   border: none;
   outline: none;
 }
 
-:deep(.xterm) {
-  padding: 4px 8px;
+::deep(.xterm) {
+  padding: 12px 14px 14px;
   height: 100%;
 }
 
-:deep(.xterm-screen) {
+::deep(.xterm-screen) {
   height: 100%;
 }
 
-:deep(.xterm-viewport::-webkit-scrollbar) {
-  width: 6px;
+::deep(.xterm-viewport::-webkit-scrollbar) {
+  width: 8px;
 }
 
-:deep(.xterm-viewport::-webkit-scrollbar-thumb) {
+::deep(.xterm-viewport::-webkit-scrollbar-thumb) {
   background: var(--scrollbar-thumb);
-  border-radius: 3px;
+  border-radius: 4px;
+  border: 2px solid var(--console-bg);
+}
+
+::deep(.xterm-viewport::-webkit-scrollbar-thumb:hover) {
+  background: var(--text-tertiary);
 }
 </style>

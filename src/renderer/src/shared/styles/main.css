@@ -55,6 +55,18 @@
   --animate-star-pop: starPop 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --animate-toast-in: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   --animate-dialog-in: dialogIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-glow-pulse: glowPulse 2.4s ease-in-out infinite;
+  --animate-indicator-slide: indicatorSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes glowPulse {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 0.9; transform: scale(1.04); }
+  }
+
+  @keyframes indicatorSlide {
+    from { opacity: 0; transform: scaleY(0.4); }
+    to { opacity: 1; transform: scaleY(1); }
+  }
 
   @keyframes dotPulse {
     0%, 100% { opacity: 1; box-shadow: 0 0 8px currentColor; }
@@ -171,6 +183,12 @@
   --indicator: linear-gradient(180deg, #15946c, #0f766e);
 
   --glass-blur: 20px;
+  --sidebar-glass: rgba(255, 255, 255, 0.52);
+  --sidebar-glass-strong: rgba(255, 255, 255, 0.72);
+  --sidebar-blob-1: rgba(59, 130, 246, 0.05);
+  --sidebar-blob-2: rgba(21, 148, 108, 0.04);
+  --sidebar-blob-3: rgba(147, 51, 234, 0.03);
+  --sidebar-dots: rgba(34, 48, 68, 0.04);
 }
 
 /* ===== 深色主题 ===== */
@@ -229,6 +247,13 @@
   --card-active-bg: var(--project-active-bg);
   --card-active-border: var(--project-active-border);
   --indicator: linear-gradient(180deg, #47cc8f, #2aa876);
+
+  --sidebar-glass: rgba(17, 25, 37, 0.50);
+  --sidebar-glass-strong: rgba(19, 28, 42, 0.74);
+  --sidebar-blob-1: rgba(59, 130, 246, 0.07);
+  --sidebar-blob-2: rgba(52, 211, 153, 0.05);
+  --sidebar-blob-3: rgba(168, 85, 247, 0.04);
+  --sidebar-dots: rgba(148, 163, 184, 0.05);
 }
 
 /* ===== 基础样式 ===== */
@@ -354,6 +379,8 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, .24);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, .28);
   --shadow-lg: 0 18px 48px rgba(0, 0, 0, .38);
+  --shadow-xl: 0 24px 64px rgba(0, 0, 0, .48);
+  --border-gradient: linear-gradient(180deg, rgba(86, 136, 255, .35), rgba(86, 136, 255, 0) 60%);
   --sidebar-nav-bg: rgba(17, 25, 37, .76);
   --nav-active-bg: #172233;
   --nav-active-border: rgba(86, 136, 255, .34);
@@ -363,6 +390,13 @@
   --card-active-bg: var(--project-active-bg);
   --card-active-border: var(--project-active-border);
   --indicator: linear-gradient(180deg, #47cc8f, #2aa876);
+
+  --sidebar-glass: rgba(17, 25, 37, 0.50);
+  --sidebar-glass-strong: rgba(19, 28, 42, 0.74);
+  --sidebar-blob-1: rgba(59, 130, 246, 0.07);
+  --sidebar-blob-2: rgba(52, 211, 153, 0.05);
+  --sidebar-blob-3: rgba(168, 85, 247, 0.04);
+  --sidebar-dots: rgba(148, 163, 184, 0.05);
 }
 
 :root[data-theme='light'] {
@@ -402,6 +436,8 @@
   --shadow-sm: 0 1px 3px rgba(30, 45, 65, .07);
   --shadow-md: 0 8px 24px rgba(30, 45, 65, .10);
   --shadow-lg: 0 18px 48px rgba(30, 45, 65, .15);
+  --shadow-xl: 0 24px 64px rgba(30, 45, 65, .20);
+  --border-gradient: linear-gradient(180deg, rgba(47, 111, 237, .35), rgba(47, 111, 237, 0) 60%);
   --sidebar-nav-bg: rgba(255, 255, 255, .68);
   --nav-active-bg: #ffffff;
   --nav-active-border: rgba(47, 111, 237, .30);
@@ -411,6 +447,23 @@
   --card-active-bg: var(--project-active-bg);
   --card-active-border: var(--project-active-border);
   --indicator: linear-gradient(180deg, #15946c, #0f766e);
+}
+
+/* ===== Collapse 折叠动画（侧边栏分组 / 设置页） ===== */
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+  overflow: hidden;
+}
+.collapse-enter-from,
+.collapse-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+.collapse-enter-to,
+.collapse-leave-from {
+  max-height: 2000px;
+  opacity: 1;
 }
 
 html, body { font-family: var(--font-ui); background: var(--bg-app); }

@@ -123,17 +123,18 @@ function formatLocalUrl(url: string) {
 </template>
 
 <style scoped>
-.project-overview-card { min-width: 0; min-height: 208px; display: flex; flex-direction: column; justify-content: flex-start; gap: 12px; padding: 16px; overflow: hidden; border: 1px solid var(--border-default); border-radius: 10px; background: var(--bg-surface); box-shadow: var(--shadow-card); cursor: pointer; transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease, background 180ms ease; }
+.project-overview-card { position: relative; min-width: 0; min-height: 208px; display: flex; flex-direction: column; justify-content: flex-start; gap: 12px; padding: 16px; overflow: hidden; border: 1px solid var(--border-default); border-radius: 14px; background: var(--bg-surface); box-shadow: var(--shadow-card); cursor: pointer; transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease, background 180ms ease; }
+.project-overview-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--border-gradient); opacity: 0.6; pointer-events: none; }
 .project-overview-card.running { border-color: color-mix(in srgb, var(--success) 16%, var(--border-default)); background: color-mix(in srgb, var(--success-bg) 22%, var(--bg-surface)); }
 .project-overview-card.error { border-color: color-mix(in srgb, var(--error) 18%, var(--border-default)); background: color-mix(in srgb, var(--error-bg) 18%, var(--bg-surface)); }
-.project-overview-card:hover { transform: translateY(-1px); border-color: var(--border-strong); box-shadow: var(--shadow-card-hover); }
+.project-overview-card:hover { transform: translateY(-2px); border-color: var(--border-strong); box-shadow: var(--shadow-card-hover); }
 .project-overview-card:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
 .project-card-header { min-width: 0; }
 .project-card-title { min-width: 0; flex: 1; }
 .project-title-row { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .project-card-title strong { min-width: 0; overflow: hidden; color: var(--text-primary); font-size: 18px; font-weight: 750; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
 .project-status-inline { display: inline-flex; align-items: center; gap: 6px; flex: none; color: var(--text-tertiary); font-size: 11px; font-weight: 650; line-height: 1; }
-.project-status-inline i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.project-status-inline i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
 .project-status-inline.running { color: var(--success); }
 .project-status-inline.error { color: var(--error); }
 .project-card-meta { min-width: 0; margin: 8px 0 0; overflow: hidden; color: var(--text-tertiary); font: 11px/1.35 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }

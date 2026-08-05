@@ -124,17 +124,21 @@ watch(() => props.status?.status, () => {
 </template>
 
 <style scoped>
-.project-context-bar { min-height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 22px; border-bottom: 1px solid var(--border-default); background: var(--bg-surface); }
-.project-context-main { min-width: 0; }.project-title-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.project-context-bar { min-height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 22px; border-bottom: 1px solid var(--border-default); background: linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 100%, transparent) 0%, color-mix(in srgb, var(--bg-surface) 92%, transparent) 100%); }
+.project-context-bar::after { content: ''; position: absolute; left: 22px; right: 22px; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent-primary) 30%, transparent) 30%, color-mix(in srgb, var(--accent-primary) 30%, transparent) 70%, transparent); pointer-events: none; }
+.project-context-main { position: relative; min-width: 0; }
+.project-title-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 h1 { min-width: 0; margin: 0; overflow: hidden; color: var(--text-primary); font-size: 18px; line-height: 1.2; letter-spacing: 0; text-overflow: ellipsis; white-space: nowrap; }
-.context-status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 999px; color: var(--text-tertiary); background: var(--bg-subtle); font: 10px var(--font-mono); }
-.context-status i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }.context-status.running { color: var(--success); background: var(--success-bg); }.context-status.error { color: var(--error); background: var(--error-bg); }
+.context-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid currentColor; border-radius: 999px; color: var(--text-tertiary); background: linear-gradient(180deg, color-mix(in srgb, currentColor 18%, transparent) 0%, color-mix(in srgb, currentColor 8%, transparent) 100%); font: 10px var(--font-mono); }
+.context-status i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 7px currentColor; }
+.context-status.running { color: var(--success); border-color: color-mix(in srgb, var(--success) 30%, transparent); }
+.context-status.error { color: var(--error); border-color: color-mix(in srgb, var(--error) 30%, transparent); }
 .project-context-meta { display: flex; align-items: center; gap: 10px; margin-top: 9px; color: var(--text-tertiary); font: 11px var(--font-mono); }
 .project-path { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.node-meta { flex: none; }
+.node-meta { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border: 1px solid var(--border-muted); border-radius: 6px; background: color-mix(in srgb, var(--bg-subtle) 60%, transparent); }
 .command-picker-wrap { position: relative; }
-.command-picker { height: 34px; min-width: 118px; max-width: 176px; display: inline-flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--border-default); border-radius: 8px; color: var(--text-secondary); background: var(--bg-surface); box-shadow: var(--shadow-sm); }
-.command-picker:hover:not(:disabled), .command-picker[aria-expanded='true'] { border-color: var(--accent-border); background: var(--bg-hover); }
+.command-picker { height: 36px; min-width: 132px; max-width: 192px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--border-default); border-radius: 10px; color: var(--text-secondary); background: linear-gradient(180deg, var(--bg-surface) 0%, color-mix(in srgb, var(--bg-subtle) 80%, transparent) 100%); box-shadow: var(--shadow-sm); transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
+.command-picker:hover:not(:disabled), .command-picker[aria-expanded='true'] { border-color: var(--accent-border); background: var(--bg-hover); transform: translateY(-1px); box-shadow: var(--shadow-md); }
 .command-picker:disabled { cursor: default; opacity: 1; }
 .command-picker-label { flex: none; color: var(--text-tertiary); font-family: var(--font-sans); font-size: 11px; font-weight: 700; }
 .command-picker strong { flex: 1; min-width: 0; overflow: hidden; color: var(--accent-primary); font: 700 13px/1 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
@@ -144,8 +148,13 @@ h1 { min-width: 0; margin: 0; overflow: hidden; color: var(--text-primary); font
 .command-option:hover { color: var(--accent-primary); background: var(--bg-hover); }
 .command-option.active { color: var(--accent-primary); background: var(--accent-glow); }
 .command-option svg { flex: none; }
-.project-context-actions { display: flex; align-items: center; gap: 7px; flex: none; }.icon-action { position: relative; width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--border-default); border-radius: 8px; color: var(--text-secondary); background: var(--bg-surface); }.icon-action:hover { color: var(--accent-primary); border-color: var(--accent-border); background: var(--bg-hover); }
+.project-context-actions { display: flex; align-items: center; gap: 7px; flex: none; }
+.icon-action { position: relative; width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--border-default); border-radius: 10px; color: var(--text-secondary); background: linear-gradient(180deg, var(--bg-surface) 0%, color-mix(in srgb, var(--bg-subtle) 80%, transparent) 100%); transition: transform 160ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease; }
+.icon-action:hover { transform: translateY(-1px); color: var(--accent-primary); border-color: var(--accent-border); background: var(--bg-hover); box-shadow: var(--shadow-md); }
 .icon-action::after { content: attr(data-tooltip); position: absolute; right: 50%; bottom: -34px; z-index: 20; transform: translateX(50%) translateY(-2px); padding: 5px 8px; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-primary); background: var(--bg-surface); box-shadow: var(--shadow-sm); font-size: 11px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 140ms ease, transform 140ms ease; }
 .icon-action:hover::after { opacity: 1; transform: translateX(50%) translateY(0); }
-.context-primary { min-width: 68px; min-height: 34px; padding: 0 14px; border-radius: 8px; color: #fff; background: var(--accent-primary); font-size: 12px; font-weight: 700; }.context-primary.stop { background: var(--error); }
+.context-primary { min-width: 76px; min-height: 36px; padding: 0 16px; border-radius: 10px; color: #fff; background: var(--accent-primary); box-shadow: 0 4px 12px var(--accent-glow); font-size: 12px; font-weight: 700; transition: transform 160ms ease, box-shadow 180ms ease, background 180ms ease; }
+.context-primary:hover { transform: translateY(-1px); background: var(--accent-primary-hover); box-shadow: 0 8px 18px var(--accent-glow); }
+.context-primary.stop { background: var(--error); box-shadow: 0 3px 10px color-mix(in srgb, var(--error) 30%, transparent); }
+.context-primary.stop:hover { background: color-mix(in srgb, var(--error) 88%, #000); box-shadow: 0 6px 16px color-mix(in srgb, var(--error) 34%, transparent); }
 </style>

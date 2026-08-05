@@ -73,7 +73,10 @@ function editProject() {
           :project-id="project.id"
           :has-error="status?.status === 'error'"
           :has-logs="status?.status === 'running' || status?.status === 'error'"
+          :project="project"
+          :node-version="globalNodeVersion"
           @analyze-errors="emit('analyze-errors')"
+          @start="emit('start')"
           @export-result="(success, message) => emit('export-result', success, message)"
         />
       </div>

@@ -3,7 +3,7 @@ import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
-import type { LogEntry } from '../../../shared/types'
+import type { LogEntry, Project } from '../../../shared/types'
 import { clearSessionLogs, getSessionLogs, subscribeSessionLogs } from '../model/sessionLogs'
 import { formatLogForView, formatLogsForExport, type LogFilter } from '../model/logView'
 import { currentTerminalTheme } from '../terminalTheme'
@@ -13,11 +13,15 @@ const props = defineProps<{
   projectId: string
   hasError: boolean
   hasLogs: boolean
+  project?: Project | null
+  nodeVersion?: string | null
 }>()
 
 const emit = defineEmits<{
   'analyze-errors': []
   'export-result': [success: boolean, message: string]
+  'start': []
+  'copy-command': [command: string]
 }>()
 
 const terminalContainer = ref<HTMLDivElement>()
@@ -26,6 +30,8 @@ const searchQuery = ref('')
 const logFilter = ref<LogFilter>('all')
 const hasSessionLogs = ref(false)
 const canExport = computed(() => hasSessionLogs.value)
+// 空状态：项目未启动且尚未产生任何日志时显示
+const showEmptyState = computed(() => !hasSessionLogs.value && !props.isRunning)
 let terminal: Terminal | null = null
 let fitAddon: FitAddon | null = null
 let cleanupSessionLogs: (() => void) | null = null
@@ -178,6 +184,25 @@ async function exportLog() {
     exporting.value = false
   }
 }
+
+function truncate(value: string, max: number) {
+  if (!value || value.length <= max) return value
+  const head = Math.ceil((max - 1) / 2)
+  const tail = Math.floor((max - 1) / 2)
+  return `${value.slice(0, head)}…${value.slice(value.length - tail)}`
+}
+
+async function copyLaunchCommand() {
+  if (!props.project) return
+  const command = `npm run ${props.project.command}`
+  try {
+    await navigator.clipboard.writeText(command)
+    emit('export-result', true, `已复制启动命令: ${command}`)
+    emit('copy-command', command)
+  } catch (error: any) {
+    emit('export-result', false, error?.message || '复制失败')
+  }
+}
 </script>
 
 <template>
@@ -188,6 +213,14 @@ async function exportLog() {
         <span v-if="isRunning" class="flex items-center gap-1.25 text-[10px] font-semibold text-success-c">
           <span class="running-dot w-1.25 h-1.25 rounded-full bg-success-c animate-dot-pulse"></span>
           运行中
+        </span>
+        <span v-else-if="hasSessionLogs" class="flex items-center gap-1.25 text-[10px] font-semibold text-ttertiary">
+          <span class="w-1.25 h-1.25 rounded-full bg-ttertiary"></span>
+          已停止
+        </span>
+        <span v-else class="flex items-center gap-1.25 text-[10px] font-semibold text-ttertiary">
+          <span class="w-1.25 h-1.25 rounded-full bg-ttertiary/60"></span>
+          等待运行
         </span>
       </div>
       <div class="flex items-center gap-2">
@@ -228,7 +261,85 @@ async function exportLog() {
         </button>
       </div>
     </div>
-    <div ref="terminalContainer" class="flex-1 min-h-0 bg-console-bg border-none outline-none"></div>
+    <div class="terminal-region">
+      <div ref="terminalContainer" class="terminal-canvas"></div>
+      <div v-if="showEmptyState" class="console-empty" aria-live="polite">
+        <div class="console-empty-decoration" aria-hidden="true">
+          <span class="console-empty-blob console-empty-blob-a"></span>
+          <span class="console-empty-blob console-empty-blob-b"></span>
+          <span class="console-empty-grid"></span>
+        </div>
+        <div class="console-empty-icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"/>
+            <line x1="12" y1="19" x2="20" y2="19"/>
+          </svg>
+        </div>
+        <h3>控制台等待启动</h3>
+        <p>启动项目后，stdout / stderr 输出会实时流式显示在这里。</p>
+
+        <div v-if="project" class="console-empty-card">
+          <div class="console-empty-card-head">
+            <span class="console-empty-card-tag">即将执行</span>
+            <span class="console-empty-card-runtime">{{ project.nodeVersion || nodeVersion || '系统 Node' }}</span>
+          </div>
+          <div class="console-empty-command">
+            <span class="console-empty-prompt">$</span>
+            <code>npm run {{ project.command }}</code>
+            <button
+              type="button"
+              class="console-empty-copy"
+              :aria-label="'复制启动命令'"
+              title="复制启动命令"
+              @click="copyLaunchCommand"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span>复制</span>
+            </button>
+          </div>
+          <div class="console-empty-meta">
+            <span class="console-empty-meta-item">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+              <span :title="project.path">{{ truncate(project.path, 32) }}</span>
+            </span>
+            <span class="console-empty-meta-item">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="6 4 20 12 6 20 6 4" fill="currentColor" stroke="none"/></svg>
+              <span>点击右上角「启动」即可开始</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="console-empty-actions">
+          <button type="button" class="console-empty-action primary" @click="emit('start')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="6 4 20 12 6 20 6 4" fill="currentColor" stroke="none"/></svg>
+            <span>启动项目</span>
+          </button>
+          <span class="console-empty-shortcut">
+            <kbd>Ctrl</kbd>
+            <span>+</span>
+            <kbd>R</kbd>
+            <span>运行</span>
+          </span>
+        </div>
+
+        <div class="console-empty-tips">
+          <span class="console-empty-tip">
+            <span class="tip-dot dot-info"></span>
+            <span>输出</span>
+          </span>
+          <span class="console-empty-tip">
+            <span class="tip-dot dot-warning"></span>
+            <span>警告</span>
+          </span>
+          <span class="console-empty-tip">
+            <span class="tip-dot dot-error"></span>
+            <span>错误</span>
+          </span>
+          <span class="console-empty-divider" aria-hidden="true"></span>
+          <span class="console-empty-tip muted">日志支持高亮、过滤与全文搜索</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -310,4 +421,51 @@ async function exportLog() {
   background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
+
+.terminal-region { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--console-bg); }
+.terminal-canvas { flex: 1; min-height: 0; border: none; outline: none; }
+.console-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 36px 28px; text-align: center; pointer-events: none; overflow: hidden; animation: consoleEmptyFade 320ms cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes consoleEmptyFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.console-empty-decoration { position: absolute; inset: 0; pointer-events: none; z-index: -1; overflow: hidden; }
+.console-empty-blob { position: absolute; border-radius: 50%; filter: blur(56px); opacity: 0.55; }
+.console-empty-blob-a { top: 28%; left: 32%; width: 240px; height: 240px; background: radial-gradient(circle, var(--accent-glow), transparent 72%); animation: glowPulse 6s ease-in-out infinite; }
+.console-empty-blob-b { bottom: 18%; right: 28%; width: 200px; height: 200px; background: radial-gradient(circle, color-mix(in srgb, var(--accent-primary) 14%, transparent), transparent 72%); opacity: 0.4; }
+.console-empty-grid { position: absolute; inset: 0; background-image: radial-gradient(color-mix(in srgb, var(--text-tertiary) 22%, transparent) 1px, transparent 1px); background-size: 22px 22px; opacity: 0.32; mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 35%, transparent 78%); -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 35%, transparent 78%); }
+.console-empty-icon { display: grid; place-items: center; width: 64px; height: 64px; margin-bottom: 4px; border: 1px solid var(--accent-border); border-radius: 18px; color: var(--accent-primary); background: color-mix(in srgb, var(--accent-glow) 70%, var(--bg-surface)); box-shadow: 0 8px 28px var(--accent-glow), inset 0 1px 0 color-mix(in srgb, var(--bg-surface) 60%, transparent); }
+.console-empty h3 { margin: 0; color: var(--text-primary); font-size: 17px; font-weight: 750; letter-spacing: -0.01em; }
+.console-empty > p { margin: 0; max-width: 380px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
+
+/* 命令预览卡 */
+.console-empty-card { pointer-events: auto; width: 100%; max-width: 520px; margin-top: 8px; padding: 14px 16px; border: 1px solid var(--border-default); border-radius: 14px; background: color-mix(in srgb, var(--bg-surface) 90%, transparent); box-shadow: var(--shadow-md); text-align: left; animation: scaleIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+.console-empty-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.console-empty-card-tag { display: inline-flex; align-items: center; padding: 2px 8px; border: 1px solid var(--accent-border); border-radius: 999px; color: var(--accent-primary); background: var(--accent-glow); font: 700 9px/1.4 var(--font-mono); letter-spacing: 0.12em; }
+.console-empty-card-runtime { color: var(--text-tertiary); font: 700 10px/1 var(--font-mono); letter-spacing: 0.04em; }
+.console-empty-command { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border-muted); border-radius: 10px; background: var(--console-bg); }
+.console-empty-prompt { color: var(--accent-primary); font: 700 14px/1 var(--font-mono); }
+.console-empty-command code { flex: 1; min-width: 0; overflow: hidden; color: var(--text-primary); font: 700 14px/1.4 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.console-empty-copy { display: inline-flex; align-items: center; gap: 4px; min-height: 26px; padding: 0 9px; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-tertiary); background: transparent; font-size: 10px; font-weight: 700; transition: color 160ms ease, background 160ms ease, border-color 160ms ease; }
+.console-empty-copy:hover { color: var(--accent-primary); border-color: var(--accent-border); background: var(--accent-glow); }
+.console-empty-meta { display: flex; align-items: center; gap: 14px; margin-top: 10px; color: var(--text-tertiary); font-size: 10.5px; }
+.console-empty-meta-item { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
+.console-empty-meta-item span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 启动操作区 */
+.console-empty-actions { pointer-events: auto; display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+.console-empty-action { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 16px; border: none; border-radius: 10px; color: #fff; background: var(--accent-primary); box-shadow: 0 6px 18px var(--accent-glow); font-size: 12px; font-weight: 700; transition: transform 160ms ease, box-shadow 200ms ease, background 200ms ease; }
+.console-empty-action:hover { transform: translateY(-1px); background: var(--accent-primary-hover); box-shadow: 0 9px 22px color-mix(in srgb, var(--accent-primary) 30%, transparent); }
+.console-empty-shortcut { display: inline-flex; align-items: center; gap: 5px; color: var(--text-tertiary); font-size: 10.5px; }
+.console-empty-shortcut kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border: 1px solid var(--border-default); border-bottom-width: 2px; border-radius: 5px; color: var(--text-secondary); background: color-mix(in srgb, var(--bg-surface) 70%, transparent); font: 700 10px/1 var(--font-mono); }
+
+/* 颜色提示行 */
+.console-empty-tips { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; padding: 8px 14px; border: 1px solid var(--border-muted); border-radius: 999px; background: color-mix(in srgb, var(--bg-surface) 60%, transparent); font-size: 10.5px; }
+.console-empty-tip { display: inline-flex; align-items: center; gap: 5px; color: var(--text-secondary); font: 700 10px/1 var(--font-mono); letter-spacing: 0.04em; }
+.console-empty-tip.muted { color: var(--text-tertiary); font-weight: 500; letter-spacing: 0; font-family: var(--font-ui); }
+.console-empty-divider { width: 1px; height: 12px; background: var(--border-muted); }
+.tip-dot { width: 7px; height: 7px; border-radius: 50%; }
+.dot-info { background: var(--console-info, #0969da); }
+.dot-warning { background: var(--console-warn, #9a6700); }
+.dot-error { background: var(--console-error, #cf222e); }
+:root[data-theme='dark'] .dot-info { background: var(--console-info, #60a5fa); }
+:root[data-theme='dark'] .dot-warning { background: var(--console-warn, #fbbf24); }
+:root[data-theme='dark'] .dot-error { background: var(--console-error, #f87171); }
 </style>

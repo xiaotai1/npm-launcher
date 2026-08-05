@@ -187,6 +187,13 @@ function projectDragClass(projectId: string) {
   }
 }
 
+function handleProjectKeydown(e: KeyboardEvent, projectId: string) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault()
+    emit('select', projectId)
+  }
+}
+
 function onFolderDragOver(e: DragEvent, folderId: string) {
   e.preventDefault()
   if (dragProjectId.value) {
@@ -365,9 +372,14 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 </script>
 
 <template>
-  <div class="h-full flex flex-col">
-    <div class="px-4 pt-4 pb-2.5 flex items-center justify-between">
-      <span class="text-[10px] font-semibold text-ttertiary uppercase tracking-[1.2px]">项目</span>
+  <div class="h-full flex flex-col relative sidebar-root">
+    <!-- 顶部贯穿细线 -->
+    <span class="sidebar-top-line" aria-hidden="true"></span>
+    <div class="px-4 pt-5 pb-3 flex items-center justify-between sidebar-header">
+      <div class="flex flex-col gap-0.5">
+        <span class="sidebar-brand-title">NPM Launcher</span>
+        <span class="sidebar-brand-sub">v1.0 · Node Workspace</span>
+      </div>
       <button ref="createButtonRef" class="create-button" @click="openAddForm">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         新建
@@ -392,7 +404,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       </button>
     </div>
 
-    <div class="sidebar-nav-block">
+    <div class="sidebar-list-block">
       <button
         class="overview-nav"
         :class="{ active: activeView === 'overview' }"
@@ -417,16 +429,20 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
       <!-- 根级别收藏项目 -->
       <template v-if="rootFavorites.length">
-        <div class="flex items-center gap-1.5 px-2 py-1.5 pt-1.5 pb-1 text-[10px] font-semibold text-ttertiary uppercase tracking-[0.8px] section-label">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
-          收藏
+        <div class="flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold text-ttertiary section-label">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+          收藏项目
         </div>
         <div
           v-for="project in rootFavorites"
           :key="project.id"
           :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }, projectDragClass(project.id)]"
           :draggable="!searchQuery.trim()"
+          tabindex="0"
+          role="button"
+          :aria-label="project.name"
           @click="emit('select', project.id)"
+          @keydown="handleProjectKeydown($event, project.id)"
           @contextmenu="onProjectContextMenu($event, project)"
           @dragstart="onProjectDragStart($event, project.id)"
           @dragover.stop="onProjectDragOver($event, project.id)"
@@ -443,7 +459,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
           <div class="flex-1 min-w-0 flex flex-col gap-0.5">
             <div class="flex items-center justify-between gap-2">
               <span class="text-xs font-medium text-tsecondary whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-name">{{ project.name }}</span>
-              <span class="w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-300" :style="{ background: getStatusInfo(project.id).color }"></span>
+              <span class="w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-300 status-dot" :class="{ running: getStatusInfo(project.id).text === '运行中' }" :style="{ background: getStatusInfo(project.id).color }"></span>
             </div>
             <div class="flex items-center justify-between gap-2">
               <span class="text-[10px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command" :title="project.path">{{ projectMeta(project) }}</span>
@@ -493,19 +509,24 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
           </template>
         </div>
         <!-- 文件夹内的项目 -->
-        <div v-if="!isCollapsed(folder.id)" class="pl-3.5 ml-4.5 mb-1 relative folder-projects">
+        <Transition name="collapse">
+        <div v-show="!isCollapsed(folder.id)" class="pl-3.5 ml-4.5 mb-1 relative folder-projects">
           <div
             v-for="project in folderProjects(folder.id)"
             :key="project.id"
-            :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }, projectDragClass(project.id)]"
-            :draggable="!searchQuery.trim()"
-            @click="emit('select', project.id)"
-            @contextmenu="onProjectContextMenu($event, project)"
-            @dragstart="onProjectDragStart($event, project.id)"
-            @dragover.stop="onProjectDragOver($event, project.id)"
-            @drop.stop="onProjectDrop($event, project.id)"
-            @dragend="onDragEnd"
-          >
+          :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }, projectDragClass(project.id)]"
+          :draggable="!searchQuery.trim()"
+          tabindex="0"
+          role="button"
+          :aria-label="project.name"
+          @click="emit('select', project.id)"
+          @keydown="handleProjectKeydown($event, project.id)"
+          @contextmenu="onProjectContextMenu($event, project)"
+          @dragstart="onProjectDragStart($event, project.id)"
+          @dragover.stop="onProjectDragOver($event, project.id)"
+          @drop.stop="onProjectDrop($event, project.id)"
+          @dragend="onDragEnd"
+        >
             <div class="shrink-0 w-3.5 flex items-center justify-center text-ttertiary opacity-0 transition-opacity duration-200 ease-out cursor-grab card-drag-handle" title="拖拽排序">
               <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
                 <circle cx="3" cy="2" r="1.2"/><circle cx="7" cy="2" r="1.2"/>
@@ -516,7 +537,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
             <div class="flex-1 min-w-0 flex flex-col gap-0.5">
               <div class="flex items-center justify-between gap-2">
                 <span class="text-xs font-medium text-tsecondary whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-name">{{ project.name }}</span>
-                <span class="w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-300" :style="{ background: getStatusInfo(project.id).color }"></span>
+                <span class="w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-300 status-dot" :class="{ running: getStatusInfo(project.id).text === '运行中' }" :style="{ background: getStatusInfo(project.id).color }"></span>
               </div>
               <div class="flex items-center justify-between gap-2">
                 <span class="text-[10px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command" :title="project.path">{{ projectMeta(project) }}</span>
@@ -532,6 +553,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
             拖拽项目到此处
           </div>
         </div>
+        </Transition>
       </template>
 
       <!-- 根级别普通项目 -->
@@ -557,7 +579,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
         <div class="flex-1 min-w-0 flex flex-col gap-0.5">
           <div class="flex items-center justify-between gap-2">
             <span class="text-xs font-medium text-tsecondary whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-name">{{ project.name }}</span>
-            <span class="w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-300" :style="{ background: getStatusInfo(project.id).color }"></span>
+            <span class="w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-300 status-dot" :class="{ running: getStatusInfo(project.id).text === '运行中' }" :style="{ background: getStatusInfo(project.id).color }"></span>
           </div>
           <div class="flex items-center justify-between gap-2">
             <span class="text-[10px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command" :title="project.path">{{ projectMeta(project) }}</span>
@@ -666,21 +688,17 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 </template>
 
 <style scoped>
-.sidebar-nav-block {
-  margin: 0 10px 10px;
-  padding: 6px;
-  border: 1px solid var(--border-muted);
-  border-radius: 11px;
-  background: var(--sidebar-nav-bg);
+.sidebar-list-block {
+  margin: 0 8px 4px;
+  padding: 0;
 }
 
 .overview-nav {
   width: 100%;
-  min-height: 38px;
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 0 10px;
+  padding: 9px 10px;
   border-radius: 8px;
   border: 1px solid transparent;
   color: var(--text-secondary);
@@ -696,9 +714,32 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 .overview-nav.active {
   color: var(--accent-primary);
-  background: var(--nav-active-bg);
-  border-color: var(--nav-active-border);
-  box-shadow: var(--shadow-sm);
+  background: var(--bg-active);
+  position: relative;
+}
+
+.overview-nav.active svg {
+  color: var(--accent-primary);
+}
+
+/* 选中项 — 单色 3px 短竖条，参考图风格（inset+margin 居中，跟父容器高度自适应） */
+.overview-nav.active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  height: 18px;
+  margin: auto 0;
+  border-radius: 2px;
+  background: var(--accent-primary);
+  animation: overviewIndicatorIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes overviewIndicatorIn {
+  from { opacity: 0; transform: scaleY(0.4); }
+  to { opacity: 1; transform: scaleY(1); }
 }
 
 .overview-count {
@@ -710,6 +751,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   background: var(--bg-subtle);
   font-size: 10px;
   text-align: center;
+  transition: all 200ms ease;
 }
 
 .sidebar-list-heading {
@@ -717,25 +759,41 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin: 2px 12px 6px;
-  padding: 0 4px;
+  margin: 12px 16px 6px;
+  padding: 0;
   color: var(--text-tertiary);
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.sidebar-list-heading span {
-  letter-spacing: 0;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .sidebar-list-heading i {
   min-width: 20px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  color: var(--text-tertiary);
-  background: var(--bg-subtle);
   font-style: normal;
   text-align: center;
+  color: var(--text-tertiary);
+  opacity: 0.7;
+}
+
+/* 顶部品牌头 — 参考图风格：纯文字 logo + 副标题 */
+.sidebar-header {
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar-brand-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.1px;
+  line-height: 1.2;
+}
+
+.sidebar-brand-sub {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  letter-spacing: 0.5px;
+  line-height: 1.2;
 }
 
 .create-button {
@@ -743,26 +801,31 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 0 10px;
+  padding: 0 12px;
   border-radius: 7px;
   color: #fff;
   background: var(--accent-primary);
-  box-shadow: 0 3px 10px var(--accent-glow);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
+  transition: background 180ms ease;
 }
 
 .create-button:hover {
   background: var(--accent-primary-hover);
-  box-shadow: 0 5px 14px var(--accent-glow);
 }
 
-/* 搜索框 — ::placeholder 和 focus 无法用 Tailwind 处理 */
+/* 搜索框 — 素净样式，参考图风格 */
+.search-input {
+  background: var(--bg-elevated);
+  border-color: var(--border-muted);
+}
+
 .search-input::placeholder {
   color: var(--text-tertiary);
 }
 
 .search-input:focus {
+  background: var(--bg-elevated);
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 2px var(--accent-glow);
   outline: none;
@@ -773,12 +836,14 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   color: var(--text-primary);
 }
 
-/* 分区标签 — ::after 渐变 */
-.section-label::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), transparent);
+/* 分区标签 — 纯文字小标题，参考图风格 */
+.section-label {
+  letter-spacing: 0.4px;
+}
+
+.section-label svg {
+  color: var(--text-tertiary);
+  opacity: 0.7;
 }
 
 .section-divider {
@@ -793,6 +858,12 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .folder-row.drop-highlight {
   background: var(--accent-glow);
   border: 1px dashed var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-glow), inset 0 0 12px color-mix(in srgb, var(--accent-glow) 70%, transparent);
+}
+
+.folder-row.drop-highlight .folder-icon {
+  color: var(--accent-primary);
+  filter: drop-shadow(0 0 6px var(--accent-glow));
 }
 
 .folder-toggle:hover {
@@ -853,38 +924,73 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* 左侧单色指示条 — 参考图风格：3px 贯穿到侧边栏左缘，inset+margin 居中 */
+.project-card::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  height: 18px;
+  margin: auto 0;
+  border-radius: 2px;
+  background: var(--accent-primary);
+  opacity: 0;
+  transform: scaleY(0.4);
+  transition: opacity 200ms ease, transform 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.project-card {
+  transition: background 200ms ease, border-color 200ms ease, box-shadow 200ms ease, opacity 200ms ease;
+}
+
 .project-card:hover {
   background: var(--bg-hover);
 }
 
+.project-card:hover::before {
+  opacity: 0.55;
+  transform: scaleY(1);
+}
+
+.project-card:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+
+.project-card:focus-visible::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
 .project-card.dragging {
   opacity: 0.48;
+  border-style: dashed !important;
+  border-color: var(--accent-border) !important;
 }
 
 .project-card.active {
-  background: var(--project-active-bg);
-  border-color: var(--project-active-border);
-  box-shadow: var(--project-active-shadow);
-}
-
-.project-card.drop-before {
-  box-shadow: inset 0 2px 0 var(--accent-primary);
-}
-
-.project-card.drop-after {
-  box-shadow: inset 0 -2px 0 var(--accent-primary);
+  background: var(--bg-active);
+  border-color: transparent;
 }
 
 .project-card.active::before {
-  content: '';
-  position: absolute;
-  left: -1px;
-  top: 6px;
-  bottom: 6px;
-  width: 2px;
-  border-radius: 1px;
-  background: var(--accent-primary);
-  animation: barGrow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+/* 状态点 — 运行中呼吸动画 */
+.status-dot.running {
+  animation: dotPulse 1.5s ease-in-out infinite;
+}
+
+.project-card.drop-before {
+  box-shadow: inset 0 2px 0 var(--accent-primary), 0 0 0 1px var(--accent-border);
+}
+
+.project-card.drop-after {
+  box-shadow: inset 0 -2px 0 var(--accent-primary), 0 0 0 1px var(--accent-border);
 }
 
 .project-card .card-drag-handle {
@@ -1003,5 +1109,37 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .context-item.danger:hover .context-item-icon {
   color: var(--error);
   background: var(--error-bg);
+}
+
+/* ===== 科技感背景装饰层 ===== */
+.sidebar-root {
+  isolation: isolate;
+}
+
+.sidebar-decor {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.sidebar-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(34px);
+  animation: blobFloat 22s ease-in-out infinite;
+  opacity: 0.7;
+}
+
+/* ===== 顶部贯穿细线（参考图风格） ===== */
+.sidebar-top-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-primary-hover));
+  z-index: 2;
 }
 </style>
