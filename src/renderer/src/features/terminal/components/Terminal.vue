@@ -5,6 +5,9 @@ import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { currentTerminalTheme } from '../terminalTheme'
 
+// 当前主题下的终端背景色（用于 region 容器背景，与 xterm 主题保持同步）
+const terminalBg = ref(currentTerminalTheme().background || '#0e1525')
+
 const props = defineProps<{
   id: string
   cwd: string
@@ -57,9 +60,15 @@ function initTerminal() {
 
   terminal = new Terminal({
     cursorBlink: true,
+    cursorStyle: 'bar',
     fontSize: 13,
-    lineHeight: 1.4,
-    fontFamily: "'Consolas', 'JetBrains Mono', 'Fira Code', monospace",
+    lineHeight: 1.45,
+    fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', 'Consolas', 'Menlo', monospace",
+    fontWeight: 400,
+    fontWeightBold: 600,
+    letterSpacing: 0,
+    scrollback: 5000,
+    smoothScrollDuration: 60,
     theme: currentTerminalTheme()
   })
 
@@ -192,9 +201,11 @@ watch(() => props.cwd, (newCwd, oldCwd) => {
 
 // 主题切换时更新终端配色
 const themeObserver = new MutationObserver(() => {
+  const next = currentTerminalTheme()
   if (terminal) {
-    terminal.options.theme = currentTerminalTheme()
+    terminal.options.theme = next
   }
+  if (next.background) terminalBg.value = next.background
 })
 onMounted(() => {
   themeObserver.observe(document.documentElement, {
@@ -242,7 +253,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
-    <div class="terminal-region">
+    <div class="terminal-region" :style="{ background: terminalBg }">
       <div class="terminal-region-glow" aria-hidden="true"></div>
       <div ref="terminalContainer" class="terminal-container"></div>
     </div>
@@ -257,8 +268,9 @@ onBeforeUnmount(() => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--console-bg);
   overflow: hidden;
+  /* 终端区有它独立的视觉语言：用稍微突出的边框把它从外层应用里"框"出来 */
+  border-top: 1px solid var(--border-muted);
 }
 
 .terminal-toolbar {
@@ -330,14 +342,14 @@ onBeforeUnmount(() => {
   color: var(--text-primary);
 }
 
-/* 终端区域：科技感顶发光 */
-.terminal-region { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--console-bg); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent-primary) 14%, transparent); }
-.terminal-region-glow { position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent-primary) 50%, transparent), transparent); pointer-events: none; }
+/* 终端区域：科技感顶发光 + 终端感背景 */
+.terminal-region { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent-primary) 14%, transparent); transition: background 300ms ease; }
+.terminal-region-glow { position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent-primary) 60%, transparent), transparent); pointer-events: none; z-index: 2; }
 
 .terminal-container {
   flex: 1;
   min-height: 0;
-  background: var(--console-bg);
+  background: transparent;
   border: none;
   outline: none;
 }
@@ -346,14 +358,27 @@ onBeforeUnmount(() => {
 ::deep(.xterm-screen),
 ::deep(.xterm-viewport),
 ::deep(.xterm-rows) {
-  background: var(--console-bg) !important;
+  background: transparent !important;
   border: none;
   outline: none;
 }
 
 ::deep(.xterm) {
-  padding: 12px 14px 14px;
+  padding: 14px 18px 18px;
   height: 100%;
+}
+
+::deep(.xterm-viewport) {
+  background: transparent !important;
+}
+
+::deep(.xterm-rows) {
+  font-variant-ligatures: contextual;
+}
+
+::deep(.xterm-rows > div) {
+  letter-spacing: 0.1px;
+  line-height: 1.45;
 }
 
 ::deep(.xterm-screen) {
@@ -361,16 +386,22 @@ onBeforeUnmount(() => {
 }
 
 ::deep(.xterm-viewport::-webkit-scrollbar) {
-  width: 8px;
+  width: 10px;
+}
+
+::deep(.xterm-viewport::-webkit-scrollbar-track) {
+  background: transparent;
 }
 
 ::deep(.xterm-viewport::-webkit-scrollbar-thumb) {
   background: var(--scrollbar-thumb);
-  border-radius: 4px;
-  border: 2px solid var(--console-bg);
+  border-radius: 5px;
+  border: 3px solid transparent;
+  background-clip: content-box;
 }
 
 ::deep(.xterm-viewport::-webkit-scrollbar-thumb:hover) {
   background: var(--text-tertiary);
+  background-clip: content-box;
 }
 </style>
