@@ -265,7 +265,8 @@
     font-size: 14px;
     line-height: 1.5;
     color: var(--text-primary);
-    background: var(--bg-base);
+    background: var(--ios-app-bg);
+    background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     letter-spacing: -0.01em;
@@ -273,6 +274,7 @@
 
   #app {
     height: 100%;
+    background: transparent;
   }
 
   input, textarea, select {
@@ -447,6 +449,32 @@
   --card-active-bg: var(--project-active-bg);
   --card-active-border: var(--project-active-border);
   --indicator: linear-gradient(180deg, #15946c, #0f766e);
+
+  /* ===== iOS 液态玻璃 tokens（浅色） ===== */
+  --ios-app-bg: radial-gradient(1200px 800px at 8% -10%, rgba(47, 111, 237, 0.12), transparent 55%),
+                radial-gradient(1000px 700px at 108% 8%, rgba(124, 58, 237, 0.10), transparent 50%),
+                radial-gradient(900px 700px at 50% 112%, rgba(21, 148, 108, 0.08), transparent 55%),
+                #f4f6f9;
+  --glass-fill: rgba(255, 255, 255, 0.55);
+  --glass-fill-hover: rgba(255, 255, 255, 0.75);
+  --glass-fill-strong: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.65);
+  --glass-edge: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.30) 45%, transparent 75%);
+  --glass-shadow: 0 6px 24px rgba(30, 45, 65, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+/* ===== iOS 液态玻璃 tokens（深色覆盖） ===== */
+::root[data-theme='dark'] {
+  --ios-app-bg: radial-gradient(1200px 800px at 8% -10%, rgba(47, 111, 237, 0.20), transparent 55%),
+                radial-gradient(1000px 700px at 108% 10%, rgba(124, 58, 237, 0.16), transparent 50%),
+                radial-gradient(900px 700px at 50% 110%, rgba(21, 148, 108, 0.14), transparent 55%),
+                #0b1018;
+  --glass-fill: rgba(255, 255, 255, 0.06);
+  --glass-fill-hover: rgba(255, 255, 255, 0.10);
+  --glass-fill-strong: rgba(255, 255, 255, 0.12);
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --glass-edge: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04) 40%, transparent 70%);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 /* ===== Collapse 折叠动画（侧边栏分组 / 设置页） ===== */
@@ -466,7 +494,7 @@
   opacity: 1;
 }
 
-html, body { font-family: var(--font-ui); background: var(--bg-app); }
+html, body { font-family: var(--font-ui); background: var(--ios-app-bg); background-attachment: fixed; }
 
 button:focus-visible,
 input:focus-visible,
@@ -489,6 +517,54 @@ select:focus-visible,
 .button-primary:hover:not(:disabled) { background: var(--accent-primary-hover); transform: translateY(-1px); }
 .button-secondary { color: var(--text-secondary); border: 1px solid var(--border-default); background: var(--bg-surface); }
 .button-secondary:hover:not(:disabled) { color: var(--text-primary); border-color: var(--border-strong); background: var(--bg-hover); }
+
+/* ===== iOS 液态玻璃通用工具类 ===== */
+.glass-surface {
+  position: relative;
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* 玻璃表面顶部的镜面反射高光（模拟 iOS 光折射） */
+.glass-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-edge);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.glass-surface:hover {
+  background: var(--glass-fill-hover);
+}
+
+/* 深色表面（更实心，用于侧边栏等需要更高可读性的区域） */
+.glass-surface-strong {
+  position: relative;
+  background: var(--glass-fill-strong);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* 亚克力面板（无高光，用于内容容器内部） */
+.glass-panel {
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid var(--glass-border);
+}
+
+@keyframes glassIn {
+  from { opacity: 0; transform: scale(0.98) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

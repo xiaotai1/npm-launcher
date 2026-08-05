@@ -351,7 +351,10 @@ async function copyLaunchCommand() {
 .console-header {
   gap: 10px;
   min-height: 42px;
-  border-bottom: 1px solid var(--border-muted);
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--glass-fill);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
 }
 
 .console-header > div:last-child {
@@ -455,6 +458,15 @@ async function copyLaunchCommand() {
 .console-empty-action:hover { transform: translateY(-1px); background: var(--accent-primary-hover); box-shadow: 0 9px 22px color-mix(in srgb, var(--accent-primary) 30%, transparent); }
 .console-empty-shortcut { display: inline-flex; align-items: center; gap: 5px; color: var(--text-tertiary); font-size: 10.5px; }
 .console-empty-shortcut kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border: 1px solid var(--border-default); border-bottom-width: 2px; border-radius: 5px; color: var(--text-secondary); background: color-mix(in srgb, var(--bg-surface) 70%, transparent); font: 700 10px/1 var(--font-mono); }
+
+/* 控制台终端区域：使用 xterm 主题背景，与上层玻璃面板衔接 */
+.terminal-region {
+  background: var(--console-bg);
+}
+
+.terminal-canvas {
+  background: transparent;
+}
 
 /* 颜色提示行 */
 .console-empty-tips { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; padding: 8px 14px; border: 1px solid var(--border-muted); border-radius: 999px; background: color-mix(in srgb, var(--bg-surface) 60%, transparent); font-size: 10.5px; }

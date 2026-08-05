@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { ProcessStatus, Project } from '../../../shared/types'
 import { buildLaunchCommands } from '../model/launchCommands'
 
@@ -23,6 +23,7 @@ const emit = defineEmits<{
 const packageScripts = ref<string[]>([])
 const showCommandMenu = ref(false)
 const commandPickerRef = ref<HTMLElement | null>(null)
+const commandMenuPos = ref({ top: 0, left: 0, width: 140 })
 const launchCommands = computed(() => buildLaunchCommands(props.project.command, packageScripts.value))
 const canSwitchCommand = computed(() => props.status?.status !== 'running' && launchCommands.value.length > 1)
 
@@ -31,9 +32,25 @@ async function loadPackageScripts() {
   packageScripts.value = result.scripts
 }
 
+function updateCommandMenuPos() {
+  const btn = commandPickerRef.value
+  if (!btn) return
+  const rect = btn.getBoundingClientRect()
+  commandMenuPos.value = {
+    top: rect.bottom + 6,
+    left: rect.left,
+    width: Math.max(rect.width, 140)
+  }
+}
+
 function toggleCommandMenu() {
   if (!canSwitchCommand.value) return
-  showCommandMenu.value = !showCommandMenu.value
+  if (showCommandMenu.value) {
+    showCommandMenu.value = false
+    return
+  }
+  showCommandMenu.value = true
+  nextTick(updateCommandMenuPos)
 }
 
 function selectCommand(command: string) {
@@ -45,16 +62,27 @@ function selectCommand(command: string) {
 
 function handleClickOutside(event: MouseEvent) {
   if (!showCommandMenu.value || !commandPickerRef.value) return
-  if (!commandPickerRef.value.contains(event.target as Node)) {
+  const target = event.target as Node
+  if (!commandPickerRef.value.contains(target)) {
     showCommandMenu.value = false
   }
+}
+
+function handleReposition() {
+  if (showCommandMenu.value) updateCommandMenuPos()
 }
 
 onMounted(() => {
   loadPackageScripts()
   document.addEventListener('click', handleClickOutside)
+  window.addEventListener('resize', handleReposition)
+  window.addEventListener('scroll', handleReposition, true)
 })
-onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('resize', handleReposition)
+  window.removeEventListener('scroll', handleReposition, true)
+})
 watch(() => props.project.path, loadPackageScripts)
 watch(() => props.project.id, () => { showCommandMenu.value = false })
 watch(() => props.status?.status, () => {
@@ -95,19 +123,26 @@ watch(() => props.status?.status, () => {
           <strong>{{ project.command }}</strong>
           <svg v-if="canSwitchCommand" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
-        <div v-if="showCommandMenu && canSwitchCommand" class="command-menu" role="menu">
-          <button
-            v-for="command in launchCommands"
-            :key="command"
-            :class="['command-option', { active: command === project.command }]"
-            type="button"
-            role="menuitem"
-            @click="selectCommand(command)"
+        <Teleport to="body">
+          <div
+            v-if="showCommandMenu && canSwitchCommand"
+            class="command-menu"
+            role="menu"
+            :style="{ top: commandMenuPos.top + 'px', left: commandMenuPos.left + 'px', width: commandMenuPos.width + 'px' }"
           >
-            <span>{{ command }}</span>
-            <svg v-if="command === project.command" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          </button>
-        </div>
+            <button
+              v-for="command in launchCommands"
+              :key="command"
+              :class="['command-option', { active: command === project.command }]"
+              type="button"
+              role="menuitem"
+              @click="selectCommand(command)"
+            >
+              <span>{{ command }}</span>
+              <svg v-if="command === project.command" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+          </div>
+        </Teleport>
       </div>
       <button class="icon-action" aria-label="打开项目目录" title="打开项目目录" data-tooltip="打开项目目录" @click="emit('open-folder')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v8A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5z"/></svg>
@@ -124,7 +159,7 @@ watch(() => props.status?.status, () => {
 </template>
 
 <style scoped>
-.project-context-bar { min-height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 22px; border-bottom: 1px solid var(--border-default); background: linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 100%, transparent) 0%, color-mix(in srgb, var(--bg-surface) 92%, transparent) 100%); }
+.project-context-bar { position: relative; min-height: 84px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px 22px; border-bottom: 1px solid var(--glass-border); background: var(--glass-fill); backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset; }
 .project-context-bar::after { content: ''; position: absolute; left: 22px; right: 22px; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent-primary) 30%, transparent) 30%, color-mix(in srgb, var(--accent-primary) 30%, transparent) 70%, transparent); pointer-events: none; }
 .project-context-main { position: relative; min-width: 0; }
 .project-title-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -143,7 +178,8 @@ h1 { min-width: 0; margin: 0; overflow: hidden; color: var(--text-primary); font
 .command-picker-label { flex: none; color: var(--text-tertiary); font-family: var(--font-sans); font-size: 11px; font-weight: 700; }
 .command-picker strong { flex: 1; min-width: 0; overflow: hidden; color: var(--accent-primary); font: 700 13px/1 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
 .command-picker svg { flex: none; margin-left: auto; color: var(--accent-primary); opacity: .85; }
-.command-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 50; width: 100%; min-width: 140px; padding: 5px; border: 1px solid var(--border-default); border-radius: 8px; background: var(--bg-surface); box-shadow: var(--shadow-lg); }
+/* Teleport 到 body，position: fixed + viewport 坐标，脱离一切祖先裁切/堆叠上下文 */
+.command-menu { position: fixed; z-index: 10000; min-width: 140px; padding: 5px; border: 1px solid var(--glass-border); border-radius: 12px; background: var(--glass-fill-strong); backdrop-filter: blur(28px) saturate(170%); -webkit-backdrop-filter: blur(28px) saturate(170%); box-shadow: var(--glass-shadow); animation: glassIn 0.18s cubic-bezier(0.16, 1, 0.3, 1); }
 .command-option { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 8px; border-radius: 6px; color: var(--text-secondary); background: transparent; font: 700 12px/1 var(--font-mono); text-align: left; }
 .command-option:hover { color: var(--accent-primary); background: var(--bg-hover); }
 .command-option.active { color: var(--accent-primary); background: var(--accent-glow); }

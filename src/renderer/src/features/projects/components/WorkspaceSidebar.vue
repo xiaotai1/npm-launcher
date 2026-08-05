@@ -708,13 +708,14 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .overview-nav:hover {
-  background: var(--bg-hover);
+  background: var(--glass-fill-hover);
   color: var(--text-primary);
 }
 
 .overview-nav.active {
   color: var(--accent-primary);
-  background: var(--bg-active);
+  background: color-mix(in srgb, var(--accent-primary) 7%, var(--glass-fill-strong));
+  border-color: transparent;
   position: relative;
 }
 
@@ -946,7 +947,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .project-card:hover {
-  background: var(--bg-hover);
+  background: var(--glass-fill-hover);
 }
 
 .project-card:hover::before {
@@ -971,7 +972,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .project-card.active {
-  background: var(--bg-active);
+  background: color-mix(in srgb, var(--accent-primary) 7%, var(--glass-fill-strong));
   border-color: transparent;
 }
 

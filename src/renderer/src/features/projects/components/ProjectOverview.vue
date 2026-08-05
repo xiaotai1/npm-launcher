@@ -437,7 +437,7 @@ function getStatusColor(projectId: string) {
 </template>
 
 <style scoped>
-.overview-page { position: relative; height: 100%; overflow-y: auto; background: var(--bg-app); }
+.overview-page { position: relative; height: 100%; overflow-y: auto; background: transparent; }
 
 /* 背景装饰：在浅色/深色主题下都使用的 subtle gradient blob + 点阵纹理
    整体降一档透明度，避免在卡片间隙"突然冒出色斑"造成视觉色差 */
@@ -450,7 +450,7 @@ function getStatusColor(projectId: string) {
 .blob-four { top: 18%; left: 45%; width: 320px; height: 320px; background: radial-gradient(circle, color-mix(in srgb, var(--accent-primary) 8%, transparent), transparent 72%); opacity: 0.2; animation: glowPulse 8s ease-in-out infinite reverse; }
 .blob-five { top: 62%; right: 12%; width: 280px; height: 280px; background: radial-gradient(circle, color-mix(in srgb, var(--warning) 8%, transparent), transparent 72%); opacity: 0.18; }
 
-.overview-header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 96px; padding: 22px 28px; border-bottom: 1px solid var(--border-muted); background: color-mix(in srgb, var(--bg-surface) 86%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.overview-header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 96px; padding: 22px 28px; border-bottom: 1px solid var(--glass-border); background: var(--glass-fill); backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset; }
 .section-eyebrow { margin: 0 0 6px; color: var(--text-tertiary); font: 700 10px/1 var(--font-mono); letter-spacing: .18em; }
 .overview-title-block { display: flex; flex-direction: column; gap: 2px; }
 .overview-header h1 { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--text-primary); font-size: 22px; font-weight: 750; letter-spacing: -0.01em; }
@@ -464,7 +464,7 @@ function getStatusColor(projectId: string) {
 
 /* 统计卡片 — 等宽 1:1:1，避免数字位差异造成的不协调 */
 .stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.stat-card { position: relative; padding: 16px 18px; border: 1px solid var(--border-default); border-radius: 14px; background: color-mix(in srgb, var(--bg-surface) 82%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: var(--shadow-sm); transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 200ms ease, border-color 200ms ease; overflow: hidden; }
+.stat-card { position: relative; padding: 16px 18px; border: 1px solid var(--glass-border); border-radius: 16px; background: var(--glass-fill); backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%); box-shadow: var(--glass-shadow); transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 200ms ease, border-color 200ms ease; overflow: hidden; }
 .stat-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, transparent 60%, color-mix(in srgb, var(--accent-primary) 8%, transparent)); opacity: 0; transition: opacity 200ms ease; }
 .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--accent-border); }
 .stat-card:hover::before { opacity: 1; }
@@ -491,20 +491,20 @@ function getStatusColor(projectId: string) {
 
 .overview-main-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; margin-top: 16px; }
 .project-grid { grid-column: span 1; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; align-items: stretch; }
-.project-empty-slot { height: 100%; min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 18px; border: 1px dashed var(--border-default); border-radius: 14px; color: var(--text-tertiary); background: color-mix(in srgb, var(--bg-surface) 42%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); text-align: center; }
-.project-empty-slot:hover { color: var(--accent-primary); border-color: var(--accent-border); background: color-mix(in srgb, var(--accent-glow) 42%, transparent); }
+.project-empty-slot { height: 100%; min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 18px; border: 1px dashed var(--glass-border); border-radius: 16px; color: var(--text-tertiary); background: var(--glass-fill); backdrop-filter: blur(16px) saturate(140%); -webkit-backdrop-filter: blur(16px) saturate(140%); text-align: center; }
+.project-empty-slot:hover { color: var(--accent-primary); border-color: var(--accent-border); background: var(--glass-fill-hover); }
 .project-empty-slot strong { color: var(--text-secondary); font-size: 12px; }
 .project-empty-slot span { font-size: 10px; }
 
 /* 玻璃化项目卡片：让背景色与页面装饰统一，消除"上下色差" */
-.project-grid :deep(.project-overview-card) { background: color-mix(in srgb, var(--bg-surface) 84%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-.project-grid :deep(.project-overview-card.running) { background: color-mix(in srgb, var(--success-bg) 18%, color-mix(in srgb, var(--bg-surface) 82%, transparent)); }
-.project-grid :deep(.project-overview-card.error) { background: color-mix(in srgb, var(--error-bg) 14%, color-mix(in srgb, var(--bg-surface) 82%, transparent)); }
+.project-grid :deep(.project-overview-card) { background: var(--glass-fill); backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%); border-color: var(--glass-border); box-shadow: var(--glass-shadow); }
+.project-grid :deep(.project-overview-card.running) { background: color-mix(in srgb, var(--success-bg) 30%, var(--glass-fill)); }
+.project-grid :deep(.project-overview-card.error) { background: color-mix(in srgb, var(--error-bg) 22%, var(--glass-fill)); }
 
 .overview-side-rail { min-width: 0; display: flex; flex-direction: column; gap: 14px; align-self: start; position: sticky; top: 110px; }
 
 /* ===== 运行时面板 ===== */
-.runtime-panel { border: 1px solid var(--border-default); border-radius: 14px; background: color-mix(in srgb, var(--bg-surface) 92%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; }
+.runtime-panel { border: 1px solid var(--glass-border); border-radius: 16px; background: var(--glass-fill); backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%); box-shadow: var(--glass-shadow); display: flex; flex-direction: column; }
 .runtime-panel > header { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--border-muted); }
 .runtime-panel h2 { margin: 0; font-size: 12px; font-weight: 750; letter-spacing: -0.005em; }
 .runtime-panel > header span { display: block; margin-top: 2px; color: var(--text-tertiary); font-size: 9px; }
@@ -530,7 +530,7 @@ function getStatusColor(projectId: string) {
 .runtime-recent-cmd { margin-left: auto; color: var(--accent-primary); font: 700 10px/1 var(--font-mono); letter-spacing: 0.04em; }
 
 /* ===== 快捷键面板 ===== */
-.shortcuts-panel { border: 1px solid var(--border-default); border-radius: 14px; background: color-mix(in srgb, var(--bg-surface) 92%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); display: flex; flex-direction: column; }
+.shortcuts-panel { border: 1px solid var(--glass-border); border-radius: 16px; background: var(--glass-fill); backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%); box-shadow: var(--glass-shadow); display: flex; flex-direction: column; }
 .shortcuts-panel > header { min-height: 44px; display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--border-muted); }
 .shortcuts-panel h2 { margin: 0; font-size: 12px; font-weight: 750; }
 .shortcuts-panel > header span { display: block; margin-top: 2px; color: var(--text-tertiary); font-size: 9px; }
@@ -541,7 +541,7 @@ function getStatusColor(projectId: string) {
 .shortcut-key span { color: var(--text-tertiary); font-weight: 700; }
 .shortcut-soon { padding: 2px 7px; border: 1px dashed var(--border-strong); border-radius: 999px; color: var(--text-tertiary); font: 700 9px/1.2 var(--font-mono); letter-spacing: 0.04em; }
 
-.activity-panel { border: 1px solid var(--border-default); border-radius: 14px; background: color-mix(in srgb, var(--bg-surface) 92%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); display: flex; flex-direction: column; overflow: hidden; }
+.activity-panel { border: 1px solid var(--glass-border); border-radius: 16px; background: var(--glass-fill); backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%); box-shadow: var(--glass-shadow); display: flex; flex-direction: column; overflow: hidden; }
 .activity-panel > header { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--border-muted); }
 .activity-panel h2 { margin: 0; font-size: 12px; }
 .activity-panel header span { display: block; margin-top: 2px; color: var(--text-tertiary); font-size: 9px; }

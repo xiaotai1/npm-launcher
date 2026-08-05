@@ -66,7 +66,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 </script>
 
 <template>
-  <header class="flex items-center justify-between border-b border-border bg-surface relative select-none app-header" :class="{ 'mac-titlebar': isMac }">
+  <header class="flex items-center justify-between border-b border-border bg-surface relative select-none app-header glass-topbar" :class="{ 'mac-titlebar': isMac }">
     <div class="flex items-center header-left" :class="{ 'mac-title-area': isMac }">
       <span v-if="!isMac" class="text-[13px] font-semibold text-tsecondary app-title">NPM Launcher</span>
     </div>
@@ -152,6 +152,22 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   min-height: 44px;
   -webkit-app-region: drag;
   overflow: visible;
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  border-color: var(--glass-border);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+}
+
+.glass-topbar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--glass-edge);
+  pointer-events: none;
 }
 
 .header-left {

@@ -279,8 +279,10 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   padding: 0 10px 0 14px;
-  border-bottom: 1px solid var(--border-muted);
-  background: var(--bg-surface);
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--glass-fill);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
 }
 
 .terminal-path {
