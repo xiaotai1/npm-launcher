@@ -15,6 +15,7 @@ import { clearLaunchFailure, mergeLaunchFailures, setLaunchFailure, type LaunchF
 
 type WorkspaceTab = 'logs' | 'terminal' | 'info'
 
+const isMac = window.electronAPI?.platform === 'darwin'
 const config = ref<AppConfig | null>(null)
 const nodeVersion = ref<string | null>(null)
 const nodeVersions = ref<string[]>([])
@@ -57,6 +58,13 @@ const currentStatus = computed(() => selectedProjectId.value
 const activeProjectTab = computed<WorkspaceTab>(() => {
   if (!selectedProjectId.value) return 'logs'
   return projectTabs.value[selectedProjectId.value] || 'logs'
+})
+
+const shortcutProjectId = computed(() => {
+  if (activeView.value !== 'project') return null
+  const projects = config.value?.projects || []
+  if (selectedProjectId.value && projects.some(project => project.id === selectedProjectId.value)) return selectedProjectId.value
+  return null
 })
 
 async function loadConfig() {
@@ -173,6 +181,24 @@ async function stopProjectById(projectId: string) {
 
 function startSelectedProject() { if (selectedProjectId.value) return startProjectById(selectedProjectId.value) }
 function stopSelectedProject() { if (selectedProjectId.value) return stopProjectById(selectedProjectId.value) }
+
+function startShortcutProject() {
+  const projectId = shortcutProjectId.value
+  if (!projectId) {
+    showToast('请先进入一个项目', 'warning')
+    return
+  }
+  return startProjectById(projectId)
+}
+
+function stopShortcutProject() {
+  const projectId = shortcutProjectId.value
+  if (!projectId) {
+    showToast('请先进入一个项目', 'warning')
+    return
+  }
+  return stopProjectById(projectId)
+}
 
 function handleStatus(status: ProcessStatus) {
   const previous = processStatuses.value[status.projectId]
@@ -315,6 +341,42 @@ function getCollapsedProjectTooltip(project: Project) {
 
 function toggleSidebar() { sidebarCollapsed.value = !sidebarCollapsed.value }
 
+function isEditableShortcutTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false
+  const tagName = target.tagName.toLowerCase()
+  return target.isContentEditable || tagName === 'input' || tagName === 'textarea' || tagName === 'select' || target.getAttribute('role') === 'textbox'
+}
+
+function isPrimaryShortcutPressed(event: KeyboardEvent) {
+  return isMac
+    ? event.metaKey && !event.ctrlKey
+    : event.ctrlKey && !event.metaKey
+}
+
+function handleGlobalShortcut(event: KeyboardEvent) {
+  if (!isPrimaryShortcutPressed(event) || event.altKey || event.shiftKey || event.repeat || isEditableShortcutTarget(event.target)) return
+  const key = event.key.toLowerCase()
+  if (key === 'n') {
+    event.preventDefault()
+    openAddProject()
+    return
+  }
+  if (key === 'k') {
+    event.preventDefault()
+    showToast('命令面板即将开放', 'warning')
+    return
+  }
+  if (key === 'r') {
+    event.preventDefault()
+    void startShortcutProject()
+    return
+  }
+  if (event.key === '.' || event.code === 'Period') {
+    event.preventDefault()
+    void stopShortcutProject()
+  }
+}
+
 function onResizeStart(event: MouseEvent) {
   event.preventDefault()
   isResizing.value = true
@@ -338,9 +400,10 @@ onMounted(async () => {
   cleanupLogs = window.electronAPI.onLogData(handleLogData)
   cleanupErrorAnalysis = window.electronAPI.onErrorAnalysis?.(handleErrorAnalysis) || null
   cleanupSystemTheme = installSystemThemeListener(() => config.value?.theme || 'system')
+  window.addEventListener('keydown', handleGlobalShortcut)
 })
 
-onUnmounted(() => { cleanupStatus?.(); cleanupLogs?.(); cleanupErrorAnalysis?.(); cleanupSystemTheme?.() })
+onUnmounted(() => { cleanupStatus?.(); cleanupLogs?.(); cleanupErrorAnalysis?.(); cleanupSystemTheme?.(); window.removeEventListener('keydown', handleGlobalShortcut) })
 watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
 </script>
 

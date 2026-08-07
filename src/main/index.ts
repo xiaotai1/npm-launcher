@@ -66,10 +66,9 @@ function createWindow() {
     mainWindow?.show()
   })
 
-  // 开发模式
-  if (is.dev) {
-    mainWindow.loadURL('http://localhost:5173')
-    mainWindow.webContents.openDevTools()
+  // 开发模式：使用 electron-vite 提供的实际渲染地址，避免端口被占用后加载到旧地址
+  if (is.dev && process.env.ELECTRON_RENDERER_URL) {
+    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
@@ -84,7 +83,7 @@ app.whenReady().then(async () => {
   // 设置 App 用户模型 ID
   electronApp.setAppUserModelId('com.npm-launcher.app')
 
-  // 开发模式下默认通过 F12 按退出或重新加载
+  // 开发模式下通过 F12 手动打开或关闭开发者工具
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })

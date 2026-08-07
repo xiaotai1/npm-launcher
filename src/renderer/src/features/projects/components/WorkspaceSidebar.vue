@@ -376,9 +376,17 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
     <!-- 顶部贯穿细线 -->
     <span class="sidebar-top-line" aria-hidden="true"></span>
     <div class="px-4 pt-5 pb-3 flex items-center justify-between sidebar-header">
-      <div class="flex flex-col gap-0.5">
-        <span class="sidebar-brand-title">NPM Launcher</span>
-        <span class="sidebar-brand-sub">v1.0 · Node Workspace</span>
+      <div class="sidebar-brand">
+        <span class="sidebar-brand-mark" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M7 8.5L11 12L7 15.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M13 16.5H18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <div class="flex flex-col gap-0.5 min-w-0">
+          <span class="sidebar-brand-title">NPM Launcher</span>
+          <span class="sidebar-brand-sub">项目启动器</span>
+        </div>
       </div>
       <button ref="createButtonRef" class="create-button" @click="openAddForm">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
@@ -476,7 +484,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       <!-- 文件夹 -->
       <template v-for="folder in visibleFolders" :key="folder.id">
         <div
-          :class="['flex items-center gap-1.75 py-1.75 px-2 mb-0.5 rounded-lg cursor-default transition-all duration-150 ease-out folder-row', { 'drop-highlight': dropTarget?.type === 'folder' && dropTarget?.id === folder.id, dragging: dragFolderId === folder.id }]"
+          :class="['flex items-center gap-1.75 py-1.75 px-2 mb-0.5 rounded-lg cursor-default transition-colors duration-150 ease-out folder-row', { 'drop-highlight': dropTarget?.type === 'folder' && dropTarget?.id === folder.id, dragging: dragFolderId === folder.id }]"
           draggable="true"
           @dragstart="onFolderDragStart($event, folder.id)"
           @dragover.stop="dragFolderId ? onFolderDragOverForSort($event, folder.id) : onFolderDragOver($event, folder.id)"
@@ -501,32 +509,37 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
                 <polyline points="9 18 15 12 9 6"/>
               </svg>
             </button>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="shrink-0 folder-icon">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-            </svg>
+            <span :class="['folder-icon-shell', { collapsed: isCollapsed(folder.id) }]">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" class="folder-icon" aria-hidden="true">
+                <path class="folder-icon-fill" d="M3.5 8.2c0-1.05.85-1.9 1.9-1.9h4.25c.48 0 .93.22 1.22.6l1.03 1.35h6.7c1.05 0 1.9.85 1.9 1.9v6.55c0 1.05-.85 1.9-1.9 1.9H5.4c-1.05 0-1.9-.85-1.9-1.9V8.2Z"/>
+                <path d="M3.5 9.05V8.2c0-1.05.85-1.9 1.9-1.9h4.25c.48 0 .93.22 1.22.6l1.03 1.35h6.7c1.05 0 1.9.85 1.9 1.9v.55"/>
+                <path d="M4.6 9.7h14.8c.88 0 1.58.75 1.5 1.62l-.5 5.25c-.1 1.15-1.06 2.03-2.2 2.03H5.8c-1.14 0-2.1-.88-2.2-2.03l-.5-5.25c-.08-.87.62-1.62 1.5-1.62Z"/>
+              </svg>
+            </span>
             <span class="flex-1 text-xs font-medium text-tsecondary whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out folder-name">{{ folder.name }}</span>
             <span class="text-[10px] px-2 rounded-[10px] min-w-5.5 text-center folder-count">{{ folderProjects(folder.id).length }}</span>
           </template>
         </div>
         <!-- 文件夹内的项目 -->
-        <Transition name="collapse">
+        <Transition name="folder-list">
         <div v-show="!isCollapsed(folder.id)" class="pl-3.5 ml-4.5 mb-1 relative folder-projects">
-          <div
-            v-for="project in folderProjects(folder.id)"
-            :key="project.id"
-          :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }, projectDragClass(project.id)]"
-          :draggable="!searchQuery.trim()"
-          tabindex="0"
-          role="button"
-          :aria-label="project.name"
-          @click="emit('select', project.id)"
-          @keydown="handleProjectKeydown($event, project.id)"
-          @contextmenu="onProjectContextMenu($event, project)"
-          @dragstart="onProjectDragStart($event, project.id)"
-          @dragover.stop="onProjectDragOver($event, project.id)"
-          @drop.stop="onProjectDrop($event, project.id)"
-          @dragend="onDragEnd"
-        >
+          <div class="folder-projects-inner">
+            <div
+              v-for="project in folderProjects(folder.id)"
+              :key="project.id"
+              :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }, projectDragClass(project.id)]"
+              :draggable="!searchQuery.trim()"
+              tabindex="0"
+              role="button"
+              :aria-label="project.name"
+              @click="emit('select', project.id)"
+              @keydown="handleProjectKeydown($event, project.id)"
+              @contextmenu="onProjectContextMenu($event, project)"
+              @dragstart="onProjectDragStart($event, project.id)"
+              @dragover.stop="onProjectDragOver($event, project.id)"
+              @drop.stop="onProjectDrop($event, project.id)"
+              @dragend="onDragEnd"
+            >
             <div class="shrink-0 w-3.5 flex items-center justify-center text-ttertiary opacity-0 transition-opacity duration-200 ease-out cursor-grab card-drag-handle" title="拖拽排序">
               <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
                 <circle cx="3" cy="2" r="1.2"/><circle cx="7" cy="2" r="1.2"/>
@@ -548,9 +561,10 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
               <svg v-if="project.favorite" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
               <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
             </button>
-          </div>
-          <div v-if="folderProjects(folder.id).length === 0" class="py-3 text-xs text-ttertiary opacity-50 text-center">
-            拖拽项目到此处
+            </div>
+            <div v-if="folderProjects(folder.id).length === 0" class="py-3 text-xs text-ttertiary opacity-50 text-center">
+              拖拽项目到此处
+            </div>
           </div>
         </div>
         </Transition>
@@ -781,38 +795,84 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   z-index: 1;
 }
 
+.sidebar-brand {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.sidebar-brand-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 22%, var(--border-muted));
+  border-radius: 10px;
+  color: var(--accent-primary);
+  background:
+    radial-gradient(circle at 28% 20%, color-mix(in srgb, #fff 72%, transparent), transparent 42%),
+    linear-gradient(145deg, color-mix(in srgb, var(--accent-glow) 86%, var(--bg-surface)), var(--bg-elevated));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 72%, transparent),
+    0 8px 18px color-mix(in srgb, var(--accent-primary) 14%, transparent);
+}
+
 .sidebar-brand-title {
-  font-size: 14px;
-  font-weight: 700;
+  overflow: hidden;
   color: var(--text-primary);
-  letter-spacing: -0.1px;
-  line-height: 1.2;
+  font-size: 14px;
+  font-weight: 780;
+  letter-spacing: -0.18px;
+  line-height: 1.12;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sidebar-brand-sub {
+  color: var(--text-primary);
   font-size: 10px;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  letter-spacing: 0.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
   line-height: 1.2;
+  opacity: 0.52;
+}
+
+:global(:root[data-theme='dark']) .sidebar-brand-mark {
+  border-color: color-mix(in srgb, var(--accent-primary) 34%, rgba(255, 255, 255, 0.08));
+  background:
+    radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.18), transparent 42%),
+    linear-gradient(145deg, rgba(72, 129, 255, 0.18), rgba(17, 24, 39, 0.72));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 10px 22px rgba(50, 102, 224, 0.2);
 }
 
 .create-button {
-  min-height: 30px;
+  min-height: 28px;
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 0 12px;
-  border-radius: 7px;
+  padding: 0 11px;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 76%, transparent);
+  border-radius: 9px;
   color: #fff;
-  background: var(--accent-primary);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-primary) 92%, #fff), var(--accent-primary));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 8px 16px color-mix(in srgb, var(--accent-primary) 18%, transparent);
   font-size: 11px;
-  font-weight: 600;
-  transition: background 180ms ease;
+  font-weight: 700;
+  transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease;
 }
 
 .create-button:hover {
-  background: var(--accent-primary-hover);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-primary-hover) 92%, #fff), var(--accent-primary-hover));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 10px 20px color-mix(in srgb, var(--accent-primary) 24%, transparent);
+  transform: translateY(-1px);
 }
 
 /* 搜索框 — 素净样式，参考图风格 */
@@ -859,12 +919,11 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .folder-row.drop-highlight {
   background: var(--accent-glow);
   border: 1px dashed var(--accent-primary);
-  box-shadow: 0 0 0 3px var(--accent-glow), inset 0 0 12px color-mix(in srgb, var(--accent-glow) 70%, transparent);
 }
 
-.folder-row.drop-highlight .folder-icon {
+.folder-row.drop-highlight .folder-icon-shell,
+.folder-row:hover .folder-icon-shell {
   color: var(--accent-primary);
-  filter: drop-shadow(0 0 6px var(--accent-glow));
 }
 
 .folder-toggle:hover {
@@ -884,20 +943,49 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   transform: rotate(90deg);
 }
 
-.folder-icon {
+.folder-icon-shell {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   color: var(--accent-primary);
-  filter: drop-shadow(0 0 3px var(--accent-glow));
-  transition: filter 200ms ease;
+  transition: color 150ms ease;
 }
 
-.folder-row:hover .folder-icon {
-  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.35));
+.folder-icon-shell.collapsed {
+  color: color-mix(in srgb, var(--accent-primary) 76%, var(--text-tertiary));
+}
+
+.folder-icon {
+  display: block;
+  color: inherit;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: color 150ms ease;
+}
+
+.folder-icon-fill {
+  fill: currentColor;
+  opacity: 0.1;
+  stroke: none;
+}
+
+.folder-icon-shell.collapsed .folder-icon-fill {
+  opacity: 0.075;
+}
+
+:global(:root[data-theme='dark']) .folder-icon-shell.collapsed {
+  color: color-mix(in srgb, var(--accent-primary) 70%, var(--text-tertiary));
 }
 
 .folder-count {
   color: var(--text-tertiary);
   background: var(--bg-elevated);
-  transition: all 200ms ease;
+  transition: color 150ms ease, background 150ms ease;
 }
 
 .folder-row:hover .folder-count {
@@ -905,9 +993,34 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   color: var(--text-secondary);
 }
 
-/* 文件夹内项目 — ::before 渐变线 */
+/* 文件夹内项目 — 使用真实内容高度的 Grid 折叠，避免 max-height 造成下方节点跳动 */
 .folder-projects {
-  animation: slideIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  overflow: hidden;
+  transition:
+    grid-template-rows 190ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 120ms ease,
+    margin-bottom 190ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.folder-list-enter-from,
+.folder-list-leave-to {
+  grid-template-rows: 0fr;
+  margin-bottom: 0;
+  opacity: 0;
+}
+
+.folder-list-enter-to,
+.folder-list-leave-from {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.folder-projects-inner {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .folder-projects::before {
@@ -923,6 +1036,10 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 /* 项目卡片 — 复杂状态 + ::before 指示器 */
 .project-card {
   animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.folder-projects .project-card {
+  animation: none;
 }
 
 /* 左侧单色指示条 — 参考图风格：3px 贯穿到侧边栏左缘，inset+margin 居中 */

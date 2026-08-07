@@ -32,11 +32,22 @@ const hasSessionLogs = ref(false)
 const canExport = computed(() => hasSessionLogs.value)
 // 空状态：项目未启动且尚未产生任何日志时显示
 const showEmptyState = computed(() => !hasSessionLogs.value && !props.isRunning)
+const isMac = computed(() => window.electronAPI?.platform === 'darwin')
+const primaryShortcutKey = computed(() => isMac.value ? '⌘' : 'Ctrl')
+const primaryShortcutLabel = computed(() => isMac.value ? 'Command' : 'Control')
 let terminal: Terminal | null = null
 let fitAddon: FitAddon | null = null
 let cleanupSessionLogs: (() => void) | null = null
 let resizeObserver: ResizeObserver | null = null
 let themeObserver: MutationObserver | null = null
+
+function currentReadonlyLogTheme() {
+  return {
+    ...currentTerminalTheme(),
+    cursor: 'transparent',
+    cursorAccent: 'transparent'
+  }
+}
 
 function updateLogState() {
   hasSessionLogs.value = getSessionLogs(props.projectId).length > 0
@@ -73,7 +84,7 @@ function initTerminal() {
     fontSize: 13,
     lineHeight: 1.4,
     fontFamily: "'Consolas', 'JetBrains Mono', 'Fira Code', monospace",
-    theme: currentTerminalTheme(),
+    theme: currentReadonlyLogTheme(),
     scrollback: 5000,
     disableStdin: true
   })
@@ -139,7 +150,7 @@ watch([searchQuery, logFilter], () => {
 
 themeObserver = new MutationObserver(() => {
   if (terminal) {
-    terminal.options.theme = currentTerminalTheme()
+    terminal.options.theme = currentReadonlyLogTheme()
   }
 })
 
@@ -262,7 +273,7 @@ async function copyLaunchCommand() {
       </div>
     </div>
     <div class="terminal-region">
-      <div ref="terminalContainer" class="terminal-canvas"></div>
+      <div ref="terminalContainer" :class="['terminal-canvas', { hidden: showEmptyState }]"></div>
       <div v-if="showEmptyState" class="console-empty" aria-live="polite">
         <div class="console-empty-decoration" aria-hidden="true">
           <span class="console-empty-blob console-empty-blob-a"></span>
@@ -314,11 +325,19 @@ async function copyLaunchCommand() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="6 4 20 12 6 20 6 4" fill="currentColor" stroke="none"/></svg>
             <span>启动项目</span>
           </button>
-          <span class="console-empty-shortcut">
-            <kbd>Ctrl</kbd>
-            <span>+</span>
-            <kbd>R</kbd>
-            <span>运行</span>
+          <span class="console-empty-shortcuts" aria-label="当前项目快捷键">
+            <span class="console-empty-shortcut">
+              <kbd :aria-label="primaryShortcutLabel">{{ primaryShortcutKey }}</kbd>
+              <span>+</span>
+              <kbd>R</kbd>
+              <span>运行</span>
+            </span>
+            <span class="console-empty-shortcut muted">
+              <kbd :aria-label="primaryShortcutLabel">{{ primaryShortcutKey }}</kbd>
+              <span>+</span>
+              <kbd>.</kbd>
+              <span>停止</span>
+            </span>
           </span>
         </div>
 
@@ -427,6 +446,8 @@ async function copyLaunchCommand() {
 
 .terminal-region { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--console-bg); }
 .terminal-canvas { flex: 1; min-height: 0; border: none; outline: none; }
+.terminal-canvas.hidden { visibility: hidden; }
+:deep(.terminal-canvas .xterm-cursor-layer) { display: none !important; }
 .console-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 36px 28px; text-align: center; pointer-events: none; overflow: hidden; animation: consoleEmptyFade 320ms cubic-bezier(0.16, 1, 0.3, 1); }
 @keyframes consoleEmptyFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .console-empty-decoration { position: absolute; inset: 0; pointer-events: none; z-index: -1; overflow: hidden; }
@@ -453,11 +474,16 @@ async function copyLaunchCommand() {
 .console-empty-meta-item span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* 启动操作区 */
-.console-empty-actions { pointer-events: auto; display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+.console-empty-actions { pointer-events: auto; display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 4px; flex-wrap: wrap; }
 .console-empty-action { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 16px; border: none; border-radius: 10px; color: #fff; background: var(--accent-primary); box-shadow: 0 6px 18px var(--accent-glow); font-size: 12px; font-weight: 700; transition: transform 160ms ease, box-shadow 200ms ease, background 200ms ease; }
 .console-empty-action:hover { transform: translateY(-1px); background: var(--accent-primary-hover); box-shadow: 0 9px 22px color-mix(in srgb, var(--accent-primary) 30%, transparent); }
-.console-empty-shortcut { display: inline-flex; align-items: center; gap: 5px; color: var(--text-tertiary); font-size: 10.5px; }
-.console-empty-shortcut kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border: 1px solid var(--border-default); border-bottom-width: 2px; border-radius: 5px; color: var(--text-secondary); background: color-mix(in srgb, var(--bg-surface) 70%, transparent); font: 700 10px/1 var(--font-mono); }
+.console-empty-shortcuts { display: inline-flex; align-items: center; gap: 12px; }
+.console-empty-shortcut { display: inline-flex; align-items: center; gap: 5px; color: var(--text-tertiary); font-size: 11px; font-weight: 700; }
+.console-empty-shortcut.muted { opacity: 0.76; }
+.console-empty-shortcut kbd { display: inline-grid; place-items: center; min-width: 34px; height: 30px; padding: 0 9px; border: 1px solid color-mix(in srgb, var(--border-default) 86%, #fff); border-bottom-width: 3px; border-radius: 9px; color: var(--text-secondary); background: linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 84%, #fff), var(--bg-elevated)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), inset 0 -1px 0 rgba(0, 0, 0, 0.06), 0 2px 4px rgba(30, 45, 65, 0.1); font: 800 13px/1 var(--font-mono); letter-spacing: -0.02em; }
+.console-empty-shortcut kbd:first-child { min-width: 40px; font-size: 15px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', var(--font-mono); }
+.console-empty-shortcut > span:not(:last-child) { color: var(--text-tertiary); font-size: 14px; font-weight: 800; }
+:global(:root[data-theme='dark']) .console-empty-shortcut kbd { border-color: rgba(148, 163, 184, 0.24); border-bottom-color: rgba(148, 163, 184, 0.34); background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.96)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.28), 0 2px 5px rgba(0, 0, 0, 0.28); }
 
 /* 控制台终端区域：使用 xterm 主题背景，与上层玻璃面板衔接 */
 .terminal-region {

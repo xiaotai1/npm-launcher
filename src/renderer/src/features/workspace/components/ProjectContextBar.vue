@@ -144,10 +144,10 @@ watch(() => props.status?.status, () => {
           </div>
         </Teleport>
       </div>
-      <button class="icon-action" aria-label="打开项目目录" title="打开项目目录" data-tooltip="打开项目目录" @click="emit('open-folder')">
+      <button class="icon-action" aria-label="打开项目目录" data-tooltip="打开项目目录" @click="emit('open-folder')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v8A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5z"/></svg>
       </button>
-      <button class="icon-action" aria-label="用 VS Code 打开项目" title="用 VS Code 打开项目" data-tooltip="用 VS Code 打开" @click="emit('open-vscode')">
+      <button class="icon-action" aria-label="用 VS Code 打开项目" data-tooltip="用 VS Code 打开" @click="emit('open-vscode')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m16 5 5 3v8l-5 3-9-7z"/><path d="m7 12-4-3 2-2 4 3m-2 2-4 3 2 2 4-3"/></svg>
       </button>
       <button v-if="localUrl" class="button-secondary" :title="localUrl" @click="emit('open-url', localUrl)">打开页面</button>
@@ -159,7 +159,7 @@ watch(() => props.status?.status, () => {
 </template>
 
 <style scoped>
-.project-context-bar { position: relative; min-height: 84px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px 22px; border-bottom: 1px solid var(--glass-border); background: var(--glass-fill); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset; }
+.project-context-bar { position: relative; z-index: 8; overflow: visible; min-height: 84px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px 22px; border-bottom: 1px solid var(--glass-border); background: var(--glass-fill); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset; }
 .project-context-bar::after { content: ''; position: absolute; left: 22px; right: 22px; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent-primary) 30%, transparent) 30%, color-mix(in srgb, var(--accent-primary) 30%, transparent) 70%, transparent); pointer-events: none; }
 .project-context-main { position: relative; min-width: 0; }
 .project-title-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -184,10 +184,10 @@ h1 { min-width: 0; margin: 0; overflow: hidden; color: var(--text-primary); font
 .command-option:hover { color: var(--accent-primary); background: var(--bg-hover); }
 .command-option.active { color: var(--accent-primary); background: var(--accent-glow); }
 .command-option svg { flex: none; }
-.project-context-actions { display: flex; align-items: center; gap: 7px; flex: none; }
+.project-context-actions { position: relative; z-index: 2; display: flex; align-items: center; gap: 7px; flex: none; }
 .icon-action { position: relative; width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--border-default); border-radius: 10px; color: var(--text-secondary); background: linear-gradient(180deg, var(--bg-surface) 0%, color-mix(in srgb, var(--bg-subtle) 80%, transparent) 100%); transition: transform 160ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease; }
 .icon-action:hover { transform: translateY(-1px); color: var(--accent-primary); border-color: var(--accent-border); background: var(--bg-hover); box-shadow: var(--shadow-md); }
-.icon-action::after { content: attr(data-tooltip); position: absolute; right: 50%; bottom: -34px; z-index: 20; transform: translateX(50%) translateY(-2px); padding: 5px 8px; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-primary); background: var(--bg-surface); box-shadow: var(--shadow-sm); font-size: 11px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 140ms ease, transform 140ms ease; }
+.icon-action::after { content: attr(data-tooltip); position: absolute; right: 50%; bottom: -40px; z-index: 200; transform: translateX(50%) translateY(-2px); padding: 6px 9px; border: 1px solid var(--border-default); border-radius: 7px; color: var(--text-primary); background: var(--bg-surface); box-shadow: var(--shadow-md); font-size: 11px; font-weight: 650; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 140ms ease, transform 140ms ease; }
 .icon-action:hover::after { opacity: 1; transform: translateX(50%) translateY(0); }
 .context-primary { min-width: 76px; min-height: 36px; padding: 0 16px; border-radius: 10px; color: #fff; background: var(--accent-primary); box-shadow: 0 4px 12px var(--accent-glow); font-size: 12px; font-weight: 700; transition: transform 160ms ease, box-shadow 180ms ease, background 180ms ease; }
 .context-primary:hover { transform: translateY(-1px); background: var(--accent-primary-hover); box-shadow: 0 8px 18px var(--accent-glow); }

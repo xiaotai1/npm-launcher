@@ -139,19 +139,20 @@ onBeforeUnmount(restorePreviousFocus)
   display: grid;
   place-items: center;
   padding: 28px;
-  background: rgba(4, 9, 17, .42);
+  background: var(--modal-backdrop);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   -webkit-app-region: no-drag;
 }
 
 .confirm-dialog {
+  position: relative;
   width: min(420px, calc(100vw - 40px));
   overflow: hidden;
   color: var(--text-primary);
   border: 1px solid var(--glass-border);
   border-radius: 18px;
-  background: var(--glass-fill-strong);
+  background: color-mix(in srgb, var(--bg-surface) 94%, transparent);
   backdrop-filter: blur(28px) saturate(170%);
   -webkit-backdrop-filter: blur(28px) saturate(170%);
   box-shadow: var(--glass-shadow);
@@ -167,6 +168,8 @@ onBeforeUnmount(restorePreviousFocus)
 }
 
 .dialog-header {
+  position: relative;
+  z-index: 1;
   min-height: 72px;
   display: flex;
   align-items: center;
@@ -174,6 +177,7 @@ onBeforeUnmount(restorePreviousFocus)
   gap: 18px;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border-muted);
+  background: color-mix(in srgb, var(--bg-surface) 88%, transparent);
 }
 
 .dialog-header p {
@@ -210,10 +214,13 @@ onBeforeUnmount(restorePreviousFocus)
 }
 
 .dialog-body {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
   gap: 13px;
   padding: 20px;
+  background: color-mix(in srgb, var(--bg-surface) 82%, var(--bg-subtle));
 }
 
 .dialog-icon {
@@ -247,12 +254,25 @@ onBeforeUnmount(restorePreviousFocus)
 }
 
 .dialog-actions {
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   padding: 14px 20px;
   border-top: 1px solid var(--border-muted);
-  background: color-mix(in srgb, var(--bg-subtle) 55%, var(--bg-surface));
+  background: color-mix(in srgb, var(--bg-surface) 92%, var(--bg-subtle));
+}
+
+:global(:root[data-theme='dark']) .confirm-dialog {
+  background: rgba(15, 23, 42, 0.94);
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+:global(:root[data-theme='dark']) .dialog-header,
+:global(:root[data-theme='dark']) .dialog-body,
+:global(:root[data-theme='dark']) .dialog-actions {
+  background: rgba(15, 23, 42, 0.86);
 }
 
 .cancel-button,

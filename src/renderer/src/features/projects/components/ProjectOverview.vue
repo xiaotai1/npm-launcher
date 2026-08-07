@@ -94,8 +94,8 @@ function triggerOnboarding(action: string | null) {
 }
 
 const isMac = computed(() => window.electronAPI?.platform === 'darwin')
-// 预留：用于在 macOS / Windows / Linux 上扩展更多快捷键提示时统一判断修饰键。
-const modifierKey = computed(() => isMac.value ? 'mac' : 'win')
+const primaryShortcutKey = computed(() => isMac.value ? '⌘' : 'Ctrl')
+const primaryShortcutLabel = computed(() => isMac.value ? 'Command' : 'Control')
 
 const recentProjects = computed(() => props.projects.slice(0, 2))
 
@@ -319,21 +319,13 @@ function getStatusColor(projectId: string) {
             </header>
             <ul class="shortcuts-list">
               <li>
-                <span class="shortcut-key"><kbd>Ctrl</kbd><span>+</span><kbd>N</kbd></span>
+                <span class="shortcut-key"><kbd :aria-label="primaryShortcutLabel">{{ primaryShortcutKey }}</kbd><span>+</span><kbd>N</kbd></span>
                 <span>快速添加项目</span>
               </li>
               <li>
-                <span class="shortcut-key"><kbd>Ctrl</kbd><span>+</span><kbd>K</kbd></span>
+                <span class="shortcut-key"><kbd :aria-label="primaryShortcutLabel">{{ primaryShortcutKey }}</kbd><span>+</span><kbd>K</kbd></span>
                 <span>命令面板</span>
                 <span class="shortcut-soon">即将开放</span>
-              </li>
-              <li>
-                <span class="shortcut-key"><kbd>Ctrl</kbd><span>+</span><kbd>R</kbd></span>
-                <span>运行当前项目</span>
-              </li>
-              <li>
-                <span class="shortcut-key"><kbd>Ctrl</kbd><span>+</span><kbd>.</kbd></span>
-                <span>停止当前项目</span>
               </li>
             </ul>
           </section>
@@ -460,7 +452,17 @@ function getStatusColor(projectId: string) {
 .overview-pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 0 var(--success); animation: dotPulse 1.5s ease-in-out infinite; color: var(--success); }
 .overview-actions { display: flex; gap: 8px; }
 
-.overview-content { position: relative; z-index: 1; min-height: calc(100% - 96px); max-width: 1320px; margin: 0 auto; padding: 24px 28px 36px; display: flex; flex-direction: column; }
+.overview-content {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 1760px);
+  min-height: calc(100% - 96px);
+  margin: 0 auto;
+  padding: clamp(24px, 1.8vw, 34px) clamp(28px, 2vw, 42px) 40px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
 
 /* 统计卡片 — 等宽 1:1:1，避免数字位差异造成的不协调 */
 .stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
@@ -489,8 +491,8 @@ function getStatusColor(projectId: string) {
 .failure-actions button { min-height: 28px; padding: 0 9px; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-secondary); background: var(--bg-surface); font-size: 10px; font-weight: 700; }
 .failure-actions button:hover { color: var(--error); border-color: color-mix(in srgb, var(--error) 36%, var(--border-default)); background: var(--error-bg); }
 
-.overview-main-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; margin-top: 16px; }
-.project-grid { grid-column: span 1; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; align-items: stretch; }
+.overview-main-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(420px, 2fr); gap: clamp(16px, 1.4vw, 22px); align-items: start; margin-top: clamp(16px, 1.4vw, 22px); }
+.project-grid { grid-column: span 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: stretch; }
 .project-empty-slot { height: 100%; min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 18px; border: 1px dashed var(--glass-border); border-radius: 16px; color: var(--text-tertiary); background: var(--glass-fill); backdrop-filter: blur(calc(var(--glass-blur) + 4px)) saturate(calc(var(--glass-saturate) - 20%)); -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 4px)) saturate(calc(var(--glass-saturate) - 20%)); text-align: center; }
 .project-empty-slot:hover { color: var(--accent-primary); border-color: var(--accent-border); background: var(--glass-fill-hover); }
 .project-empty-slot strong { color: var(--text-secondary); font-size: 12px; }
@@ -535,11 +537,13 @@ function getStatusColor(projectId: string) {
 .shortcuts-panel > header { min-height: 44px; display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--border-muted); }
 .shortcuts-panel h2 { margin: 0; font-size: 12px; font-weight: 750; }
 .shortcuts-panel > header span { display: block; margin-top: 2px; color: var(--text-tertiary); font-size: 9px; }
-.shortcuts-list { margin: 0; padding: 8px 14px 12px; list-style: none; display: flex; flex-direction: column; gap: 6px; }
-.shortcuts-list li { display: grid; grid-template-columns: 110px 1fr auto; align-items: center; gap: 12px; color: var(--text-secondary); font-size: 11px; }
-.shortcut-key { display: inline-flex; align-items: center; gap: 3px; }
-.shortcut-key kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border: 1px solid var(--border-default); border-bottom-width: 2px; border-radius: 5px; color: var(--text-secondary); background: var(--bg-elevated); font: 700 10px/1 var(--font-mono); }
-.shortcut-key span { color: var(--text-tertiary); font-weight: 700; }
+.shortcuts-list { margin: 0; padding: 12px 14px 14px; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.shortcuts-list li { display: grid; grid-template-columns: 124px 1fr auto; align-items: center; gap: 12px; color: var(--text-secondary); font-size: 11px; }
+.shortcut-key { display: inline-flex; align-items: center; gap: 5px; }
+.shortcut-key kbd { position: relative; display: inline-grid; place-items: center; min-width: 36px; height: 32px; padding: 0 10px; border: 1px solid color-mix(in srgb, var(--border-default) 86%, #fff); border-bottom-width: 3px; border-radius: 9px; color: var(--text-secondary); background: linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 82%, #fff), var(--bg-elevated)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), inset 0 -1px 0 rgba(0, 0, 0, 0.06), 0 2px 4px rgba(30, 45, 65, 0.1); font: 800 13px/1 var(--font-mono); letter-spacing: -0.02em; }
+.shortcut-key kbd:first-child { min-width: 42px; font-size: 15px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', var(--font-mono); }
+.shortcut-key span { color: var(--text-tertiary); font-size: 14px; font-weight: 800; }
+:global(:root[data-theme='dark']) .shortcut-key kbd { border-color: rgba(148, 163, 184, 0.24); border-bottom-color: rgba(148, 163, 184, 0.34); color: var(--text-secondary); background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.96)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.28), 0 2px 5px rgba(0, 0, 0, 0.28); }
 .shortcut-soon { padding: 2px 7px; border: 1px dashed var(--border-strong); border-radius: 999px; color: var(--text-tertiary); font: 700 9px/1.2 var(--font-mono); letter-spacing: 0.04em; }
 
 .activity-panel { border: 1px solid var(--glass-border); border-radius: 16px; background: var(--glass-fill); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); box-shadow: var(--glass-shadow); display: flex; flex-direction: column; overflow: hidden; }

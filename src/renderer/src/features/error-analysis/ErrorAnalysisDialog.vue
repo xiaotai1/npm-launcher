@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
 import type { ErrorAnalysis } from '../../shared/types'
 
 const props = defineProps<{
@@ -9,16 +8,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: [] }>()
 
-const show = ref(false)
-
-watch(() => props.visible, (val) => {
-  if (val) {
-    show.value = true
-  }
-})
-
 function onClose() {
-  show.value = false
   emit('close')
 }
 
@@ -40,7 +30,7 @@ function severityClass(severity: string): string {
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="show && analysis" class="fixed inset-0 z-2000 flex items-center justify-center modal-overlay" @click="onOverlayClick">
+      <div v-if="visible && analysis" class="fixed inset-0 z-2000 flex items-center justify-center modal-overlay" @click="onOverlayClick">
         <div class="min-w-85 max-w-120 rounded-2xl animate-dialog-in modal-dialog" @click.stop>
           <div class="p-6 px-7 modal-content">
             <div class="flex items-center gap-2.5 mb-4 modal-header">
@@ -95,7 +85,7 @@ function severityClass(severity: string): string {
 
 <style scoped>
 .modal-overlay {
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--modal-backdrop);
   backdrop-filter: blur(12px);
   -webkit-app-region: no-drag;
 }

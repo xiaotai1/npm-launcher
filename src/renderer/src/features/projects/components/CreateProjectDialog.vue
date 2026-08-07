@@ -192,10 +192,15 @@ watch(() => props.visible, visible => {
 
               <div class="field-group">
                 <label for="create-project-command">启动命令</label>
-                <select id="create-project-command" v-model="projectDraft.command" :disabled="loadingScripts || availableScripts.length === 0">
-                  <option value="" disabled>{{ loadingScripts ? '正在加载…' : availableScripts.length ? '选择启动命令' : '请先选择项目目录' }}</option>
-                  <option v-for="script in availableScripts" :key="script" :value="script">npm run {{ script }}</option>
-                </select>
+                <div class="select-control">
+                  <select id="create-project-command" v-model="projectDraft.command" :disabled="loadingScripts || availableScripts.length === 0">
+                    <option value="" disabled>{{ loadingScripts ? '正在加载…' : availableScripts.length ? '选择启动命令' : '请先选择项目目录' }}</option>
+                    <option v-for="script in availableScripts" :key="script" :value="script">npm run {{ script }}</option>
+                  </select>
+                  <svg class="select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="m7 10 5 5 5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
               </div>
             </template>
 
@@ -224,12 +229,18 @@ watch(() => props.visible, visible => {
 </template>
 
 <style scoped>
-.create-dialog-backdrop { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 28px; background: rgba(4, 9, 17, .42); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.create-dialog-backdrop { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 28px; background: var(--modal-backdrop); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .create-dialog { width: min(460px, calc(100vw - 40px)); overflow: hidden; border: 1px solid var(--glass-border); border-radius: 18px; color: var(--text-primary); background: var(--glass-fill-strong); backdrop-filter: blur(28px) saturate(170%); -webkit-backdrop-filter: blur(28px) saturate(170%); box-shadow: var(--glass-shadow); }
 .create-dialog::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--glass-edge); pointer-events: none; }
 .dialog-header { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 20px; border-bottom: 1px solid var(--border-muted); }.dialog-header p { margin: 0 0 4px; color: var(--text-tertiary); font: 700 9px/1 var(--font-mono); letter-spacing: .14em; }.dialog-header h2 { margin: 0; font-size: 17px; letter-spacing: -.025em; }.dialog-close { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; color: var(--text-tertiary); }.dialog-close:hover { color: var(--text-primary); background: var(--bg-hover); }
 .mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 16px 20px 0; padding: 4px; border-radius: 10px; background: var(--bg-subtle); }.mode-switch button { min-height: 34px; display: flex; align-items: center; justify-content: center; gap: 7px; border-radius: 7px; color: var(--text-tertiary); font-size: 12px; font-weight: 650; }.mode-switch button:hover { color: var(--text-primary); }.mode-switch button.active { color: var(--accent-primary); background: var(--bg-surface); box-shadow: var(--shadow-sm); }
 .dialog-form { padding: 18px 20px 0; }.field-group { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }.field-group label { color: var(--text-secondary); font-size: 11px; font-weight: 650; }.field-group input,.field-group select { width: 100%; min-height: 40px; border-radius: 12px; font-size: 12px; }.field-group input[readonly] { color: var(--text-secondary); cursor: pointer; }.field-group input:focus,.field-group select:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--accent-glow), 0 0 12px color-mix(in srgb, var(--accent-glow) 80%, transparent); outline: none; }.path-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }.browse-button { min-width: 68px; border: 1px solid var(--accent-border); border-radius: 10px; color: var(--accent-primary); background: var(--bg-surface); font-size: 11px; font-weight: 700; }.browse-button:hover:not(:disabled) { background: var(--accent-glow); }.field-hint { min-height: 16px; color: var(--text-secondary); font-size: 10px; }
+.select-control { position: relative; }
+.select-control select { appearance: none; -webkit-appearance: none; padding-right: 42px; color: var(--text-primary); background: var(--bg-elevated); cursor: pointer; }
+.select-control select:disabled { color: var(--text-secondary); cursor: not-allowed; opacity: 1; }
+.select-arrow { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none; transition: color 160ms ease; }
+.select-control:focus-within .select-arrow { color: var(--accent-primary); }
+.select-control:has(select:disabled) .select-arrow { color: var(--text-tertiary); opacity: 0.72; }
 .folder-intro { display: flex; align-items: center; gap: 12px; margin-bottom: 17px; padding: 12px; border: 1px solid var(--border-muted); border-radius: 10px; background: var(--bg-subtle); }.folder-mark { width: 38px; height: 38px; display: grid; place-items: center; flex: none; border-radius: 9px; color: var(--accent-primary); background: var(--accent-glow); }.folder-intro strong,.folder-intro span { display: block; }.folder-intro strong { color: var(--text-primary); font-size: 11px; }.folder-intro span { margin-top: 3px; color: var(--text-secondary); font-size: 10px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin: 4px -20px 0; padding: 14px 20px; border-top: 1px solid var(--border-muted); background: color-mix(in srgb, var(--bg-subtle) 55%, var(--bg-surface)); }.cancel-button,.submit-button { min-height: 36px; padding: 0 15px; border-radius: 8px; font-size: 11px; font-weight: 700; }.cancel-button { color: var(--text-secondary); border: 1px solid var(--border-default); background: var(--bg-surface); }.cancel-button:hover { color: var(--text-primary); background: var(--bg-hover); }.submit-button { min-width: 94px; color: #fff; background: var(--accent-primary); box-shadow: 0 3px 10px var(--accent-glow); }.submit-button:hover:not(:disabled) { background: var(--accent-primary-hover); }
 .create-dialog-enter-active,.create-dialog-leave-active { transition: opacity 180ms ease; }.create-dialog-enter-active .create-dialog,.create-dialog-leave-active .create-dialog { transition: transform 180ms ease, opacity 180ms ease; }.create-dialog-enter-from,.create-dialog-leave-to { opacity: 0; }.create-dialog-enter-from .create-dialog,.create-dialog-leave-to .create-dialog { opacity: 0; transform: translateY(6px) scale(.985); }
