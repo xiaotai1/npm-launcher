@@ -1,7 +1,6 @@
 import { spawn, exec, ChildProcess } from 'child_process'
 import { BrowserWindow } from 'electron'
 import * as iconv from 'iconv-lite'
-import { deleteProject } from './configManager'
 import { getProjectEnv } from './platform'
 import { startLogSession, recordLogLine, finishLogSession, analyzeErrors } from './logManager'
 import { detectPackageManager, getPackageManagerCommand } from './packageManager'

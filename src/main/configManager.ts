@@ -113,12 +113,6 @@ export function deleteProject(projectId: string): boolean {
   return saveConfig(config)
 }
 
-export function updateTheme(theme: 'light' | 'dark' | 'system'): boolean {
-  const config = getConfig()
-  config.theme = theme
-  return saveConfig(config)
-}
-
 export function reorderProjects(projectIds: string[]): boolean {
   const config = getConfig()
   const idSet = new Set(projectIds)
