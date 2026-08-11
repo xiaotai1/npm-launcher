@@ -15,9 +15,6 @@ const logFlushTimers: Map<string, NodeJS.Timeout> = new Map()
 const LOG_FLUSH_INTERVAL = 30 // ms
 const LOG_MAX_BUFFER_SIZE = 50 // 超过此数量立即刷新
 
-// 记录用户手动停止的项目，避免被误判为 error
-const manualStopped: Set<string> = new Set()
-
 export interface ProcessStatus {
   projectId: string
   status: 'running' | 'stopped' | 'error'
@@ -246,10 +243,8 @@ export async function startProject(
   command: string,
   nodeVersion?: string
 ): Promise<boolean> {
-  // 先停止已运行的进程
-  if (runningProcesses.has(projectId)) {
-    stopProject(projectId)
-  }
+  // 重复启动按成功处理，避免旧进程退出回调干扰新进程状态
+  if (runningProcesses.has(projectId)) return true
 
   try {
     let child: ChildProcess
@@ -313,29 +308,23 @@ export async function startProject(
 
     // 进程关闭
     child.on('close', (code) => {
+      if (runningProcesses.get(projectId) !== child) return
+
       // 清理日志缓冲区，发送剩余日志
       cleanupLogBuffer(mainWindow, projectId)
 
       runningProcesses.delete(projectId)
-      // 如果是用户手动停止的，状态设为 stopped
-      const wasManualStop = manualStopped.has(projectId)
-      manualStopped.delete(projectId)
-      if (wasManualStop) {
-        sendStatus(mainWindow, projectId, 'stopped', { exitCode: code ?? 0 })
-        sendLog(mainWindow, projectId, 'info', processLogLine('已手动停止', 'info', Date.now()))
-      } else {
-        sendStatus(mainWindow, projectId, code === 0 ? 'stopped' : 'error', { exitCode: code ?? 0 })
-        sendLog(mainWindow, projectId, 'info', processLogLine(`进程退出，代码: ${code ?? 0}`, 'info', Date.now()))
+      sendStatus(mainWindow, projectId, code === 0 ? 'stopped' : 'error', { exitCode: code ?? 0 })
+      sendLog(mainWindow, projectId, 'info', processLogLine(`进程退出，代码: ${code ?? 0}`, 'info', Date.now()))
 
-        // 异常退出时触发错误分析
-        if (code !== 0 && code !== null && mainWindow && !mainWindow.isDestroyed()) {
-          const analysis = analyzeErrors(projectId, code)
-          if (analysis) {
-            try {
-              mainWindow.webContents.send('error-analysis', analysis)
-            } catch {
-              // 窗口可能已销毁
-            }
+      // 异常退出时触发错误分析
+      if (code !== 0 && code !== null && mainWindow && !mainWindow.isDestroyed()) {
+        const analysis = analyzeErrors(projectId, code)
+        if (analysis) {
+          try {
+            mainWindow.webContents.send('error-analysis', analysis)
+          } catch {
+            // 窗口可能已销毁
           }
         }
       }
@@ -344,6 +333,8 @@ export async function startProject(
 
     // 进程错误
     child.on('error', (error) => {
+      if (runningProcesses.get(projectId) !== child) return
+
       // 清理日志缓冲区，发送剩余日志
       cleanupLogBuffer(mainWindow, projectId)
 
@@ -375,9 +366,12 @@ export function stopProject(projectId: string, mainWindow: BrowserWindow | null 
   }
 
   try {
-    // 标记为手动停止
-    manualStopped.add(projectId)
     runningProcesses.delete(projectId)
+
+    // 先完成本次日志会话，避免马上重启时旧进程收尾污染新会话
+    cleanupLogBuffer(mainWindow, projectId)
+    sendLog(mainWindow, projectId, 'info', processLogLine('已手动停止', 'info', Date.now()))
+    finishLogSession(projectId)
 
     // 立即通知 UI 进程已停止，不用等 close 事件
     sendStatus(mainWindow, projectId, 'stopped')
@@ -410,15 +404,8 @@ export function stopProject(projectId: string, mainWindow: BrowserWindow | null 
       }, 1000)
     }
 
-    // 异步清理日志，不阻塞返回
-    setImmediate(() => {
-      cleanupLogBuffer(mainWindow, projectId)
-      finishLogSession(projectId)
-    })
-
     return true
   } catch {
-    manualStopped.delete(projectId)
     return false
   }
 }

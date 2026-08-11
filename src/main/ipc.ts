@@ -416,6 +416,8 @@ export function setupIpc(): void {
     const result = createStartAllProjectsResult()
 
     for (const projectId of projectIds) {
+      if (isProcessRunning(projectId)) continue
+
       const configuredProject = config.projects.find(project => project.id === projectId)
       if (!configuredProject) {
         recordStartFailure(result, { id: projectId, name: '未知项目' }, '项目配置不存在')
