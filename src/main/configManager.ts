@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { join } from 'path'
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs'
 
 // 项目配置
 export interface Project {
@@ -59,16 +59,29 @@ export function getConfig(): AppConfig {
     }
   } catch (error) {
     console.error('读取配置失败:', error)
+    try {
+      renameSync(configPath, `${configPath}.corrupt-${Date.now()}`)
+      saveConfig(defaultConfig)
+    } catch {
+      // 备份失败时保留原文件，避免覆盖仍可恢复的数据
+    }
     return defaultConfig
   }
 }
 
 export function saveConfig(config: AppConfig): boolean {
   const configPath = getConfigPath()
+  const tempPath = `${configPath}.${process.pid}.${Date.now()}.tmp`
   try {
-    writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8')
+    writeFileSync(tempPath, JSON.stringify(config, null, 2), 'utf-8')
+    renameSync(tempPath, configPath)
     return true
   } catch (error) {
+    try {
+      rmSync(tempPath, { force: true })
+    } catch {
+      // 临时文件清理失败不覆盖原始保存错误
+    }
     console.error('保存配置失败:', error)
     return false
   }
