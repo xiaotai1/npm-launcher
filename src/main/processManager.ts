@@ -185,15 +185,17 @@ function flushLogBuffer(mainWindow: BrowserWindow | null, projectId: string): vo
     logFlushTimers.delete(projectId)
   }
 
-  // 合并同类型日志为一条 IPC 消息，大幅减少 IPC 调用次数
-  const grouped = new Map<LogEntry['type'], string[]>()
+  // 只合并相邻同类型日志，减少 IPC 调用且保持 stdout/stderr 原始顺序
+  const grouped: { type: LogEntry['type']; lines: string[] }[] = []
   for (const entry of entries) {
-    if (!grouped.has(entry.type)) {
-      grouped.set(entry.type, [])
+    const current = grouped[grouped.length - 1]
+    if (current?.type === entry.type) {
+      current.lines.push(entry.data)
+    } else {
+      grouped.push({ type: entry.type, lines: [entry.data] })
     }
-    grouped.get(entry.type)!.push(entry.data)
   }
-  for (const [type, lines] of grouped) {
+  for (const { type, lines } of grouped) {
     sendLog(mainWindow, projectId, type, lines.join('\r\n'))
   }
 }
