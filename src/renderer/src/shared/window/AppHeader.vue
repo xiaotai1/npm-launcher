@@ -148,6 +148,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 <style scoped>
 .app-header {
+  z-index: 50;
   height: 44px;
   min-height: 44px;
   -webkit-app-region: drag;

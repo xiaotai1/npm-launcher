@@ -83,6 +83,7 @@ function formatLocalUrl(url: string) {
         class="project-local-button"
         :title="localUrl"
         :aria-label="`打开 ${project.name} 页面`"
+        :disabled="status?.status !== 'running'"
         @click.stop="emit('open-url', localUrl)"
       >
         <span>{{ project.name }}</span>
@@ -146,7 +147,7 @@ function formatLocalUrl(url: string) {
 .project-section-heading strong { color: var(--text-primary); font-size: 11px; }
 .project-section-heading span { color: var(--text-tertiary); font-size: 9px; }
 .project-local-button { width: 100%; min-height: 40px; display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.2fr) auto; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--border-muted); border-radius: 8px; color: var(--text-secondary); background: var(--bg-subtle); text-align: left; }
-.project-local-button:hover { color: var(--accent-primary); border-color: var(--accent-border); background: var(--bg-hover); }
+.project-local-button:hover:not(:disabled) { color: var(--accent-primary); border-color: var(--accent-border); background: var(--bg-hover); }
 .project-local-button span,.project-local-button code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .project-local-button span { font-size: 10px; font-weight: 700; }
 .project-local-button code { color: var(--text-tertiary); font: 10px/1 var(--font-mono); }

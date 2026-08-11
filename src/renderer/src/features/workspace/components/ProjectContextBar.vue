@@ -150,7 +150,7 @@ watch(() => props.status?.status, () => {
       <button class="icon-action" aria-label="用 VS Code 打开项目" data-tooltip="用 VS Code 打开" @click="emit('open-vscode')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m16 5 5 3v8l-5 3-9-7z"/><path d="m7 12-4-3 2-2 4 3m-2 2-4 3 2 2 4-3"/></svg>
       </button>
-      <button v-if="localUrl" class="button-secondary" :title="localUrl" @click="emit('open-url', localUrl)">打开页面</button>
+      <button v-if="localUrl" class="button-secondary" :title="localUrl" :disabled="status?.status !== 'running'" @click="emit('open-url', localUrl)">打开页面</button>
       <button class="button-secondary" @click="emit('edit')">编辑</button>
       <button v-if="status?.status === 'running'" class="context-primary stop" @click="emit('stop')">停止</button>
       <button v-else class="context-primary" @click="emit('start')">启动</button>
