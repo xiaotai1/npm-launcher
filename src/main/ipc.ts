@@ -52,6 +52,21 @@ interface ConfigTransferResult {
 
 const execAsync = promisify(exec)
 
+function spawnDetached(command: string, args: string[]): Promise<boolean> {
+  return new Promise(resolve => {
+    try {
+      const child = spawn(command, args, { detached: true, stdio: 'ignore' })
+      child.once('error', () => resolve(false))
+      child.once('spawn', () => {
+        child.unref()
+        resolve(true)
+      })
+    } catch {
+      resolve(false)
+    }
+  })
+}
+
 export function setupIpc(): void {
   setupPtyIpc()
   // ===== 配置管理 =====
@@ -340,12 +355,8 @@ export function setupIpc(): void {
 
     for (const cmd of candidates) {
       if (existsSync(cmd) || !cmd.includes('/')) {
-        try {
-          const child = spawn(cmd, ['-n', folderPath], { detached: true, stdio: 'ignore' })
-          child.unref()
+        if (await spawnDetached(cmd, ['-n', folderPath])) {
           return { success: true }
-        } catch {
-          continue
         }
       }
     }
