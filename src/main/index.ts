@@ -1,44 +1,10 @@
 import { app, BrowserWindow, nativeTheme, Menu } from 'electron'
 import { join } from 'path'
-import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { setupIpc } from './ipc'
 import { stopAllProcesses } from './processManager'
 import { killAllPty } from './ptyManager'
 import { getShellEnv, isMac } from './platform'
-
-// 国内镜像源
-const NODE_MIRROR = 'https://npmmirror.com/mirrors/node/'
-const NPM_MIRROR = 'https://npmmirror.com/mirrors/npm/'
-
-/**
- * 检测并设置 nvm 国内镜像源
- */
-function ensureNvmMirror(): void {
-  const nvmHome = process.env.NVM_HOME
-  if (!nvmHome || !existsSync(nvmHome)) return
-
-  const settingsPath = join(nvmHome, 'settings.txt')
-  if (!existsSync(settingsPath)) return
-
-  try {
-    let content = readFileSync(settingsPath, 'utf-8')
-    let changed = false
-
-    // 检查 node_mirror
-    if (!content.includes('npmmirror.com') && !content.includes('taobao.org')) {
-      content = content.replace(/^node_mirror:\s*.*$/m, `node_mirror: ${NODE_MIRROR}`)
-      content = content.replace(/^npm_mirror:\s*.*$/m, `npm_mirror: ${NPM_MIRROR}`)
-      changed = true
-    }
-
-    if (changed) {
-      writeFileSync(settingsPath, content, 'utf-8')
-    }
-  } catch {
-    // 静默失败，不影响启动
-  }
-}
 
 let mainWindow: BrowserWindow | null = null
 
@@ -94,7 +60,6 @@ app.whenReady().then(async () => {
   }
 
   createWindow()
-  ensureNvmMirror()
   setupIpc()
 
   // macOS: 设置应用菜单，避免菜单栏显示 "Electron"
