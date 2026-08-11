@@ -335,8 +335,8 @@ export function setupIpc(): void {
   // 在系统文件管理器中打开文件夹
   ipcMain.handle('open-in-file-manager', async (_event, folderPath: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      await shell.openPath(folderPath)
-      return { success: true }
+      const error = await shell.openPath(folderPath)
+      return error ? { success: false, error } : { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
     }
