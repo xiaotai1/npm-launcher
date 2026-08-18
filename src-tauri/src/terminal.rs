@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     io::{Read, Write},
     sync::{Arc, Mutex},
     thread,
@@ -16,11 +15,27 @@ use crate::{
 };
 
 type SharedPtyChild = Arc<Mutex<Box<dyn Child + Send + Sync>>>;
+type SharedPtyMaster = Arc<Mutex<Box<dyn MasterPty + Send>>>;
+type SharedPtyWriter = Arc<Mutex<Box<dyn Write + Send>>>;
 
+#[derive(Clone)]
 pub struct PtySession {
-    master: Box<dyn MasterPty + Send>,
-    writer: Box<dyn Write + Send>,
+    generation: u64,
+    master: SharedPtyMaster,
+    writer: SharedPtyWriter,
     child: SharedPtyChild,
+}
+
+fn terminal_is_current(state: &AppState, id: &str, generation: u64) -> bool {
+    state
+        .terminals
+        .lock()
+        .map(|terminals| {
+            terminals
+                .get(id)
+                .is_some_and(|session| session.generation == generation)
+        })
+        .unwrap_or(false)
 }
 
 fn emit_error(app: &AppHandle, id: &str, message: &str) {
@@ -40,7 +55,7 @@ fn emit_error(app: &AppHandle, id: &str, message: &str) {
     );
 }
 
-fn monitor_child(app: AppHandle, id: String, child: SharedPtyChild) {
+fn monitor_child(app: AppHandle, id: String, generation: u64, child: SharedPtyChild) {
     thread::spawn(move || loop {
         let exit_code = {
             let Ok(mut process) = child.lock() else {
@@ -54,27 +69,41 @@ fn monitor_child(app: AppHandle, id: String, child: SharedPtyChild) {
         };
         if let Some(exit_code) = exit_code {
             let state = app.state::<AppState>();
-            if let Ok(mut terminals) = state.terminals.lock() {
-                terminals.remove(&id);
+            let is_current = state
+                .terminals
+                .lock()
+                .ok()
+                .and_then(|mut terminals| {
+                    let matches = terminals
+                        .get(&id)
+                        .is_some_and(|session| session.generation == generation);
+                    matches.then(|| terminals.remove(&id)).flatten()
+                })
+                .is_some();
+            if is_current {
+                let _ = app.emit(
+                    "pty-exit",
+                    PtyExitEvent {
+                        id: id.clone(),
+                        exit_code,
+                    },
+                );
             }
-            let _ = app.emit(
-                "pty-exit",
-                PtyExitEvent {
-                    id: id.clone(),
-                    exit_code,
-                },
-            );
             return;
         }
         thread::sleep(Duration::from_millis(100));
     });
 }
 
-fn read_terminal(app: AppHandle, id: String, mut reader: Box<dyn Read + Send>) {
+fn read_terminal(app: AppHandle, id: String, generation: u64, mut reader: Box<dyn Read + Send>) {
     thread::spawn(move || {
         let mut buffer = [0_u8; 8192];
         while let Ok(size) = reader.read(&mut buffer) {
             if size == 0 {
+                return;
+            }
+            let state = app.state::<AppState>();
+            if !terminal_is_current(&state, &id, generation) {
                 return;
             }
             let _ = app.emit(
@@ -145,52 +174,72 @@ pub fn spawn_terminal(app: &AppHandle, request: PtySpawnRequest) -> Result<(), S
         .master
         .take_writer()
         .map_err(|error| format!("写入终端失败：{error}"))?;
+    let generation = state.next_terminal_generation();
     let child = Arc::new(Mutex::new(child));
     let session = PtySession {
-        master: pair.master,
-        writer,
+        generation,
+        master: Arc::new(Mutex::new(pair.master)),
+        writer: Arc::new(Mutex::new(writer)),
         child: child.clone(),
     };
 
-    state
+    let mut terminals = state
         .terminals
         .lock()
-        .map_err(|_| "终端状态不可用".to_string())?
-        .insert(request.id.clone(), session);
-    read_terminal(app.clone(), request.id.clone(), reader);
-    monitor_child(app.clone(), request.id, child);
+        .map_err(|_| "终端状态不可用".to_string())?;
+    if terminals.contains_key(&request.id) {
+        drop(terminals);
+        if let Ok(mut process) = child.lock() {
+            let _ = process.kill();
+        }
+        return Ok(());
+    }
+    terminals.insert(request.id.clone(), session);
+    drop(terminals);
+
+    read_terminal(app.clone(), request.id.clone(), generation, reader);
+    monitor_child(app.clone(), request.id, generation, child);
     Ok(())
 }
 
-pub fn spawn_terminal_or_emit(app: &AppHandle, request: PtySpawnRequest) {
+pub fn spawn_terminal_or_emit(app: &AppHandle, request: PtySpawnRequest) -> bool {
     let id = request.id.clone();
-    if let Err(error) = spawn_terminal(app, request) {
-        emit_error(app, &id, &error);
+    match spawn_terminal(app, request) {
+        Ok(()) => true,
+        Err(error) => {
+            emit_error(app, &id, &error);
+            false
+        }
     }
 }
 
 pub fn write_terminal(state: &AppState, id: &str, data: &str) -> bool {
-    state
+    let session = state
         .terminals
         .lock()
         .ok()
-        .and_then(|mut terminals| {
-            terminals
-                .get_mut(id)
-                .map(|session| session.writer.write_all(data.as_bytes()).is_ok())
+        .and_then(|terminals| terminals.get(id).cloned());
+    session
+        .and_then(|session| {
+            session
+                .writer
+                .lock()
+                .ok()
+                .map(|mut writer| writer.write_all(data.as_bytes()).is_ok())
         })
         .unwrap_or(false)
 }
 
 pub fn resize_terminal(state: &AppState, id: &str, cols: u16, rows: u16) -> bool {
-    state
+    let session = state
         .terminals
         .lock()
         .ok()
-        .and_then(|terminals| {
-            terminals.get(id).map(|session| {
-                session
-                    .master
+        .and_then(|terminals| terminals.get(id).cloned());
+    session
+        .and_then(|session| {
+            session.master.lock().ok().map(|master| {
+                master
                     .resize(PtySize {
                         rows,
                         cols,
@@ -220,12 +269,16 @@ pub fn kill_terminal(state: &AppState, id: &str) -> bool {
 }
 
 pub fn kill_all_terminals(state: &AppState) {
-    let sessions: HashMap<String, PtySession> = state
+    let sessions = state
         .terminals
         .lock()
-        .map(|mut terminals| std::mem::take(&mut *terminals))
+        .map(|mut terminals| {
+            std::mem::take(&mut *terminals)
+                .into_values()
+                .collect::<Vec<_>>()
+        })
         .unwrap_or_default();
-    for (_, session) in sessions {
+    for session in sessions {
         if let Ok(mut child) = session.child.lock() {
             let _ = child.kill();
         }
@@ -233,10 +286,15 @@ pub fn kill_all_terminals(state: &AppState) {
 }
 
 pub fn broadcast_to_all_terminals(state: &AppState, command: &str) {
-    if let Ok(mut terminals) = state.terminals.lock() {
-        let payload = format!("{command}\n");
-        for session in terminals.values_mut() {
-            let _ = session.writer.write_all(payload.as_bytes());
+    let sessions = state
+        .terminals
+        .lock()
+        .map(|terminals| terminals.values().cloned().collect::<Vec<_>>())
+        .unwrap_or_default();
+    let payload = format!("{command}\n");
+    for session in sessions {
+        if let Ok(mut writer) = session.writer.lock() {
+            let _ = writer.write_all(payload.as_bytes());
         }
     }
 }

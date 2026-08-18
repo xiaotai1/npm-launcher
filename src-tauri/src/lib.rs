@@ -137,7 +137,7 @@ pub fn run() {
             }
         }
         if matches!(event, tauri::RunEvent::Exit) {
-            process::stop_all_processes(app);
+            process::stop_all_processes_for_exit(app);
             if let Some(state) = app.try_state::<state::AppState>() {
                 terminal::kill_all_terminals(&state);
             }

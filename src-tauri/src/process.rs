@@ -138,7 +138,12 @@ fn read_stream(
     });
 }
 
-fn flush_process_logs(app: &AppHandle, project_id: &str, pending: &mut Vec<(LogType, Vec<u8>)>) {
+fn flush_process_logs(
+    app: &AppHandle,
+    project_id: &str,
+    generation: u64,
+    pending: &mut Vec<(LogType, Vec<u8>)>,
+) {
     let mut grouped: Vec<(LogType, Vec<u8>)> = Vec::new();
     for (kind, bytes) in pending.drain(..) {
         if let Some((current_kind, current_bytes)) = grouped.last_mut() {
@@ -148,6 +153,17 @@ fn flush_process_logs(app: &AppHandle, project_id: &str, pending: &mut Vec<(LogT
             }
         }
         grouped.push((kind, bytes));
+    }
+
+    let state = app.state::<AppState>();
+    let Ok(processes) = state.processes.lock() else {
+        return;
+    };
+    if !processes
+        .get(project_id)
+        .is_some_and(|handle| handle.generation == generation)
+    {
+        return;
     }
     for (kind, bytes) in grouped {
         emit_log(app, project_id, kind, &decode_output(&bytes));
@@ -179,35 +195,30 @@ fn consume_process_messages(
                 Ok(ProcessMessage::StreamClosed) => closed_streams += 1,
                 Ok(ProcessMessage::Exited(code)) => exit_code = Some(code),
                 Err(mpsc::RecvTimeoutError::Timeout) => {
-                    flush_process_logs(&app, &project_id, &mut pending);
+                    flush_process_logs(&app, &project_id, generation, &mut pending);
                     flush_deadline = None;
                 }
                 Err(mpsc::RecvTimeoutError::Disconnected) => break,
             }
             if pending.len() >= LOG_MAX_BUFFER_SIZE {
-                flush_process_logs(&app, &project_id, &mut pending);
+                flush_process_logs(&app, &project_id, generation, &mut pending);
                 flush_deadline = None;
             }
             if closed_streams >= 2 && exit_code.is_some() {
-                flush_process_logs(&app, &project_id, &mut pending);
+                flush_process_logs(&app, &project_id, generation, &mut pending);
                 break;
             }
         }
 
         let code = exit_code.unwrap_or(-1);
         let state = app.state::<AppState>();
-        let is_current = state
-            .processes
-            .lock()
-            .ok()
-            .and_then(|mut processes| {
-                let matches = processes
-                    .get(&project_id)
-                    .is_some_and(|handle| handle.generation == generation);
-                matches.then(|| processes.remove(&project_id)).flatten()
-            })
-            .is_some();
-        if !is_current {
+        let Ok(mut processes) = state.processes.lock() else {
+            return;
+        };
+        if !processes
+            .get(&project_id)
+            .is_some_and(|handle| handle.generation == generation)
+        {
             return;
         }
 
@@ -234,6 +245,7 @@ fn consume_process_messages(
             }
         }
         finish_log_session(&state, &project_id, Some(code));
+        processes.remove(&project_id);
     });
 }
 
@@ -341,10 +353,11 @@ pub fn start_project_process(
     Ok(())
 }
 
-fn terminate_process_tree(pid: u32) {
+fn terminate_process_tree(pid: u32, wait_for_exit: bool) {
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
+        let _ = wait_for_exit;
         let _ = Command::new("taskkill")
             .args(["/F", "/T", "/PID", &pid.to_string()])
             .creation_flags(0x08000000)
@@ -358,10 +371,20 @@ fn terminate_process_tree(pid: u32) {
         };
         let group = Pid::from_raw(pid as i32);
         let _ = killpg(group, Signal::SIGTERM);
-        thread::spawn(move || {
-            thread::sleep(Duration::from_secs(1));
+        let force_kill = move || {
+            for _ in 0..10 {
+                thread::sleep(Duration::from_millis(100));
+                if killpg(group, None).is_err() {
+                    return;
+                }
+            }
             let _ = killpg(group, Signal::SIGKILL);
-        });
+        };
+        if wait_for_exit {
+            force_kill();
+        } else {
+            thread::spawn(force_kill);
+        }
     }
 }
 
@@ -379,7 +402,7 @@ pub fn stop_project_process(app: &AppHandle, project_id: &str) -> bool {
     emit_log(app, project_id, LogType::Info, "已手动停止");
     finish_log_session(&state, project_id, None);
     emit_status(app, project_id, ProcessState::Stopped, None, None);
-    terminate_process_tree(handle.pid);
+    terminate_process_tree(handle.pid, false);
     true
 }
 
@@ -392,6 +415,22 @@ pub fn stop_all_processes(app: &AppHandle) {
         .unwrap_or_default();
     for project_id in project_ids {
         stop_project_process(app, &project_id);
+    }
+}
+
+pub fn stop_all_processes_for_exit(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let handles = state
+        .processes
+        .lock()
+        .map(|mut processes| {
+            std::mem::take(&mut *processes)
+                .into_values()
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    for handle in handles {
+        terminate_process_tree(handle.pid, true);
     }
 }
 

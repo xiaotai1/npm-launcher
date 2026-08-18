@@ -19,6 +19,8 @@ use crate::{
 
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
 const NVM_SWITCH_TIMEOUT: Duration = Duration::from_secs(15);
+#[cfg(windows)]
+const WINDOWS_UAC_TIMEOUT: Duration = Duration::from_secs(60);
 
 fn current_env() -> HashMap<String, String> {
     env::vars().collect()
@@ -312,35 +314,40 @@ fn timestamp_millis() -> u128 {
 }
 
 #[cfg(windows)]
-fn switch_windows_version(
-    environment: &HashMap<String, String>,
-    version: &str,
-) -> Result<(), String> {
+fn powershell_literal(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "''"))
+}
+
+#[cfg(windows)]
+fn update_windows_junction(
+    junction: &str,
+    target: Option<&Path>,
+    rollback_target: Option<&Path>,
+) -> Result<String, String> {
     use std::os::windows::process::CommandExt;
 
     const CREATE_NO_WINDOW: u32 = 0x08000000;
-    let nvm_home =
-        env_value(environment, "NVM_HOME").ok_or_else(|| "未找到 NVM_HOME 环境变量".to_string())?;
-    let nvm_symlink = env_value(environment, "NVM_SYMLINK")
-        .ok_or_else(|| "未找到 NVM_SYMLINK 环境变量".to_string())?;
-    let target = installed_version_dir(environment, version)
-        .ok_or_else(|| format!("版本 {version} 未安装"))?;
-
     let suffix = format!("{}-{}", std::process::id(), timestamp_millis());
     let temp_dir = env::temp_dir();
     let batch_path = temp_dir.join(format!("nvm-switch-{suffix}.bat"));
     let output_path = temp_dir.join(format!("nvm-switch-{suffix}.txt"));
     let script_path = temp_dir.join(format!("nvm-switch-{suffix}.ps1"));
-
-    let batch = format!(
-        "@echo off\r\nrmdir \"{nvm_symlink}\" 2>nul\r\nmklink /J \"{nvm_symlink}\" \"{}\" > \"{}\" 2>&1\r\n",
-        target.display(),
-        output_path.display()
-    );
+    let batch = "@echo off\r\nsetlocal EnableExtensions DisableDelayedExpansion\r\nif exist \"%NPM_LAUNCHER_LINK%\" rmdir \"%NPM_LAUNCHER_LINK%\"\r\nif errorlevel 1 exit /b 1\r\nif not defined NPM_LAUNCHER_TARGET exit /b 0\r\nmklink /J \"%NPM_LAUNCHER_LINK%\" \"%NPM_LAUNCHER_TARGET%\" > \"%NPM_LAUNCHER_OUTPUT%\" 2>&1\r\nif not errorlevel 1 exit /b 0\r\nset \"NPM_LAUNCHER_SWITCH_ERROR=%errorlevel%\"\r\nif not defined NPM_LAUNCHER_ROLLBACK goto switch_failed\r\nmklink /J \"%NPM_LAUNCHER_LINK%\" \"%NPM_LAUNCHER_ROLLBACK%\" >> \"%NPM_LAUNCHER_OUTPUT%\" 2>&1\r\n:switch_failed\r\nexit /b %NPM_LAUNCHER_SWITCH_ERROR%\r\n";
     fs::write(&batch_path, batch).map_err(|error| format!("创建切换脚本失败：{error}"))?;
+
+    let target = target
+        .map(|path| path.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let rollback_target = rollback_target
+        .map(|path| path.to_string_lossy().to_string())
+        .unwrap_or_default();
     let script = format!(
-        "Start-Process -FilePath cmd.exe -ArgumentList '/c \"{}\"' -Verb RunAs -Wait -WindowStyle Hidden\r\n",
-        batch_path.display()
+        "$env:NPM_LAUNCHER_LINK = {}\r\n$env:NPM_LAUNCHER_TARGET = {}\r\n$env:NPM_LAUNCHER_ROLLBACK = {}\r\n$env:NPM_LAUNCHER_OUTPUT = {}\r\n$batchPath = {}\r\ntry {{\r\n  $arguments = '/d /c \"' + $batchPath + '\"'\r\n  $process = Start-Process -FilePath cmd.exe -ArgumentList $arguments -Verb RunAs -Wait -PassThru -WindowStyle Hidden -ErrorAction Stop\r\n  exit $process.ExitCode\r\n}} catch {{\r\n  $_ | Out-File -LiteralPath $env:NPM_LAUNCHER_OUTPUT -Encoding utf8\r\n  exit 1\r\n}}\r\n",
+        powershell_literal(junction),
+        powershell_literal(&target),
+        powershell_literal(&rollback_target),
+        powershell_literal(&output_path.to_string_lossy()),
+        powershell_literal(&batch_path.to_string_lossy())
     );
     if let Err(error) = fs::write(&script_path, script) {
         let _ = fs::remove_file(&batch_path);
@@ -352,18 +359,89 @@ fn switch_windows_version(
         .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"])
         .arg(&script_path)
         .creation_flags(CREATE_NO_WINDOW);
-    let result = run_with_timeout(command, NVM_SWITCH_TIMEOUT);
+    let result = run_with_timeout(command, WINDOWS_UAC_TIMEOUT);
     let output = fs::read_to_string(&output_path).unwrap_or_default();
     let _ = fs::remove_file(&batch_path);
     let _ = fs::remove_file(&script_path);
     let _ = fs::remove_file(&output_path);
 
-    result?;
-    let lower = output.to_ascii_lowercase();
-    if lower.contains("cannot") || lower.contains("error") {
-        return Err(output.trim().to_string());
+    let command_output = result?;
+    if !command_output.status.success() {
+        return Err(if output.trim().is_empty() {
+            "管理员授权被取消或 Node.js 版本切换失败".to_string()
+        } else {
+            output.trim().to_string()
+        });
     }
-    let _ = nvm_home;
+    Ok(output.trim().to_string())
+}
+
+#[cfg(windows)]
+fn switch_windows_version(
+    environment: &HashMap<String, String>,
+    version: &str,
+) -> Result<(), String> {
+    let nvm_home =
+        env_value(environment, "NVM_HOME").ok_or_else(|| "未找到 NVM_HOME 环境变量".to_string())?;
+    if !Path::new(&nvm_home).is_dir() {
+        return Err("NVM_HOME 目录不存在".to_string());
+    }
+    let nvm_symlink = env_value(environment, "NVM_SYMLINK")
+        .ok_or_else(|| "未找到 NVM_SYMLINK 环境变量".to_string())?;
+    let target = installed_version_dir(environment, version)
+        .ok_or_else(|| format!("版本 {version} 未安装"))?;
+    let original_target = fs::canonicalize(&nvm_symlink).ok();
+
+    let unsafe_path = |value: &str| {
+        value
+            .chars()
+            .any(|character| matches!(character, '"' | '\r' | '\n'))
+    };
+    if unsafe_path(&nvm_symlink)
+        || unsafe_path(&target.to_string_lossy())
+        || original_target
+            .as_ref()
+            .is_some_and(|path| unsafe_path(&path.to_string_lossy()))
+    {
+        return Err("nvm 路径包含不支持的字符".to_string());
+    }
+
+    update_windows_junction(&nvm_symlink, Some(&target), original_target.as_deref())?;
+
+    let validation = (|| {
+        let actual_target = fs::canonicalize(&nvm_symlink)
+            .map_err(|error| format!("校验 NVM_SYMLINK 失败：{error}"))?;
+        let expected_target = fs::canonicalize(&target)
+            .map_err(|error| format!("校验目标 Node.js 目录失败：{error}"))?;
+        if !actual_target
+            .to_string_lossy()
+            .eq_ignore_ascii_case(&expected_target.to_string_lossy())
+        {
+            return Err("NVM_SYMLINK 未指向目标 Node.js 版本".to_string());
+        }
+
+        let command = command_with_env("node", &["--version"], environment);
+        let version_output = run_with_timeout(command, COMMAND_TIMEOUT)?;
+        let actual_version = String::from_utf8_lossy(&version_output.stdout)
+            .trim()
+            .trim_start_matches('v')
+            .to_string();
+        if !version_output.status.success() || actual_version != version.trim_start_matches('v') {
+            return Err(format!("Node.js 版本校验失败，当前为 v{actual_version}"));
+        }
+        Ok(())
+    })();
+
+    if let Err(error) = validation {
+        return match update_windows_junction(
+            &nvm_symlink,
+            original_target.as_deref(),
+            Some(&target),
+        ) {
+            Ok(_) => Err(format!("{error}；已恢复原 Node.js 版本")),
+            Err(rollback_error) => Err(format!("{error}；恢复原版本失败：{rollback_error}")),
+        };
+    }
     Ok(())
 }
 

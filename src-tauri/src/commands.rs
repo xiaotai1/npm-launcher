@@ -31,6 +31,14 @@ fn desktop_directory(app: &AppHandle) -> PathBuf {
         .unwrap_or_else(|_| PathBuf::from("."))
 }
 
+fn canonical_directory(path: &str) -> Result<PathBuf, String> {
+    let canonical = fs::canonicalize(path).map_err(|error| format!("项目目录不可访问：{error}"))?;
+    if !canonical.is_dir() {
+        return Err("所选路径不是目录".to_string());
+    }
+    Ok(canonical)
+}
+
 #[tauri::command]
 pub fn get_config(state: State<'_, AppState>) -> AppConfig {
     config::load_config(&state.config_path)
@@ -120,7 +128,10 @@ pub fn import_config(app: AppHandle, state: State<'_, AppState>) -> ConfigTransf
             serde_json::from_str(&content).map_err(|error| format!("解析配置失败：{error}"))
         })
         .and_then(config::normalize_imported_config)
-        .and_then(|value| config::save_config(&state.config_path, &value));
+        .and_then(|value| {
+            config::backup_config(&state.config_path, "import-backup")?;
+            config::save_config(&state.config_path, &value)
+        });
     match result {
         Ok(()) => ConfigTransferResult {
             success: true,
@@ -228,12 +239,25 @@ pub fn select_folder(app: AppHandle) -> PathSelectionResult {
 
 #[tauri::command]
 pub fn get_package_scripts(dir: String) -> PackageScriptsResult {
-    package::read_package_scripts(Path::new(&dir))
+    match canonical_directory(&dir) {
+        Ok(path) => package::read_package_scripts(&path),
+        Err(error) => PackageScriptsResult {
+            scripts: Vec::new(),
+            error: Some(error),
+        },
+    }
 }
 
 #[tauri::command(rename_all = "camelCase")]
 pub fn open_in_file_manager(app: AppHandle, folder_path: String) -> ActionResult {
-    match app.opener().open_path(&folder_path, None::<&str>) {
+    let path = match canonical_directory(&folder_path) {
+        Ok(path) => path,
+        Err(error) => return ActionResult::failure(error),
+    };
+    match app
+        .opener()
+        .open_path(path.to_string_lossy().into_owned(), None::<&str>)
+    {
         Ok(()) => ActionResult::success(),
         Err(error) => ActionResult::failure(error.to_string()),
     }
@@ -256,6 +280,11 @@ fn spawn_detached(program: &str, args: &[&str]) -> bool {
 
 #[tauri::command(rename_all = "camelCase")]
 pub fn open_in_vscode(app: AppHandle, folder_path: String) -> ActionResult {
+    let folder_path = match canonical_directory(&folder_path) {
+        Ok(path) => path,
+        Err(error) => return ActionResult::failure(error),
+    };
+    let folder_value = folder_path.to_string_lossy();
     let mut candidates = if cfg!(windows) {
         vec!["code.cmd".to_string(), "code".to_string()]
     } else {
@@ -271,13 +300,14 @@ pub fn open_in_vscode(app: AppHandle, folder_path: String) -> ActionResult {
     }
     for candidate in candidates {
         if (!candidate.contains('/') || Path::new(&candidate).exists())
-            && spawn_detached(&candidate, &["-n", &folder_path])
+            && spawn_detached(&candidate, &["-n", &folder_value])
         {
             return ActionResult::success();
         }
     }
-    let target = format!("vscode://file/{folder_path}");
-    match app.opener().open_url(target, None::<&str>) {
+    let mut target = url::Url::parse("vscode://file/").expect("内置 VS Code 地址无效");
+    target.set_path(&folder_value.replace('\\', "/"));
+    match app.opener().open_url(target.as_str(), None::<&str>) {
         Ok(()) => ActionResult::success(),
         Err(_) => ActionResult::failure("未找到 VS Code，请确保已安装"),
     }
@@ -550,7 +580,7 @@ pub fn pty_spawn(
     rows: u16,
     cwd: String,
     node_version: Option<String>,
-) {
+) -> bool {
     terminal::spawn_terminal_or_emit(
         &app,
         PtySpawnRequest {
@@ -560,7 +590,7 @@ pub fn pty_spawn(
             cwd,
             node_version,
         },
-    );
+    )
 }
 
 #[tauri::command]

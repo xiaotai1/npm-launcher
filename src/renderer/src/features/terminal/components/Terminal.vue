@@ -22,9 +22,10 @@ let cleanupData: (() => void) | null = null
 let cleanupExit: (() => void) | null = null
 let resizeObserver: ResizeObserver | null = null
 let contextMenuHandler: ((e: MouseEvent) => void) | null = null
+let terminalGeneration = 0
 
 function writeToPty(data: string) {
-  window.desktopAPI.ptyWrite(props.id, data)
+  void window.desktopAPI.ptyWrite(props.id, data)
 }
 
 function copySelection() {
@@ -48,16 +49,16 @@ function clearTerminal() {
   terminal?.focus()
 }
 
-function restartTerminal() {
-  dispose()
-  nextTick(() => {
-    if (props.visible) initTerminal()
-  })
+async function restartTerminal() {
+  await dispose()
+  await nextTick()
+  if (props.visible) await initTerminal()
 }
 
-function initTerminal() {
+async function initTerminal() {
   if (!terminalContainer.value || terminal) return
 
+  const generation = ++terminalGeneration
   terminal = new Terminal({
     cursorBlink: true,
     cursorStyle: 'bar',
@@ -75,15 +76,7 @@ function initTerminal() {
   fitAddon = new FitAddon()
   terminal.loadAddon(fitAddon)
   terminal.open(terminalContainer.value)
-
-  nextTick(() => {
-    if (fitAddon && terminal) {
-      fitAddon.fit()
-      // spawn PTY
-      window.desktopAPI.ptySpawn(props.id, terminal.cols, terminal.rows, props.cwd, props.nodeVersion)
-      terminal.focus()
-    }
-  })
+  const currentTerminal = terminal
 
   // 用户输入 → PTY
   terminal.onData((data) => {
@@ -129,48 +122,75 @@ function initTerminal() {
   contextMenuHandler = onContextMenu
 
   // PTY 输出 → 终端显示
-  cleanupData = window.desktopAPI.onPtyData(({ id, data }) => {
-    if (id === props.id) {
-      terminal?.write(data)
-    }
-  })
-
-  // PTY 退出
-  cleanupExit = window.desktopAPI.onPtyExit(({ id }) => {
-    if (id === props.id) {
-      terminal?.write('\r\n\x1b[90m[进程已退出]\x1b[0m\r\n')
-    }
-  })
-
   // 监听容器大小变化
   resizeObserver = new ResizeObserver(() => {
     if (fitAddon && terminal) {
       try {
         fitAddon.fit()
-        window.desktopAPI.ptyResize(props.id, terminal.cols, terminal.rows)
+        void window.desktopAPI.ptyResize(props.id, terminal.cols, terminal.rows)
       } catch {
         // 容器隐藏时 fit 会失败
       }
     }
   })
   resizeObserver.observe(terminalContainer.value)
+
+  let stopData: (() => void) | null = null
+  try {
+    stopData = await window.desktopAPI.onPtyData(({ id, data }) => {
+      if (generation === terminalGeneration && id === props.id) {
+        currentTerminal.write(data)
+      }
+    })
+    const stopExit = await window.desktopAPI.onPtyExit(({ id }) => {
+      if (generation === terminalGeneration && id === props.id) {
+        currentTerminal.write('\r\n\x1b[90m[进程已退出]\x1b[0m\r\n')
+      }
+    })
+    if (generation !== terminalGeneration || terminal !== currentTerminal) {
+      stopData()
+      stopExit()
+      return
+    }
+    cleanupData = stopData
+    cleanupExit = stopExit
+  } catch {
+    stopData?.()
+    await dispose()
+    return
+  }
+
+  await nextTick()
+  if (generation === terminalGeneration && fitAddon && terminal === currentTerminal) {
+    fitAddon.fit()
+    await window.desktopAPI.ptySpawn(
+      props.id,
+      currentTerminal.cols,
+      currentTerminal.rows,
+      props.cwd,
+      props.nodeVersion
+    )
+    currentTerminal.focus()
+  }
 }
 
-function dispose() {
-  window.desktopAPI.ptyKill(props.id)
+async function dispose() {
+  const currentTerminal = terminal
+  terminalGeneration += 1
   cleanupData?.()
   cleanupExit?.()
   resizeObserver?.disconnect()
   if (contextMenuHandler && terminalContainer.value) {
     terminalContainer.value.removeEventListener('contextmenu', contextMenuHandler)
   }
-  terminal?.dispose()
+  currentTerminal?.dispose()
   terminal = null
   fitAddon = null
   cleanupData = null
   cleanupExit = null
   resizeObserver = null
   contextMenuHandler = null
+  await window.desktopAPI.ptyKill(props.id)
 }
 
 // 当可见性变化时：首次可见则初始化，之后只做 fit，不销毁
@@ -178,11 +198,11 @@ watch(() => props.visible, async (val) => {
   if (val) {
     await nextTick()
     if (!terminal) {
-      initTerminal()
+      await initTerminal()
     } else if (fitAddon) {
       try {
         fitAddon.fit()
-        window.desktopAPI.ptyResize(props.id, terminal.cols, terminal.rows)
+        void window.desktopAPI.ptyResize(props.id, terminal.cols, terminal.rows)
       } catch {
         // 容器尺寸未就绪
       }
@@ -192,10 +212,11 @@ watch(() => props.visible, async (val) => {
 })
 
 // 当 cwd 变化时重新创建终端
-watch(() => props.cwd, (newCwd, oldCwd) => {
+watch(() => props.cwd, async (newCwd, oldCwd) => {
   if (newCwd !== oldCwd && props.visible) {
-    dispose()
-    nextTick(() => initTerminal())
+    await dispose()
+    await nextTick()
+    await initTerminal()
   }
 })
 
@@ -216,13 +237,13 @@ onMounted(() => {
 
 onMounted(() => {
   if (props.visible) {
-    nextTick(() => initTerminal())
+    void nextTick(() => initTerminal())
   }
 })
 
 onBeforeUnmount(() => {
   themeObserver.disconnect()
-  dispose()
+  void dispose()
 })
 </script>
 

@@ -25,6 +25,10 @@ function subscribe<T>(event: string, callback: (payload: T) => void): () => void
   }
 }
 
+function subscribeReady<T>(event: string, callback: (payload: T) => void): Promise<UnlistenFn> {
+  return listen<T>(event, ({ payload }) => callback(payload))
+}
+
 function detectPlatform(): string {
   const agent = navigator.userAgent
   if (agent.includes('Windows')) return 'win32'
@@ -73,20 +77,13 @@ export const desktopAPI: DesktopAPI = {
   maximize: () => invoke<void>('window_maximize'),
   close: () => invoke<void>('window_close'),
   isMaximized: () => invoke<boolean>('window_is_maximized'),
-  ptySpawn: (id, cols, rows, cwd, nodeVersion) => {
-    void invoke('pty_spawn', { id, cols, rows, cwd, nodeVersion })
-  },
-  ptyWrite: (id, data) => {
-    void invoke('pty_write', { id, data })
-  },
-  ptyResize: (id, cols, rows) => {
-    void invoke('pty_resize', { id, cols, rows })
-  },
-  ptyKill: id => {
-    void invoke('pty_kill', { id })
-  },
-  onPtyData: callback => subscribe<{ id: string; data: string }>('pty-data', callback),
-  onPtyExit: callback => subscribe<{ id: string; exitCode: number }>('pty-exit', callback)
+  ptySpawn: (id, cols, rows, cwd, nodeVersion) =>
+    invoke<boolean>('pty_spawn', { id, cols, rows, cwd, nodeVersion }),
+  ptyWrite: (id, data) => invoke<boolean>('pty_write', { id, data }),
+  ptyResize: (id, cols, rows) => invoke<boolean>('pty_resize', { id, cols, rows }),
+  ptyKill: id => invoke<boolean>('pty_kill', { id }),
+  onPtyData: callback => subscribeReady<{ id: string; data: string }>('pty-data', callback),
+  onPtyExit: callback => subscribeReady<{ id: string; exitCode: number }>('pty-exit', callback)
 }
 
 window.desktopAPI = desktopAPI

@@ -23,6 +23,7 @@ pub struct AppState {
     pub logs: Mutex<HashMap<String, Vec<SessionLogLine>>>,
     pub shell_env: Mutex<Option<HashMap<String, String>>>,
     process_generation: AtomicU64,
+    terminal_generation: AtomicU64,
 }
 
 impl AppState {
@@ -34,10 +35,15 @@ impl AppState {
             logs: Mutex::new(HashMap::new()),
             shell_env: Mutex::new(None),
             process_generation: AtomicU64::new(1),
+            terminal_generation: AtomicU64::new(1),
         })
     }
 
     pub fn next_process_generation(&self) -> u64 {
         self.process_generation.fetch_add(1, Ordering::Relaxed)
+    }
+
+    pub fn next_terminal_generation(&self) -> u64 {
+        self.terminal_generation.fetch_add(1, Ordering::Relaxed)
     }
 }

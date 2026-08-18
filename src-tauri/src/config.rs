@@ -106,7 +106,28 @@ fn replace_file(source: &Path, target: &Path) -> std::io::Result<()> {
 }
 
 pub fn normalize_imported_config(value: Value) -> Result<AppConfig, String> {
+    let object = value
+        .as_object()
+        .ok_or_else(|| "配置文件格式不正确".to_string())?;
+    if !object.get("projects").is_some_and(Value::is_array)
+        || !object.get("folders").is_some_and(Value::is_array)
+        || !matches!(
+            object.get("theme").and_then(Value::as_str),
+            Some("light" | "dark" | "system")
+        )
+    {
+        return Err("配置文件格式不正确".to_string());
+    }
     serde_json::from_value(value).map_err(|_| "配置文件格式不正确".to_string())
+}
+
+pub fn backup_config(path: &Path, reason: &str) -> Result<Option<PathBuf>, String> {
+    if !path.exists() {
+        return Ok(None);
+    }
+    let backup = path.with_file_name(format!("config.json.{reason}-{}", timestamp_millis()));
+    fs::copy(path, &backup).map_err(|error| format!("备份现有配置失败：{error}"))?;
+    Ok(Some(backup))
 }
 
 fn change_config(path: &Path, update: impl FnOnce(&mut AppConfig) -> bool) -> bool {

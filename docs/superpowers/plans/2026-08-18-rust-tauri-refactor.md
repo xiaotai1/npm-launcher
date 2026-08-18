@@ -491,19 +491,19 @@ cargo check --manifest-path src-tauri/Cargo.toml
 git diff --check
 ```
 
-- [ ] **步骤 3：构建并启动 macOS 应用**
+- [x] **步骤 3：构建并启动 macOS 应用**
 
 运行 `npm run build` 生成当前架构应用，启动本地开发服务器并检查窗口非空、主题、窗口控制、配置读取和终端创建。该步骤不执行测试代码。
 
-- [ ] **步骤 4：检查发布工作流**
+- [x] **步骤 4：检查发布工作流**
 
 本地校验 YAML、产物 glob 和四产物计数逻辑；Windows ConPTY、UAC、nvm-windows 和安装包运行记录为 Windows 原生 CI/实机检查项。
 
-- [ ] **步骤 5：检查功能覆盖与差异**
+- [x] **步骤 5：检查功能覆盖与差异**
 
 逐项对照设计文档 14 个章节，检查无遗漏 command/event，确认新构建不引用 Electron 或 `node-pty`，记录未能在当前 macOS 环境执行的 Windows 验证。
 
-- [ ] **步骤 6：最终提交**
+- [x] **步骤 6：最终提交**
 
 ```bash
 git add -A
