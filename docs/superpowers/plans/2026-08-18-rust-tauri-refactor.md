@@ -531,3 +531,7 @@ git commit -m "refactor: 完成 Rust Tauri 重构"
 - [x] **步骤 2：执行静态与开发态验证**
 
 运行 `npm run typecheck`、`npm run build:frontend` 和 `git diff --check`，确认开发态 Tauri 应用热更新成功；受项目规则约束，不新增或运行测试。
+
+- [x] **步骤 3：开放最小窗口拖拽权限**
+
+在 `src-tauri/capabilities/default.json` 中加入 `core:window:allow-start-dragging`，重启 Tauri 开发进程并确认 capability 配置被加载。

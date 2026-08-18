@@ -167,7 +167,7 @@ Rust 使用 `portable-pty` 创建平台原生 PTY：Windows 使用 ConPTY，macO
 
 ## 11. 权限与安全
 
-- 前端只获得主窗口所需的最小 Tauri capability。
+- 前端只获得主窗口所需的最小 Tauri capability，包括标题栏原生拖拽所需的 `core:window:allow-start-dragging`。
 - 不向前端开放任意 Shell 执行权限；项目命令、nvm 和外部打开均通过受控 Rust command。
 - 路径和 URL 在 Rust 信任边界再次校验。
 - 保持启动命令只来自已保存项目和已读取的 package scripts。
