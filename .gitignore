@@ -4,6 +4,8 @@ node_modules/
 # 构建
 out/
 dist/
+src-tauri/target/
+src-tauri/gen/
 
 # 日志
 *.log

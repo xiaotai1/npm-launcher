@@ -3,7 +3,40 @@ const path = require('path')
 const readline = require('readline')
 
 const pkgPath = path.join(__dirname, '..', 'package.json')
+const lockPath = path.join(__dirname, '..', 'package-lock.json')
+const cargoPath = path.join(__dirname, '..', 'src-tauri', 'Cargo.toml')
+const tauriPath = path.join(__dirname, '..', 'src-tauri', 'tauri.conf.json')
 const args = process.argv.slice(2)
+
+function assertVersion(version) {
+  if (!/^\d+\.\d+\.\d+$/.test(version)) {
+    throw new Error(`版本号格式错误：${version}，应为 x.y.z`)
+  }
+}
+
+function syncVersion(version) {
+  assertVersion(version)
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+  const lock = JSON.parse(fs.readFileSync(lockPath, 'utf-8'))
+  const tauri = JSON.parse(fs.readFileSync(tauriPath, 'utf-8'))
+  const cargo = fs.readFileSync(cargoPath, 'utf-8')
+  const nextCargo = cargo.replace(
+    /^(\[package\][\s\S]*?^version\s*=\s*)"[^"]+"/m,
+    `$1"${version}"`
+  )
+  if (nextCargo === cargo && !cargo.includes(`version = "${version}"`)) {
+    throw new Error('无法更新 Cargo.toml 中的 package.version')
+  }
+
+  pkg.version = version
+  lock.version = version
+  if (lock.packages?.['']) lock.packages[''].version = version
+  tauri.version = version
+  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf-8')
+  fs.writeFileSync(lockPath, JSON.stringify(lock, null, 2) + '\n', 'utf-8')
+  fs.writeFileSync(tauriPath, JSON.stringify(tauri, null, 2) + '\n', 'utf-8')
+  fs.writeFileSync(cargoPath, nextCargo, 'utf-8')
+}
 
 function bumpVersion(version, type) {
   const parts = version.replace(/^v/, '').split('.').map(Number)
@@ -39,14 +72,16 @@ function askVersion(current) {
 }
 
 async function main() {
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+  const current = pkg.version
+  assertVersion(current)
+
   if (args.includes('--skip')) {
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+    syncVersion(current)
     console.log(`版本: ${pkg.version} (跳过 bump)`)
     return
   }
 
-  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
-  const current = pkg.version
   let newVersion
 
   if (args.includes('--ask')) {
@@ -59,9 +94,11 @@ async function main() {
     newVersion = bumpVersion(current, 'patch')
   }
 
-  pkg.version = newVersion
-  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf-8')
+  syncVersion(newVersion)
   console.log(`版本: ${current} → ${newVersion}`)
 }
 
-main()
+main().catch(error => {
+  console.error(error instanceof Error ? error.message : error)
+  process.exit(1)
+})
