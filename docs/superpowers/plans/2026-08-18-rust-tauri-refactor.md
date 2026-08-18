@@ -94,7 +94,7 @@ README.md
 - `npm run build` 调用 `tauri build --no-bundle`。
 - Rust 入口调用 `npm_launcher_lib::run()`。
 
-- [ ] **步骤 1：将渲染层改为独立 Vite 构建**
+- [x] **步骤 1：将渲染层改为独立 Vite 构建**
 
 `vite.config.ts` 使用 `src/renderer` 作为 root，输出到 `out/renderer`，保留 Vue、Tailwind 和 `@renderer` 别名：
 
@@ -107,15 +107,15 @@ export default defineConfig({
 })
 ```
 
-- [ ] **步骤 2：建立 Tauri Cargo 配置**
+- [x] **步骤 2：建立 Tauri Cargo 配置**
 
 `Cargo.toml` 声明 `tauri = "2"`、`tauri-plugin-dialog = "2"`、`tauri-plugin-opener = "2"`、`serde`、`serde_json`、`portable-pty = "0.9"`、`encoding_rs`、`regex`、`url`、`chrono`，Unix 目标额外依赖带 `signal/process` 特性的 `nix`。
 
-- [ ] **步骤 3：建立窗口与平台配置**
+- [x] **步骤 3：建立窗口与平台配置**
 
 基础窗口固定 1300×850、最小 1000×700。macOS 配置隐藏标题并保留原生交通灯；Windows 配置关闭 decorations 以继续使用自定义窗口按钮。构建读取 `../out/renderer`。
 
-- [ ] **步骤 4：建立最小 Rust 入口和 capability**
+- [x] **步骤 4：建立最小 Rust 入口和 capability**
 
 ```rust
 fn main() {
@@ -125,11 +125,11 @@ fn main() {
 
 `lib.rs` 暂时只初始化 dialog/opener 插件并创建窗口，后续任务再注册状态与命令。
 
-- [ ] **步骤 5：调整 npm 与 TypeScript 配置**
+- [x] **步骤 5：调整 npm 与 TypeScript 配置**
 
 增加 `@tauri-apps/api`、`@tauri-apps/plugin-dialog`、`@tauri-apps/plugin-opener` 和 `@tauri-apps/cli`；将 TypeScript 范围限制到渲染层和 `vite.config.ts`，避免旧 Electron 源码进入新构建。
 
-- [ ] **步骤 6：验证配置结构**
+- [x] **步骤 6：验证配置结构**
 
 运行：`npm run typecheck`
 
@@ -509,4 +509,3 @@ git diff --check
 git add -A
 git commit -m "refactor: 完成 Rust Tauri 重构"
 ```
-

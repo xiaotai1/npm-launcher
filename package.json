@@ -2,20 +2,20 @@
   "name": "npm-launcher",
   "version": "1.0.7",
   "description": "NPM 项目启动器 - 可视化管理多个 NPM 项目",
-  "main": "./out/main/index.js",
   "author": "xiaotai",
   "license": "MIT",
   "scripts": {
-    "dev": "node scripts/dev.js",
-    "build": "electron-vite build",
-    "preview": "electron-vite preview",
-    "start": "electron-vite preview",
-    "postinstall": "electron-builder install-app-deps",
-    "dist": "node scripts/bump-version.js && npm run build && electron-builder",
-    "dist:all": "node scripts/bump-version.js && npm run build && electron-builder --mac && electron-builder --win",
-    "dist:win": "node scripts/bump-version.js --skip && npm run build && electron-builder --win",
-    "dist:mac": "node scripts/bump-version.js --skip && npm run build && electron-builder --mac",
-    "dist:ask": "node scripts/bump-version.js --ask && npm run build && electron-builder",
+    "dev": "tauri dev",
+    "dev:frontend": "vite --config vite.config.mts",
+    "build": "tauri build --no-bundle",
+    "build:frontend": "vite build --config vite.config.mts",
+    "preview": "vite preview --config vite.config.mts",
+    "start": "tauri dev",
+    "dist": "node scripts/bump-version.js && tauri build",
+    "dist:all": "node scripts/bump-version.js && tauri build",
+    "dist:win": "node scripts/bump-version.js --skip && tauri build --bundles nsis",
+    "dist:mac": "node scripts/bump-version.js --skip && tauri build --bundles dmg",
+    "dist:ask": "node scripts/bump-version.js --ask && tauri build",
     "test": "node scripts/run-tests.mjs",
     "typecheck": "tsc --noEmit"
   },
@@ -23,75 +23,19 @@
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-web-links": "^0.12.0",
     "@xterm/xterm": "^6.0.0",
-    "iconv-lite": "^0.6.3",
-    "node-pty": "^1.1.0",
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0",
+    "@tauri-apps/plugin-opener": "^2.0.0",
     "vue": "^3.4.21"
   },
   "devDependencies": {
-    "@electron-toolkit/preload": "^3.0.1",
-    "@electron-toolkit/utils": "^3.0.0",
-    "@electron/rebuild": "^3.7.2",
+    "@tauri-apps/cli": "^2.0.0",
     "@tailwindcss/vite": "^4.2.4",
     "@types/node": "^20.11.24",
     "@vitejs/plugin-vue": "^5.0.4",
-    "electron": "^29.1.0",
-    "electron-builder": "^24.13.3",
-    "electron-vite": "^2.0.0",
     "sharp": "^0.34.5",
     "tailwindcss": "^4.2.4",
     "typescript": "^5.3.3",
     "vite": "^5.1.4"
-  },
-  "build": {
-    "asar": true,
-    "asarUnpack": [
-      "node_modules/node-pty/**/*"
-    ],
-    "electronDownload": {
-      "mirror": "https://npmmirror.com/mirrors/electron/"
-    },
-    "appId": "com.npm-launcher.app",
-    "productName": "NPM Launcher",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "out/**/*"
-    ],
-    "win": {
-      "icon": "build/icon.ico",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "mac": {
-      "icon": "build/icon.png",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ],
-      "category": "public.app-category.developer-tools"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "deleteAppDataOnUninstall": true
-    }
   }
 }

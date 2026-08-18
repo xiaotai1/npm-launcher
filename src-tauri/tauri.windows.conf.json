@@ -1,0 +1,31 @@
+{
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "NPM Launcher",
+        "width": 1300,
+        "height": 850,
+        "minWidth": 1000,
+        "minHeight": 700,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": false,
+        "backgroundColor": "#0f172a"
+      }
+    ]
+  },
+  "bundle": {
+    "targets": ["nsis"],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "both",
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}
