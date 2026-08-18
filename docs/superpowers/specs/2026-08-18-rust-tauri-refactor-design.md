@@ -189,6 +189,8 @@ Rust 使用 `portable-pty` 创建平台原生 PTY：Windows 使用 ConPTY，macO
 
 版本脚本同步更新 `package.json`、`src-tauri/Cargo.toml` 和 `src-tauri/tauri.conf.json`。
 
+macOS 使用带透明安全边距的专用 `.icns`，图形在 `1024×1024` 画布中按 84% 比例居中，避免 Dock 中的视觉尺寸大于其他应用；Windows 图标尺寸保持不变。
+
 现有 GitHub Actions 改为安装 Rust 工具链和 Tauri 系统依赖，在 Windows 与 macOS 原生运行器构建。发布任务继续要求四个产物全部存在后才创建或更新 Release。
 
 ## 13. 错误处理

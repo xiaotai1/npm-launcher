@@ -535,3 +535,25 @@ git commit -m "refactor: 完成 Rust Tauri 重构"
 - [x] **步骤 3：开放最小窗口拖拽权限**
 
 在 `src-tauri/capabilities/default.json` 中加入 `core:window:allow-start-dragging`，重启 Tauri 开发进程并确认 capability 配置被加载。
+
+---
+
+### 任务 10：校正 macOS Dock 图标视觉尺寸
+
+**文件：**
+
+- 新增：`build/icon-macos.svg`
+- 修改：`src-tauri/icons/icon.icns`
+
+**产出接口：**
+
+- macOS 图标在 `1024×1024` 透明画布中按 84% 比例居中。
+- Windows 和其他平台图标资源保持不变。
+
+- [x] **步骤 1：建立 macOS 专用图标源文件**
+
+复用现有图形和配色，将整体图形放入 `translate(82 82) scale(0.84)` 变换组。
+
+- [x] **步骤 2：重新生成并检查 ICNS**
+
+使用 Tauri CLI 将专用 SVG 生成到临时目录，只替换 `src-tauri/icons/icon.icns`；检查画布尺寸、透明通道与打包配置，不运行测试。
