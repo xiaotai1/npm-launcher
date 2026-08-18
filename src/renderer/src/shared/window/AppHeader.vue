@@ -66,8 +66,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 </script>
 
 <template>
-  <header class="flex items-center justify-between border-b border-border bg-surface relative select-none app-header glass-topbar" :class="{ 'mac-titlebar': isMac }">
-    <div class="flex items-center header-left" :class="{ 'mac-title-area': isMac }">
+  <header data-tauri-drag-region class="flex items-center justify-between border-b border-border bg-surface relative select-none app-header glass-topbar" :class="{ 'mac-titlebar': isMac }">
+    <div data-tauri-drag-region class="flex items-center header-left" :class="{ 'mac-title-area': isMac }">
       <span v-if="!isMac" class="text-[13px] font-semibold text-tsecondary app-title">NPM Launcher</span>
     </div>
     <div class="flex items-center">
@@ -172,6 +172,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .header-left {
+  flex: 1 1 auto;
   height: 100%;
   min-width: 0;
   -webkit-app-region: drag;

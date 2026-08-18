@@ -509,3 +509,25 @@ git diff --check
 git add -A
 git commit -m "refactor: 完成 Rust Tauri 重构"
 ```
+
+---
+
+### 任务 9：修复 macOS 窗口拖拽区域
+
+**文件：**
+
+- 修改：`src/renderer/src/shared/window/AppHeader.vue`
+
+**产出接口：**
+
+- 标题栏空白区域使用 Tauri 2 原生 `data-tauri-drag-region`。
+- 左侧空白区域占满右侧操作区之外的剩余宽度。
+- Node 版本、主题和配置按钮继续保持正常点击。
+
+- [x] **步骤 1：补充 Tauri 拖拽标记与弹性布局**
+
+在标题栏和左侧空白元素上添加 `data-tauri-drag-region`，并为 `.header-left` 增加 `flex: 1 1 auto`。
+
+- [x] **步骤 2：执行静态与开发态验证**
+
+运行 `npm run typecheck`、`npm run build:frontend` 和 `git diff --check`，确认开发态 Tauri 应用热更新成功；受项目规则约束，不新增或运行测试。
