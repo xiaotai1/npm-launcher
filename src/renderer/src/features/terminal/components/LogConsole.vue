@@ -32,7 +32,7 @@ const hasSessionLogs = ref(false)
 const canExport = computed(() => hasSessionLogs.value)
 // 空状态：项目未启动且尚未产生任何日志时显示
 const showEmptyState = computed(() => !hasSessionLogs.value && !props.isRunning)
-const isMac = computed(() => window.electronAPI?.platform === 'darwin')
+const isMac = computed(() => window.desktopAPI?.platform === 'darwin')
 const primaryShortcutKey = computed(() => isMac.value ? '⌘' : 'Ctrl')
 const primaryShortcutLabel = computed(() => isMac.value ? 'Command' : 'Control')
 let terminal: Terminal | null = null
@@ -181,7 +181,7 @@ async function exportLog() {
   exporting.value = true
   try {
     const content = formatLogsForExport(getSessionLogs(props.projectId))
-    const result = await window.electronAPI.exportLog(buildExportFilename(), content)
+    const result = await window.desktopAPI.exportLog(buildExportFilename(), content)
     if (result.success) {
       emit('export-result', true, `日志已导出到: ${result.path}`)
     } else if (result.error) {

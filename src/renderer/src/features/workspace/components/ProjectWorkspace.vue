@@ -31,12 +31,12 @@ const emit = defineEmits<{
 }>()
 
 async function openFolder() {
-  const result = await window.electronAPI.openInFileManager(props.project.path)
+  const result = await window.desktopAPI.openInFileManager(props.project.path)
   if (!result.success) emit('toast', result.error || '打开文件夹失败', 'error')
 }
 
 async function openInVscode() {
-  const result = await window.electronAPI.openInVscode(props.project.path)
+  const result = await window.desktopAPI.openInVscode(props.project.path)
   if (!result.success) emit('toast', result.error || '未找到 VS Code', 'warning')
 }
 

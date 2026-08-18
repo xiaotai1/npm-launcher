@@ -92,7 +92,7 @@ function handleDialogKeydown(event: KeyboardEvent) {
 
 async function selectFolder() {
   if (loadingScripts.value) return
-  const result = await window.electronAPI.selectFolder()
+  const result = await window.desktopAPI.selectFolder()
   if (result.canceled || !result.path) return
 
   projectDraft.value.path = result.path
@@ -106,7 +106,7 @@ async function selectFolder() {
   scriptMessage.value = '正在读取 package.json…'
 
   try {
-    const scripts = await window.electronAPI.getPackageScripts(result.path)
+    const scripts = await window.desktopAPI.getPackageScripts(result.path)
     availableScripts.value = scripts.scripts
 
     if (scripts.scripts.length) {

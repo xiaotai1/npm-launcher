@@ -5,20 +5,20 @@ const isMaximized = ref(false)
 const isHovering = ref(false)
 
 async function handleMinimize() {
-  await window.electronAPI.minimize()
+  await window.desktopAPI.minimize()
 }
 
 async function handleMaximize() {
-  await window.electronAPI.maximize()
-  isMaximized.value = await window.electronAPI.isMaximized()
+  await window.desktopAPI.maximize()
+  isMaximized.value = await window.desktopAPI.isMaximized()
 }
 
 async function handleClose() {
-  await window.electronAPI.close()
+  await window.desktopAPI.close()
 }
 
 async function checkMaximized() {
-  isMaximized.value = await window.electronAPI.isMaximized()
+  isMaximized.value = await window.desktopAPI.isMaximized()
 }
 
 onMounted(() => {

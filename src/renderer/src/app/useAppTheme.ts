@@ -41,7 +41,7 @@ export function applyTheme(theme: ThemeMode) {
     effectiveTheme,
     callback => window.requestAnimationFrame(callback)
   )
-  window.electronAPI.setNativeTheme(theme)
+  window.desktopAPI.setNativeTheme(theme)
 }
 
 export function installSystemThemeListener(getTheme: () => ThemeMode) {

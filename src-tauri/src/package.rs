@@ -1,0 +1,130 @@
+use std::{fs, path::Path};
+
+use serde_json::Value;
+
+use crate::models::{
+    PackageScriptsResult, Project, ProjectHealthIssue, ProjectHealthIssueCode, ProjectHealthResult,
+};
+
+#[derive(Debug, Clone, Copy)]
+pub enum PackageManager {
+    Npm,
+    Pnpm,
+    Yarn,
+    Bun,
+}
+
+impl PackageManager {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Npm => "npm",
+            Self::Pnpm => "pnpm",
+            Self::Yarn => "yarn",
+            Self::Bun => "bun",
+        }
+    }
+
+    pub fn command(self) -> String {
+        let extension = if cfg!(windows) { ".cmd" } else { "" };
+        format!("{}{extension}", self.as_str())
+    }
+}
+
+pub fn detect_package_manager(project_path: &Path) -> PackageManager {
+    if project_path.join("pnpm-lock.yaml").exists() {
+        PackageManager::Pnpm
+    } else if project_path.join("yarn.lock").exists() {
+        PackageManager::Yarn
+    } else if project_path.join("bun.lockb").exists() || project_path.join("bun.lock").exists() {
+        PackageManager::Bun
+    } else {
+        PackageManager::Npm
+    }
+}
+
+pub fn read_package_scripts(dir: &Path) -> PackageScriptsResult {
+    let package_path = dir.join("package.json");
+    if !package_path.exists() {
+        return PackageScriptsResult {
+            scripts: Vec::new(),
+            error: Some("该目录下没有 package.json".to_string()),
+        };
+    }
+
+    let result = fs::read_to_string(package_path)
+        .map_err(|error| error.to_string())
+        .and_then(|content| {
+            serde_json::from_str::<Value>(&content).map_err(|error| error.to_string())
+        });
+
+    match result {
+        Ok(value) => {
+            let scripts = value
+                .get("scripts")
+                .and_then(Value::as_object)
+                .map(|items| items.keys().cloned().collect())
+                .unwrap_or_default();
+            PackageScriptsResult {
+                scripts,
+                error: None,
+            }
+        }
+        Err(error) => PackageScriptsResult {
+            scripts: Vec::new(),
+            error: Some(error),
+        },
+    }
+}
+
+pub fn inspect_project_health(
+    project: &Project,
+    node_version_installed: impl Fn(&str) -> bool,
+) -> ProjectHealthResult {
+    let mut issues = Vec::new();
+    let project_path = Path::new(&project.path);
+
+    if project.path.is_empty() || !project_path.is_dir() {
+        issues.push(ProjectHealthIssue {
+            code: ProjectHealthIssueCode::MissingProjectPath,
+            message: format!(
+                "项目目录不存在或不可访问：{}",
+                if project.path.is_empty() {
+                    "未配置"
+                } else {
+                    &project.path
+                }
+            ),
+        });
+        return ProjectHealthResult { ok: false, issues };
+    }
+
+    let package_scripts = read_package_scripts(project_path);
+    if let Some(error) = package_scripts.error {
+        issues.push(ProjectHealthIssue {
+            code: ProjectHealthIssueCode::MissingPackageJson,
+            message: error,
+        });
+        return ProjectHealthResult { ok: false, issues };
+    }
+
+    if !package_scripts.scripts.contains(&project.command) {
+        issues.push(ProjectHealthIssue {
+            code: ProjectHealthIssueCode::MissingScript,
+            message: format!("package.json 中未找到启动命令：{}", project.command),
+        });
+    }
+
+    if let Some(version) = project.node_version.as_deref() {
+        if !node_version_installed(version) {
+            issues.push(ProjectHealthIssue {
+                code: ProjectHealthIssueCode::MissingNodeVersion,
+                message: format!("指定的 Node.js 版本未安装：{version}"),
+            });
+        }
+    }
+
+    ProjectHealthResult {
+        ok: issues.is_empty(),
+        issues,
+    }
+}

@@ -15,7 +15,7 @@ import { clearLaunchFailure, mergeLaunchFailures, setLaunchFailure, type LaunchF
 
 type WorkspaceTab = 'logs' | 'terminal' | 'info'
 
-const isMac = window.electronAPI?.platform === 'darwin'
+const isMac = window.desktopAPI?.platform === 'darwin'
 const config = ref<AppConfig | null>(null)
 const nodeVersion = ref<string | null>(null)
 const nodeVersions = ref<string[]>([])
@@ -68,7 +68,7 @@ const shortcutProjectId = computed(() => {
 })
 
 async function loadConfig() {
-  const nextConfig = await window.electronAPI.getConfig()
+  const nextConfig = await window.desktopAPI.getConfig()
   config.value = nextConfig
   if (!selectedProjectId.value || !nextConfig.projects.some(project => project.id === selectedProjectId.value)) {
     selectedProjectId.value = nextConfig.projects[0]?.id || null
@@ -79,11 +79,11 @@ async function loadConfig() {
 }
 
 async function loadNodeVersion() {
-  nodeVersion.value = (await window.electronAPI.getNodeVersion()).version
+  nodeVersion.value = (await window.desktopAPI.getNodeVersion()).version
 }
 
 async function loadNodeVersions() {
-  const result = await window.electronAPI.getNodeVersions()
+  const result = await window.desktopAPI.getNodeVersions()
   nodeVersions.value = result.versions
   currentNodeVersion.value = result.current
 }
@@ -117,14 +117,14 @@ function setActiveProjectTab(tab: WorkspaceTab) {
 }
 
 async function addProject(project: Project) {
-  await window.electronAPI.addProject(project)
+  await window.desktopAPI.addProject(project)
   await loadConfig()
   selectProject(project.id)
 }
 
 async function updateProject(project: Project) {
   try {
-    const saved = await window.electronAPI.updateProject(project)
+    const saved = await window.desktopAPI.updateProject(project)
     if (!saved) {
       showToast('项目设置保存失败', 'error')
       return
@@ -140,7 +140,7 @@ async function updateProject(project: Project) {
 }
 
 async function deleteProject(id: string) {
-  await window.electronAPI.deleteProject(id)
+  await window.desktopAPI.deleteProject(id)
   launchFailures.value = clearLaunchFailure(launchFailures.value, id)
   const nextTabs = { ...projectTabs.value }
   delete nextTabs[id]
@@ -150,18 +150,18 @@ async function deleteProject(id: string) {
   if (!selectedProjectId.value) activeView.value = 'overview'
 }
 
-async function reorderProjects(ids: string[]) { await window.electronAPI.reorderProjects(ids); await loadConfig() }
-async function toggleFavorite(id: string) { await window.electronAPI.toggleFavorite(id); await loadConfig() }
-async function addFolder(folder: Folder) { await window.electronAPI.addFolder(folder); await loadConfig() }
-async function reorderFolders(ids: string[]) { await window.electronAPI.reorderFolders(ids); await loadConfig() }
-async function deleteFolder(id: string) { await window.electronAPI.deleteFolder(id); await loadConfig() }
-async function renameFolder(folder: Folder) { await window.electronAPI.updateFolder(folder); await loadConfig() }
-async function moveToFolder(projectId: string, folderId: string | null) { await window.electronAPI.moveProjectToFolder(projectId, folderId); await loadConfig() }
+async function reorderProjects(ids: string[]) { await window.desktopAPI.reorderProjects(ids); await loadConfig() }
+async function toggleFavorite(id: string) { await window.desktopAPI.toggleFavorite(id); await loadConfig() }
+async function addFolder(folder: Folder) { await window.desktopAPI.addFolder(folder); await loadConfig() }
+async function reorderFolders(ids: string[]) { await window.desktopAPI.reorderFolders(ids); await loadConfig() }
+async function deleteFolder(id: string) { await window.desktopAPI.deleteFolder(id); await loadConfig() }
+async function renameFolder(folder: Folder) { await window.desktopAPI.updateFolder(folder); await loadConfig() }
+async function moveToFolder(projectId: string, folderId: string | null) { await window.desktopAPI.moveProjectToFolder(projectId, folderId); await loadConfig() }
 
 async function startProjectById(projectId: string) {
   const project = config.value?.projects.find(item => item.id === projectId)
   if (!project) return
-  const result = await window.electronAPI.startProject(project.id)
+  const result = await window.desktopAPI.startProject(project.id)
   if (result.success) {
     launchFailures.value = clearLaunchFailure(launchFailures.value, project.id)
     return
@@ -176,7 +176,7 @@ async function startProjectById(projectId: string) {
 }
 
 async function stopProjectById(projectId: string) {
-  await window.electronAPI.stopProject(projectId)
+  await window.desktopAPI.stopProject(projectId)
 }
 
 function startSelectedProject() { if (selectedProjectId.value) return startProjectById(selectedProjectId.value) }
@@ -228,14 +228,14 @@ function handleErrorAnalysis(analysis: ErrorAnalysis) {
 
 function closeErrorAnalysis() { showErrorAnalysis.value = false; errorAnalysis.value = null }
 async function openProjectUrl(url: string) {
-  const result = await window.electronAPI.openLocalUrl(url)
+  const result = await window.desktopAPI.openLocalUrl(url)
   if (!result.success) showToast(result.error || '打开页面失败', 'error')
 }
 
 async function handleAnalyzeErrors() {
   if (!selectedProjectId.value) return
   const exitCode = processStatuses.value[selectedProjectId.value]?.exitCode ?? 1
-  const result = await window.electronAPI.analyzeErrors(selectedProjectId.value, exitCode)
+  const result = await window.desktopAPI.analyzeErrors(selectedProjectId.value, exitCode)
   if (result) handleErrorAnalysis(result)
 }
 
@@ -247,13 +247,13 @@ function showToast(message: string, type: 'success' | 'error' | 'warning') {
 function handleExportResult(success: boolean, message: string) { showToast(message, success ? 'success' : 'error') }
 
 async function exportConfig() {
-  const result = await window.electronAPI.exportConfig()
+  const result = await window.desktopAPI.exportConfig()
   if (result.success) showToast(`配置已导出到: ${result.path}`, 'success')
   else if (result.error) showToast(result.error, 'error')
 }
 
 async function importConfig() {
-  const result = await window.electronAPI.importConfig()
+  const result = await window.desktopAPI.importConfig()
   if (result.success) {
     launchFailures.value = {}
     projectUrls.value = {}
@@ -266,7 +266,7 @@ async function importConfig() {
 
 async function switchNodeVersion(version: string) {
   switchingVersion.value = true
-  const result = await window.electronAPI.switchNodeVersion(version)
+  const result = await window.desktopAPI.switchNodeVersion(version)
   switchingVersion.value = false
   if (result.success) {
     const normalized = version.startsWith('v') ? version : `v${version}`
@@ -279,26 +279,26 @@ async function switchNodeVersion(version: string) {
 async function startAllProjects() {
   if (!config.value) return
   const projectIds = config.value.projects.map(project => project.id)
-  const result = await window.electronAPI.startAllProjects(projectIds)
+  const result = await window.desktopAPI.startAllProjects(projectIds)
   launchFailures.value = mergeLaunchFailures(launchFailures.value, result.failures, projectIds)
   showToast(result.failed ? `已启动 ${result.success} 个项目，${result.failed} 个失败` : `已启动 ${result.success} 个项目`, result.failed ? 'warning' : 'success')
 }
 
-async function stopAllProjects() { await window.electronAPI.stopAllProjects(); showToast('已停止所有项目', 'success') }
+async function stopAllProjects() { await window.desktopAPI.stopAllProjects(); showToast('已停止所有项目', 'success') }
 
 async function setProjectNodeVersion(projectId: string, version: string | null) {
   const project = config.value?.projects.find(item => item.id === projectId)
   if (!project) return
   if (version) project.nodeVersion = version
   else delete project.nodeVersion
-  await window.electronAPI.updateProject(toRaw(project))
+  await window.desktopAPI.updateProject(toRaw(project))
   await loadConfig()
 }
 
 async function setProjectCommand(projectId: string, command: string) {
   const project = config.value?.projects.find(item => item.id === projectId)
   if (!project || project.command === command) return
-  await window.electronAPI.updateProject(toRaw({ ...project, command }))
+  await window.desktopAPI.updateProject(toRaw({ ...project, command }))
   await loadConfig()
   launchFailures.value = clearLaunchFailure(launchFailures.value, projectId)
   showToast(`已切换启动方案: ${command}`, 'success')
@@ -307,7 +307,7 @@ async function setProjectCommand(projectId: string, command: string) {
 async function openProjectFolderById(projectId: string) {
   const project = config.value?.projects.find(item => item.id === projectId)
   if (!project) return
-  const result = await window.electronAPI.openInFileManager(project.path)
+  const result = await window.desktopAPI.openInFileManager(project.path)
   if (!result.success) showToast(result.error || '打开文件夹失败', 'error')
 }
 
@@ -318,7 +318,7 @@ async function toggleTheme() {
   const themes: AppConfig['theme'][] = ['light', 'dark', 'system']
   config.value.theme = themes[(themes.indexOf(config.value.theme) + 1) % themes.length]
   applyTheme(config.value.theme)
-  await window.electronAPI.saveConfig(toRaw(config.value))
+  await window.desktopAPI.saveConfig(toRaw(config.value))
 }
 
 function getStatusColor(projectId: string) {
@@ -396,9 +396,9 @@ function onResizeStart(event: MouseEvent) {
 onMounted(async () => {
   await Promise.all([loadConfig(), loadNodeVersion(), loadNodeVersions()])
   applyTheme(config.value?.theme || 'system')
-  cleanupStatus = window.electronAPI.onProcessStatus(handleStatus)
-  cleanupLogs = window.electronAPI.onLogData(handleLogData)
-  cleanupErrorAnalysis = window.electronAPI.onErrorAnalysis?.(handleErrorAnalysis) || null
+  cleanupStatus = window.desktopAPI.onProcessStatus(handleStatus)
+  cleanupLogs = window.desktopAPI.onLogData(handleLogData)
+  cleanupErrorAnalysis = window.desktopAPI.onErrorAnalysis?.(handleErrorAnalysis) || null
   cleanupSystemTheme = installSystemThemeListener(() => config.value?.theme || 'system')
   window.addEventListener('keydown', handleGlobalShortcut)
 })

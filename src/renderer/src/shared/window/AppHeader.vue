@@ -18,7 +18,7 @@ const emit = defineEmits<{
   'import-config': []
 }>()
 
-const isMac = window.electronAPI.platform === 'darwin'
+const isMac = window.desktopAPI.platform === 'darwin'
 const nvmListCommand = isMac ? 'nvm ls-remote' : 'nvm list available'
 
 const themeLabel: Record<string, string> = { light: '浅色', dark: '深色', system: '系统' }

@@ -28,7 +28,7 @@ const launchCommands = computed(() => buildLaunchCommands(props.project.command,
 const canSwitchCommand = computed(() => props.status?.status !== 'running' && launchCommands.value.length > 1)
 
 async function loadPackageScripts() {
-  const result = await window.electronAPI.getPackageScripts(props.project.path)
+  const result = await window.desktopAPI.getPackageScripts(props.project.path)
   packageScripts.value = result.scripts
 }
 

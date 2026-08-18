@@ -305,7 +305,7 @@ function handleEdit() {
 async function handleOpenFolder() {
   if (contextMenu.value.type === 'project' && contextMenu.value.target) {
     const p = contextMenu.value.target as Project
-    await window.electronAPI.openInFileManager(p.path)
+    await window.desktopAPI.openInFileManager(p.path)
   }
   closeContextMenu()
 }
@@ -313,7 +313,7 @@ async function handleOpenFolder() {
 async function handleOpenInVscode() {
   if (contextMenu.value.type === 'project' && contextMenu.value.target) {
     const p = contextMenu.value.target as Project
-    await window.electronAPI.openInVscode(p.path)
+    await window.desktopAPI.openInVscode(p.path)
   }
   closeContextMenu()
 }

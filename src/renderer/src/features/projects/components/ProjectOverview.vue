@@ -93,7 +93,7 @@ function triggerOnboarding(action: string | null) {
   else if (action === 'import-config') emit('import-config')
 }
 
-const isMac = computed(() => window.electronAPI?.platform === 'darwin')
+const isMac = computed(() => window.desktopAPI?.platform === 'darwin')
 const primaryShortcutKey = computed(() => isMac.value ? '⌘' : 'Ctrl')
 const primaryShortcutLabel = computed(() => isMac.value ? 'Command' : 'Control')
 

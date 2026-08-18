@@ -24,7 +24,7 @@ let resizeObserver: ResizeObserver | null = null
 let contextMenuHandler: ((e: MouseEvent) => void) | null = null
 
 function writeToPty(data: string) {
-  window.electronAPI.ptyWrite(props.id, data)
+  window.desktopAPI.ptyWrite(props.id, data)
 }
 
 function copySelection() {
@@ -80,7 +80,7 @@ function initTerminal() {
     if (fitAddon && terminal) {
       fitAddon.fit()
       // spawn PTY
-      window.electronAPI.ptySpawn(props.id, terminal.cols, terminal.rows, props.cwd, props.nodeVersion)
+      window.desktopAPI.ptySpawn(props.id, terminal.cols, terminal.rows, props.cwd, props.nodeVersion)
       terminal.focus()
     }
   })
@@ -129,14 +129,14 @@ function initTerminal() {
   contextMenuHandler = onContextMenu
 
   // PTY 输出 → 终端显示
-  cleanupData = window.electronAPI.onPtyData(({ id, data }) => {
+  cleanupData = window.desktopAPI.onPtyData(({ id, data }) => {
     if (id === props.id) {
       terminal?.write(data)
     }
   })
 
   // PTY 退出
-  cleanupExit = window.electronAPI.onPtyExit(({ id }) => {
+  cleanupExit = window.desktopAPI.onPtyExit(({ id }) => {
     if (id === props.id) {
       terminal?.write('\r\n\x1b[90m[进程已退出]\x1b[0m\r\n')
     }
@@ -147,7 +147,7 @@ function initTerminal() {
     if (fitAddon && terminal) {
       try {
         fitAddon.fit()
-        window.electronAPI.ptyResize(props.id, terminal.cols, terminal.rows)
+        window.desktopAPI.ptyResize(props.id, terminal.cols, terminal.rows)
       } catch {
         // 容器隐藏时 fit 会失败
       }
@@ -157,7 +157,7 @@ function initTerminal() {
 }
 
 function dispose() {
-  window.electronAPI.ptyKill(props.id)
+  window.desktopAPI.ptyKill(props.id)
   cleanupData?.()
   cleanupExit?.()
   resizeObserver?.disconnect()
@@ -182,7 +182,7 @@ watch(() => props.visible, async (val) => {
     } else if (fitAddon) {
       try {
         fitAddon.fit()
-        window.electronAPI.ptyResize(props.id, terminal.cols, terminal.rows)
+        window.desktopAPI.ptyResize(props.id, terminal.cols, terminal.rows)
       } catch {
         // 容器尺寸未就绪
       }

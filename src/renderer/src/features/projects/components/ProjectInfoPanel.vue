@@ -62,7 +62,7 @@ async function loadScripts(path = editForm.value.path) {
     editScripts.value = []
     return
   }
-  const result = await window.electronAPI.getPackageScripts(path)
+  const result = await window.desktopAPI.getPackageScripts(path)
   editScripts.value = result.scripts
 }
 
@@ -81,7 +81,7 @@ watch(() => props.editTrigger, (value) => {
 onMounted(() => loadScripts())
 
 async function selectFolder() {
-  const result = await window.electronAPI.selectFolder()
+  const result = await window.desktopAPI.selectFolder()
   if (result.canceled || !result.path) return
 
   editForm.value.path = result.path
@@ -90,7 +90,7 @@ async function selectFolder() {
     editForm.value.name = parts[parts.length - 1] || ''
   }
 
-  const scripts = await window.electronAPI.getPackageScripts(result.path)
+  const scripts = await window.desktopAPI.getPackageScripts(result.path)
   editScripts.value = scripts.scripts
   editForm.value.command = scripts.scripts[0] || ''
 }

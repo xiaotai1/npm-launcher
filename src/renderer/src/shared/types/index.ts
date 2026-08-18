@@ -82,55 +82,56 @@ export interface StartAllProjectsResult {
   failures: ProjectStartFailure[]
 }
 
-// Electron API 类型声明
+export interface DesktopAPI {
+  getConfig: () => Promise<AppConfig>
+  saveConfig: (config: AppConfig) => Promise<boolean>
+  exportConfig: () => Promise<{ success: boolean; path?: string; error?: string }>
+  importConfig: () => Promise<{ success: boolean; path?: string; error?: string }>
+  addProject: (project: Project) => Promise<boolean>
+  updateProject: (project: Project) => Promise<boolean>
+  deleteProject: (projectId: string) => Promise<boolean>
+  reorderProjects: (projectIds: string[]) => Promise<boolean>
+  reorderFolders: (folderIds: string[]) => Promise<boolean>
+  addFolder: (folder: Folder) => Promise<boolean>
+  updateFolder: (folder: Folder) => Promise<boolean>
+  deleteFolder: (folderId: string) => Promise<boolean>
+  toggleFavorite: (projectId: string) => Promise<boolean>
+  moveProjectToFolder: (projectId: string, folderId: string | null) => Promise<boolean>
+  getNodeVersion: () => Promise<{ version: string | null; error?: string }>
+  getNodeVersions: () => Promise<{ versions: string[]; current: string | null; error?: string }>
+  switchNodeVersion: (version: string) => Promise<{ success: boolean; error?: string }>
+  selectFolder: () => Promise<{ canceled: boolean; path: string | null }>
+  getPackageScripts: (dir: string) => Promise<{ scripts: string[]; error?: string }>
+  openInFileManager: (folderPath: string) => Promise<{ success: boolean; error?: string }>
+  openInVscode: (folderPath: string) => Promise<{ success: boolean; error?: string }>
+  openLocalUrl: (url: string) => Promise<{ success: boolean; error?: string }>
+  startProject: (projectId: string) => Promise<StartProjectResult>
+  stopProject: (projectId: string) => Promise<boolean>
+  getProcessStatus: (projectId: string) => Promise<ProcessStatus>
+  startAllProjects: (projectIds: string[]) => Promise<StartAllProjectsResult>
+  stopAllProjects: () => Promise<boolean>
+  onLogData: (callback: (log: LogEntry) => void) => () => void
+  onProcessStatus: (callback: (status: ProcessStatus) => void) => () => void
+  exportLog: (filename: string, content: string) => Promise<{ success: boolean; path?: string; error?: string }>
+  analyzeErrors: (projectId: string, exitCode: number) => Promise<ErrorAnalysis | null>
+  onErrorAnalysis: (callback: (analysis: ErrorAnalysis) => void) => () => void
+  platform: string
+  setNativeTheme: (theme: 'light' | 'dark' | 'system') => Promise<void>
+  minimize: () => Promise<void>
+  maximize: () => Promise<void>
+  close: () => Promise<void>
+  isMaximized: () => Promise<boolean>
+  ptySpawn: (id: string, cols: number, rows: number, cwd: string, nodeVersion?: string) => void
+  ptyWrite: (id: string, data: string) => void
+  ptyResize: (id: string, cols: number, rows: number) => void
+  ptyKill: (id: string) => void
+  onPtyData: (callback: (data: { id: string; data: string }) => void) => () => void
+  onPtyExit: (callback: (data: { id: string; exitCode: number }) => void) => () => void
+}
+
 declare global {
   interface Window {
-    electronAPI: {
-      getConfig: () => Promise<AppConfig>
-      saveConfig: (config: AppConfig) => Promise<boolean>
-      exportConfig: () => Promise<{ success: boolean; path?: string; error?: string }>
-      importConfig: () => Promise<{ success: boolean; path?: string; error?: string }>
-      addProject: (project: Project) => Promise<boolean>
-      updateProject: (project: Project) => Promise<boolean>
-      deleteProject: (projectId: string) => Promise<boolean>
-      reorderProjects: (projectIds: string[]) => Promise<boolean>
-      reorderFolders: (folderIds: string[]) => Promise<boolean>
-      addFolder: (folder: Folder) => Promise<boolean>
-      updateFolder: (folder: Folder) => Promise<boolean>
-      deleteFolder: (folderId: string) => Promise<boolean>
-      toggleFavorite: (projectId: string) => Promise<boolean>
-      moveProjectToFolder: (projectId: string, folderId: string | null) => Promise<boolean>
-      getNodeVersion: () => Promise<{ version: string | null; error?: string }>
-      getNodeVersions: () => Promise<{ versions: string[]; current: string | null; error?: string }>
-      switchNodeVersion: (version: string) => Promise<{ success: boolean; error?: string }>
-      selectFolder: () => Promise<{ canceled: boolean; path: string | null }>
-      getPackageScripts: (dir: string) => Promise<{ scripts: string[]; error?: string }>
-      openInFileManager: (folderPath: string) => Promise<{ success: boolean; error?: string }>
-      openInVscode: (folderPath: string) => Promise<{ success: boolean; error?: string }>
-      openLocalUrl: (url: string) => Promise<{ success: boolean; error?: string }>
-      startProject: (projectId: string) => Promise<StartProjectResult>
-      stopProject: (projectId: string) => Promise<boolean>
-      getProcessStatus: (projectId: string) => Promise<ProcessStatus>
-      startAllProjects: (projectIds: string[]) => Promise<StartAllProjectsResult>
-      stopAllProjects: () => Promise<boolean>
-      onLogData: (callback: (log: LogEntry) => void) => () => void
-      onProcessStatus: (callback: (status: ProcessStatus) => void) => () => void
-      exportLog: (filename: string, content: string) => Promise<{ success: boolean; path?: string; error?: string }>
-      analyzeErrors: (projectId: string, exitCode: number) => Promise<ErrorAnalysis | null>
-      onErrorAnalysis: (callback: (analysis: ErrorAnalysis) => void) => () => void
-      platform: string
-      setNativeTheme: (theme: 'light' | 'dark' | 'system') => Promise<void>
-      minimize: () => Promise<void>
-      maximize: () => Promise<void>
-      close: () => Promise<void>
-      isMaximized: () => Promise<boolean>
-      ptySpawn: (id: string, cols: number, rows: number, cwd: string, nodeVersion?: string) => void
-      ptyWrite: (id: string, data: string) => void
-      ptyResize: (id: string, cols: number, rows: number) => void
-      ptyKill: (id: string) => void
-      onPtyData: (callback: (data: { id: string; data: string }) => void) => () => void
-      onPtyExit: (callback: (data: { id: string; exitCode: number }) => void) => () => void
-    }
+    desktopAPI: DesktopAPI
   }
 }
 
