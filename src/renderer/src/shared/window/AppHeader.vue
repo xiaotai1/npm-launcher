@@ -7,6 +7,7 @@ const props = defineProps<{
   availableVersions: string[]
   currentVersion: string | null
   switching: boolean
+  refreshing: boolean
   theme: 'light' | 'dark' | 'system'
 }>()
 
@@ -43,6 +44,7 @@ function selectVersion(version: string) {
 }
 
 function refreshVersions() {
+  if (props.refreshing || props.switching) return
   emit('refresh-versions')
 }
 
@@ -93,8 +95,16 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
             <div class="flex items-center justify-between px-1 pt-1">
               <span class="px-2.5 pt-1.75 pb-1.25 text-[11px] font-semibold text-ttertiary tracking-[0.3px]">已安装版本</span>
               <span class="text-[10px] text-blue-500 font-medium mr-2">仅识别 nvm</span>
-              <button class="w-7 h-7 flex items-center justify-center rounded-md text-ttertiary mr-1 refresh-btn" @click="refreshVersions" title="刷新版本列表" aria-label="刷新 Node 版本列表">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <button
+                class="w-7 h-7 flex items-center justify-center rounded-md text-ttertiary mr-1 refresh-btn"
+                :class="{ refreshing }"
+                :disabled="refreshing || switching"
+                :title="refreshing ? '正在刷新版本列表' : '刷新版本列表'"
+                aria-label="刷新 Node 版本列表"
+                :aria-busy="refreshing"
+                @click="refreshVersions"
+              >
+                <svg class="refresh-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="23 4 23 10 17 10"/>
                   <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
                 </svg>
@@ -227,9 +237,22 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   box-shadow: var(--shadow-lg), 0 0 0 1px var(--accent-glow);
 }
 
-.refresh-btn:hover {
+.refresh-btn:hover:not(:disabled) {
   background: var(--bg-hover);
   color: var(--accent-primary);
+}
+
+.refresh-btn:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.refresh-btn.refreshing .refresh-icon {
+  animation: refresh-spin 0.8s linear infinite;
+}
+
+@keyframes refresh-spin {
+  to { transform: rotate(360deg); }
 }
 
 .version-item:hover {

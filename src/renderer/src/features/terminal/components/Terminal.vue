@@ -4,6 +4,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { currentTerminalTheme } from '../terminalTheme'
+import { installTerminalDragRecovery } from '../terminalDragState'
 
 // 当前主题下的终端背景色（用于 region 容器背景，与 xterm 主题保持同步）
 const terminalBg = ref(currentTerminalTheme().background || '#0e1525')
@@ -22,26 +23,39 @@ let cleanupData: (() => void) | null = null
 let cleanupExit: (() => void) | null = null
 let resizeObserver: ResizeObserver | null = null
 let contextMenuHandler: ((e: MouseEvent) => void) | null = null
+let cleanupDragRecovery: (() => void) | null = null
 let terminalGeneration = 0
+
+function waitForLayout() {
+  return new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+}
 
 function writeToPty(data: string) {
   void window.desktopAPI.ptyWrite(props.id, data)
 }
 
-function copySelection() {
+async function copySelection() {
   const selection = terminal?.getSelection()
-  if (selection) {
-    navigator.clipboard.writeText(selection)
+  try {
+    if (selection) await window.desktopAPI.writeClipboardText(selection)
+  } catch (error) {
+    console.error('复制终端内容失败', error)
+  } finally {
+    terminal?.clearSelection()
+    terminal?.focus()
   }
-  terminal?.focus()
 }
 
 async function pasteClipboard() {
-  const text = await navigator.clipboard.readText()
-  if (text) {
-    writeToPty(text)
+  try {
+    const text = await window.desktopAPI.readClipboardText()
+    if (text) writeToPty(text)
+  } catch (error) {
+    console.error('读取剪贴板失败', error)
+  } finally {
+    terminal?.clearSelection()
+    terminal?.focus()
   }
-  terminal?.focus()
 }
 
 function clearTerminal() {
@@ -77,6 +91,7 @@ async function initTerminal() {
   terminal.loadAddon(fitAddon)
   terminal.open(terminalContainer.value)
   const currentTerminal = terminal
+  cleanupDragRecovery = installTerminalDragRecovery(terminalContainer.value, () => terminal?.clearSelection())
 
   // 用户输入 → PTY
   terminal.onData((data) => {
@@ -88,7 +103,7 @@ async function initTerminal() {
     if (event.type !== 'keydown') return true
 
     if (event.ctrlKey && event.shiftKey && (event.key === 'C' || event.key === 'c')) {
-      copySelection()
+      void copySelection()
       return false
     }
     if (event.ctrlKey && event.shiftKey && (event.key === 'V' || event.key === 'v')) {
@@ -96,7 +111,7 @@ async function initTerminal() {
       return false
     }
     if (event.ctrlKey && event.key === 'Insert') {
-      copySelection()
+      void copySelection()
       return false
     }
     if (event.shiftKey && event.key === 'Insert') {
@@ -113,7 +128,7 @@ async function initTerminal() {
     e.preventDefault()
     const selection = terminal?.getSelection()
     if (selection) {
-      copySelection()
+      void copySelection()
     } else {
       void pasteClipboard()
     }
@@ -161,6 +176,7 @@ async function initTerminal() {
   }
 
   await nextTick()
+  await waitForLayout()
   if (generation === terminalGeneration && fitAddon && terminal === currentTerminal) {
     fitAddon.fit()
     await window.desktopAPI.ptySpawn(
@@ -170,7 +186,9 @@ async function initTerminal() {
       props.cwd,
       props.nodeVersion
     )
-    currentTerminal.focus()
+    if (props.visible && generation === terminalGeneration && terminal === currentTerminal) {
+      currentTerminal.focus()
+    }
   }
 }
 
@@ -180,6 +198,7 @@ async function dispose() {
   cleanupData?.()
   cleanupExit?.()
   resizeObserver?.disconnect()
+  cleanupDragRecovery?.()
   if (contextMenuHandler && terminalContainer.value) {
     terminalContainer.value.removeEventListener('contextmenu', contextMenuHandler)
   }
@@ -190,33 +209,46 @@ async function dispose() {
   cleanupExit = null
   resizeObserver = null
   contextMenuHandler = null
+  cleanupDragRecovery = null
   await window.desktopAPI.ptyKill(props.id)
 }
 
-// 当可见性变化时：首次可见则初始化，之后只做 fit，不销毁
+async function restoreVisibleTerminal() {
+  await nextTick()
+  await waitForLayout()
+  if (!props.visible || !terminal || !fitAddon) return
+
+  try {
+    terminal.clearSelection()
+    fitAddon.fit()
+    await window.desktopAPI.ptyResize(props.id, terminal.cols, terminal.rows)
+  } catch {
+    return
+  }
+
+  if (props.visible) terminal.focus()
+}
+
+// 当可见性变化时：首次可见则初始化；离开时立即释放隐藏输入框的焦点和选区。
 watch(() => props.visible, async (val) => {
-  if (val) {
+  if (!val) {
+    terminal?.clearSelection()
+    terminal?.blur()
+    return
+  }
+
+  if (!terminal) {
     await nextTick()
-    if (!terminal) {
-      await initTerminal()
-    } else if (fitAddon) {
-      try {
-        fitAddon.fit()
-        void window.desktopAPI.ptyResize(props.id, terminal.cols, terminal.rows)
-      } catch {
-        // 容器尺寸未就绪
-      }
-      nextTick(() => terminal?.focus())
-    }
+    if (props.visible) await initTerminal()
+  } else {
+    await restoreVisibleTerminal()
   }
 })
 
-// 当 cwd 变化时重新创建终端
-watch(() => props.cwd, async (newCwd, oldCwd) => {
-  if (newCwd !== oldCwd && props.visible) {
-    await dispose()
-    await nextTick()
-    await initTerminal()
+// 项目目录或 Node.js 版本变化时，重建 PTY 以应用新的环境。
+watch(() => [props.cwd, props.nodeVersion] as const, async ([newCwd, newNodeVersion], [oldCwd, oldNodeVersion]) => {
+  if (newCwd !== oldCwd || newNodeVersion !== oldNodeVersion) {
+    await restartTerminal()
   }
 })
 

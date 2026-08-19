@@ -54,7 +54,7 @@ test('项目总览最近活动收进右侧会话栏并保持轻量', () => {
   assert.equal(overviewSource.includes('overview-lower-grid'), false)
   assert.match(overviewSource, /<aside class="overview-side-rail"[\s\S]*class="activity-panel"/)
   assert.match(overviewSource, /activities\.slice\(0,\s*8\)/)
-  assert.match(overviewSource, /\.overview-side-rail\s*\{[^}]*display:\s*block/)
+  assert.match(overviewSource, /\.overview-side-rail\s*\{[^}]*display:\s*flex/)
   assert.match(overviewSource, /\.activity-empty[\s\S]*min-height:\s*112px/)
 })
 
@@ -69,12 +69,13 @@ test('项目总览右侧会话栏展示本次摘要补足下方空间', () => {
   assert.match(overviewSource, /\.session-metric-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/)
 })
 
-test('项目总览右侧会话栏使用固定舒适高度，不按项目数量伸缩', () => {
+test('项目总览右侧会话栏按内容自适应并保持纵向布局', () => {
   assert.equal(overviewSource.includes('projects.length < 4'), false)
   assert.equal(overviewSource.includes('overview-side-rail.compact'), false)
   assert.equal(overviewSource.includes('overview-side-rail.single'), false)
   assert.match(overviewSource, /\.overview-side-rail\s*\{[^}]*align-self:\s*start/)
-  assert.match(overviewSource, /\.activity-panel\s*\{[^}]*height:\s*360px/)
+  assert.match(overviewSource, /\.activity-panel\s*\{[^}]*display:\s*flex[^}]*flex-direction:\s*column/)
+  assert.equal(/\.activity-panel\s*\{[^}]*height:/.test(overviewSource), false)
   assert.match(overviewSource, /\.activity-block\s*\{[^}]*flex:\s*1/)
 })
 
@@ -91,11 +92,12 @@ test('项目总览始终保留添加项目入口并保持同一行卡片等高',
   assert.equal(overviewSource.includes('grid-column: 1 / -1'), false)
 })
 
-test('项目总览在侧栏宽度变化时保持左侧对齐', () => {
-  assert.match(overviewSource, /\.overview-content\s*\{[^}]*max-width:\s*1180px[^}]*margin:\s*0 auto 0 0[^}]*padding:\s*22px 24px 32px/)
-  assert.match(overviewSource, /\.overview-main-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/)
-  assert.match(overviewSource, /\.project-grid\s*\{[^}]*grid-column:\s*span 2/)
-  assert.equal(overviewSource.includes('margin: 0 auto; padding: 22px 24px 32px'), false)
+test('项目总览使用有上限的响应式居中布局', () => {
+  assert.match(overviewSource, /width:\s*min\(100%,\s*1760px\)/)
+  assert.match(overviewSource, /margin:\s*0 auto/)
+  assert.match(overviewSource, /padding:\s*clamp\(/)
+  assert.match(overviewSource, /\.overview-main-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*3fr\) minmax\(420px,\s*2fr\)/)
+  assert.match(overviewSource, /\.project-grid\s*\{[^}]*grid-column:\s*span 1/)
 })
 
 test('项目总览标题不使用负字距', () => {

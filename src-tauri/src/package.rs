@@ -85,7 +85,7 @@ pub fn inspect_project_health(
 
     if project.path.is_empty() || !project_path.is_dir() {
         issues.push(ProjectHealthIssue {
-            code: ProjectHealthIssueCode::MissingProjectPath,
+            code: ProjectHealthIssueCode::ProjectPath,
             message: format!(
                 "项目目录不存在或不可访问：{}",
                 if project.path.is_empty() {
@@ -101,7 +101,7 @@ pub fn inspect_project_health(
     let package_scripts = read_package_scripts(project_path);
     if let Some(error) = package_scripts.error {
         issues.push(ProjectHealthIssue {
-            code: ProjectHealthIssueCode::MissingPackageJson,
+            code: ProjectHealthIssueCode::PackageJson,
             message: error,
         });
         return ProjectHealthResult { ok: false, issues };
@@ -109,7 +109,7 @@ pub fn inspect_project_health(
 
     if !package_scripts.scripts.contains(&project.command) {
         issues.push(ProjectHealthIssue {
-            code: ProjectHealthIssueCode::MissingScript,
+            code: ProjectHealthIssueCode::Script,
             message: format!("package.json 中未找到启动命令：{}", project.command),
         });
     }
@@ -117,7 +117,7 @@ pub fn inspect_project_health(
     if let Some(version) = project.node_version.as_deref() {
         if !node_version_installed(version) {
             issues.push(ProjectHealthIssue {
-                code: ProjectHealthIssueCode::MissingNodeVersion,
+                code: ProjectHealthIssueCode::NodeVersion,
                 message: format!("指定的 Node.js 版本未安装：{version}"),
             });
         }

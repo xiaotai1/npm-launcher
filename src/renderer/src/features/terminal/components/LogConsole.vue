@@ -7,6 +7,7 @@ import type { LogEntry, Project } from '../../../shared/types'
 import { clearSessionLogs, getSessionLogs, subscribeSessionLogs } from '../model/sessionLogs'
 import { formatLogForView, formatLogsForExport, type LogFilter } from '../model/logView'
 import { currentTerminalTheme } from '../terminalTheme'
+import { installTerminalDragRecovery } from '../terminalDragState'
 
 const props = defineProps<{
   isRunning: boolean
@@ -40,6 +41,7 @@ let fitAddon: FitAddon | null = null
 let cleanupSessionLogs: (() => void) | null = null
 let resizeObserver: ResizeObserver | null = null
 let themeObserver: MutationObserver | null = null
+let cleanupDragRecovery: (() => void) | null = null
 
 function currentReadonlyLogTheme() {
   return {
@@ -68,6 +70,7 @@ function writeLogEntry(log: LogEntry) {
 
 function replayCurrentProjectLogs() {
   if (!terminal) return
+  terminal.clearSelection()
   terminal.clear()
   const logs = getSessionLogs(props.projectId)
   hasSessionLogs.value = logs.length > 0
@@ -92,6 +95,7 @@ function initTerminal() {
   fitAddon = new FitAddon()
   terminal.loadAddon(fitAddon)
   terminal.open(terminalContainer.value)
+  cleanupDragRecovery = installTerminalDragRecovery(terminalContainer.value, () => terminal?.clearSelection())
 
   nextTick(() => {
     if (fitAddon) {
@@ -120,10 +124,12 @@ function initTerminal() {
 
 function disposeTerminal() {
   resizeObserver?.disconnect()
+  cleanupDragRecovery?.()
   terminal?.dispose()
   terminal = null
   fitAddon = null
   resizeObserver = null
+  cleanupDragRecovery = null
 }
 
 function setupSessionLogListener() {
@@ -405,6 +411,11 @@ async function copyLaunchCommand() {
 .log-tools input {
   width: 150px;
   padding: 0 8px;
+}
+
+.log-tools select:focus-visible,
+.log-tools input:focus-visible {
+  outline: none;
 }
 
 .log-tools button {

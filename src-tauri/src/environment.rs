@@ -18,7 +18,6 @@ use crate::{
 };
 
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
-const NVM_SWITCH_TIMEOUT: Duration = Duration::from_secs(15);
 #[cfg(windows)]
 const WINDOWS_UAC_TIMEOUT: Duration = Duration::from_secs(60);
 
@@ -85,7 +84,7 @@ pub fn get_shell_env(state: &AppState) -> HashMap<String, String> {
     let shell = login_shell();
     let mut command = Command::new(&shell);
     command.args(["-l", "-c", "env"]);
-    let environment = match run_with_timeout(command, COMMAND_TIMEOUT) {
+    let mut environment = match run_with_timeout(command, COMMAND_TIMEOUT) {
         Ok(output) if output.status.success() => {
             let mut values = current_env();
             for line in String::from_utf8_lossy(&output.stdout).lines() {
@@ -97,6 +96,9 @@ pub fn get_shell_env(state: &AppState) -> HashMap<String, String> {
         }
         _ => current_env(),
     };
+
+    #[cfg(not(windows))]
+    apply_default_node_version(&mut environment);
 
     if let Ok(mut cache) = state.shell_env.lock() {
         *cache = Some(environment.clone());
@@ -159,6 +161,48 @@ fn installed_version_dir(environment: &HashMap<String, String>, version: &str) -
     candidates.into_iter().find(|path| path.is_dir())
 }
 
+fn prepend_node_binary_path(environment: &mut HashMap<String, String>, version: &str) -> bool {
+    let Some(version_dir) = installed_version_dir(environment, version) else {
+        return false;
+    };
+    let binary_dir = if cfg!(windows) {
+        version_dir
+    } else {
+        version_dir.join("bin")
+    };
+    if !binary_dir.is_dir() {
+        return false;
+    }
+
+    let path_key = environment
+        .keys()
+        .find(|key| key.eq_ignore_ascii_case("PATH"))
+        .cloned()
+        .unwrap_or_else(|| "PATH".to_string());
+    let current_path = environment.get(&path_key).cloned().unwrap_or_default();
+    let mut paths = vec![binary_dir.clone()];
+    paths.extend(env::split_paths(&current_path).filter(|path| path != &binary_dir));
+    let Ok(next_path) = env::join_paths(paths) else {
+        return false;
+    };
+    environment.insert(path_key, next_path.to_string_lossy().into_owned());
+    true
+}
+
+#[cfg(not(windows))]
+fn apply_default_node_version(environment: &mut HashMap<String, String>) {
+    let Some(nvm_dir) = nvm_paths(environment).0 else {
+        return;
+    };
+    let Ok(default_version) = fs::read_to_string(nvm_dir.join("alias").join("default")) else {
+        return;
+    };
+    let default_version = default_version.trim();
+    if valid_version(default_version) {
+        prepend_node_binary_path(environment, default_version);
+    }
+}
+
 pub fn is_node_version_installed(state: &AppState, version: &str) -> bool {
     installed_version_dir(&get_shell_env(state), version).is_some()
 }
@@ -176,32 +220,9 @@ pub fn get_project_env(
         }
     }
 
-    let Some(version) = node_version else {
-        return environment;
-    };
-    let Some(version_dir) = installed_version_dir(&environment, version) else {
-        return environment;
-    };
-    let binary_dir = if cfg!(windows) {
-        version_dir
-    } else {
-        version_dir.join("bin")
-    };
-    if !binary_dir.is_dir() {
-        return environment;
+    if let Some(version) = node_version {
+        prepend_node_binary_path(&mut environment, version);
     }
-
-    let path_key = environment
-        .keys()
-        .find(|key| key.eq_ignore_ascii_case("PATH"))
-        .cloned()
-        .unwrap_or_else(|| "PATH".to_string());
-    let separator = if cfg!(windows) { ";" } else { ":" };
-    let current_path = environment.get(&path_key).cloned().unwrap_or_default();
-    environment.insert(
-        path_key,
-        format!("{}{separator}{current_path}", binary_dir.display()),
-    );
     environment
 }
 
@@ -221,6 +242,14 @@ fn valid_version(version: &str) -> bool {
     VERSION_PATTERN
         .get_or_init(|| Regex::new(r"^v?\d+\.\d+\.\d+$").expect("Node.js 版本规则无效"))
         .is_match(version)
+}
+
+fn normalize_node_version(version: &str) -> Option<String> {
+    valid_version(version).then(|| format!("v{}", version.trim_start_matches('v')))
+}
+
+fn versions_match(expected: &str, actual: &str) -> bool {
+    normalize_node_version(expected) == normalize_node_version(actual)
 }
 
 pub fn get_node_version(state: &AppState) -> NodeVersionResult {
@@ -449,31 +478,23 @@ fn switch_windows_version(
 fn switch_unix_version(environment: &HashMap<String, String>, version: &str) -> Result<(), String> {
     let (nvm_dir, _) = nvm_paths(environment);
     let nvm_dir = nvm_dir.ok_or_else(|| "未找到 NVM 安装目录".to_string())?;
-    if installed_version_dir(environment, version).is_none() {
-        return Err(format!("版本 {version} 未安装"));
+    let target_dir = installed_version_dir(environment, version)
+        .ok_or_else(|| format!("版本 {version} 未安装"))?;
+    let normalized =
+        normalize_node_version(version).ok_or_else(|| "Node.js 版本格式不正确".to_string())?;
+
+    let mut command = Command::new(target_dir.join("bin").join("node"));
+    command.arg("--version").env_clear().envs(environment);
+    let output = run_with_timeout(command, COMMAND_TIMEOUT)?;
+    let actual = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if !output.status.success() || !versions_match(version, &actual) {
+        return Err(format!("Node.js 版本校验失败，当前为 {actual}"));
     }
 
-    let shell = login_shell();
-    let command_text = format!(
-        "source {}/nvm.sh && nvm alias default {} && nvm use {}",
-        shell_quote(&nvm_dir.to_string_lossy()),
-        shell_quote(version),
-        shell_quote(version)
-    );
-    let command = command_with_env(&shell, &["-l", "-c", &command_text], environment);
-    let output = run_with_timeout(command, NVM_SWITCH_TIMEOUT)?;
-    let combined = format!(
-        "{}{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    if !output.status.success() || combined.contains("N/A") || combined.contains("not installed") {
-        return Err(if combined.trim().is_empty() {
-            "Node.js 版本切换失败".to_string()
-        } else {
-            combined.trim().to_string()
-        });
-    }
+    let alias_dir = nvm_dir.join("alias");
+    fs::create_dir_all(&alias_dir).map_err(|error| format!("创建 NVM 别名目录失败：{error}"))?;
+    fs::write(alias_dir.join("default"), format!("{normalized}\n"))
+        .map_err(|error| format!("更新 NVM 默认版本失败：{error}"))?;
     Ok(())
 }
 
@@ -505,5 +526,29 @@ pub fn switch_node_version(state: &AppState, version: &str) -> ActionResult {
             ActionResult::success()
         }
         Err(error) => ActionResult::failure(error),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{normalize_node_version, versions_match};
+
+    #[test]
+    fn node_版本标准化保留统一_v_前缀() {
+        assert_eq!(
+            normalize_node_version("20.19.6"),
+            Some("v20.19.6".to_string())
+        );
+        assert_eq!(
+            normalize_node_version("v20.19.6"),
+            Some("v20.19.6".to_string())
+        );
+        assert_eq!(normalize_node_version("20"), None);
+    }
+
+    #[test]
+    fn node_版本比较忽略_v_前缀() {
+        assert!(versions_match("20.19.6", "v20.19.6"));
+        assert!(!versions_match("20.19.6", "v22.0.0"));
     }
 }

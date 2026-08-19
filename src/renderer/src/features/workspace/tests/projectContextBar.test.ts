@@ -12,5 +12,6 @@ test('顶部栏启动脚本选择器不使用原生 select', () => {
 test('启动脚本选择器箭头靠右并与菜单保持同宽', () => {
   assert.match(source, /\.command-picker strong\s*\{[^}]*flex: 1/)
   assert.match(source, /\.command-picker svg\s*\{[^}]*margin-left: auto/)
-  assert.match(source, /\.command-menu\s*\{[^}]*width: 100%/)
+  assert.match(source, /width: commandMenuPos\.width \+ 'px'/)
+  assert.match(source, /width:\s*Math\.max\(rect\.width,\s*140\)/)
 })

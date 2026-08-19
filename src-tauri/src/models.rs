@@ -207,10 +207,14 @@ pub struct PackageScriptsResult {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ProjectHealthIssueCode {
-    MissingProjectPath,
-    MissingPackageJson,
-    MissingScript,
-    MissingNodeVersion,
+    #[serde(rename = "missing-project-path")]
+    ProjectPath,
+    #[serde(rename = "missing-package-json")]
+    PackageJson,
+    #[serde(rename = "missing-script")]
+    Script,
+    #[serde(rename = "missing-node-version")]
+    NodeVersion,
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -140,11 +140,15 @@ function onConfirmDelete() {
     </header>
 
     <div class="settings-body">
-      <nav class="settings-nav" aria-label="设置目录">
+      <nav class="settings-nav" role="tablist" aria-label="设置目录">
         <button
           v-for="item in settingsNav"
           :key="item.id"
+          :id="`${item.id}-settings-tab`"
           type="button"
+          role="tab"
+          :aria-selected="activeSection === item.id"
+          :aria-controls="`${item.id}-settings-panel`"
           class="settings-nav-item"
           :class="{ active: activeSection === item.id }"
           @click="activeSection = item.id"
@@ -162,8 +166,7 @@ function onConfirmDelete() {
       </nav>
 
       <form id="project-settings-form" class="settings-content" @submit.prevent="save">
-        <Transition name="fade" mode="out-in">
-          <section v-if="activeSection === 'basic'" class="settings-section" aria-labelledby="basic-settings-title" key="basic">
+          <section id="basic-settings-panel" v-if="activeSection === 'basic'" class="settings-section" role="tabpanel" aria-labelledby="basic-settings-tab" key="basic">
             <div class="settings-fields">
               <label class="settings-field">
                 <span>项目名称</span>
@@ -194,7 +197,7 @@ function onConfirmDelete() {
             </div>
           </section>
 
-          <section v-else-if="activeSection === 'environment'" class="settings-section" aria-labelledby="env-settings-title" key="env">
+          <section id="environment-settings-panel" v-else-if="activeSection === 'environment'" class="settings-section" role="tabpanel" aria-labelledby="environment-settings-tab" key="env">
             <div class="settings-fields">
               <label class="settings-field">
                 <span>Node 版本</span>
@@ -212,7 +215,7 @@ function onConfirmDelete() {
             </div>
           </section>
 
-          <section v-else class="settings-section settings-danger" aria-labelledby="danger-settings-title" key="danger">
+          <section id="danger-settings-panel" v-else class="settings-section settings-danger" role="tabpanel" aria-labelledby="danger-settings-tab" key="danger">
             <div class="danger-zone">
               <div class="danger-zone-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -224,7 +227,6 @@ function onConfirmDelete() {
               <button type="button" class="danger-remove-btn" @click="remove">移除项目</button>
             </div>
           </section>
-        </Transition>
       </form>
     </div>
 
@@ -382,7 +384,7 @@ function onConfirmDelete() {
 }
 
 .settings-section {
-  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: fadeIn 80ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .settings-fields {

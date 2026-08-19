@@ -10,10 +10,10 @@ export function extractLocalPort(url?: string | null): string | null {
   if (!url) return null
   try {
     const parsed = new URL(url)
-    if (!['localhost', '127.0.0.1', '0.0.0.0'].includes(parsed.hostname) || !parsed.port) return null
+    if (!['localhost', '127.0.0.1', '0.0.0.0', '[::1]'].includes(parsed.hostname) || !parsed.port) return null
     return `:${parsed.port}`
   } catch {
-    const match = url.match(/^(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d+)/)
+    const match = url.match(/^(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]):(\d+)/)
     return match ? `:${match[1]}` : null
   }
 }

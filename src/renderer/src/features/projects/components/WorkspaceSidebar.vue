@@ -36,6 +36,7 @@ const emit = defineEmits<{
   'reorder-folders': [ids: string[]]
   'delete-folder': [id: string]
   'rename-folder': [folder: Folder]
+  'update-folder': [folder: Folder]
   'move-to-folder': [projectId: string, folderId: string | null]
 }>()
 
@@ -74,9 +75,6 @@ const contextMenuSizes = {
 // 删除确认
 const confirmState = ref<{ visible: boolean; type: 'project' | 'folder'; id: string; name: string }>({ visible: false, type: 'project', id: '', name: '' })
 
-// 折叠状态
-const collapsedFolders = ref<Set<string>>(new Set())
-
 // 计算分组后的列表（使用搜索过滤）
 const rootFavorites = computed(() => getRootFavorites(filteredProjects.value))
 
@@ -93,15 +91,11 @@ const visibleFolders = computed(() => {
 })
 
 function isCollapsed(folderId: string) {
-  return collapsedFolders.value.has(folderId)
+  return props.folders.find(folder => folder.id === folderId)?.collapsed === true
 }
 
-function toggleCollapse(folderId: string) {
-  if (collapsedFolders.value.has(folderId)) {
-    collapsedFolders.value.delete(folderId)
-  } else {
-    collapsedFolders.value.add(folderId)
-  }
+function toggleCollapse(folder: Folder) {
+  emit('update-folder', { ...folder, collapsed: !folder.collapsed })
 }
 
 function getStatusInfo(projectId: string) {
@@ -504,7 +498,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
             />
           </template>
           <template v-else>
-            <button class="w-5.5 h-5.5 flex items-center justify-center rounded text-ttertiary folder-toggle" :aria-label="isCollapsed(folder.id) ? `展开${folder.name}` : `收起${folder.name}`" @click="toggleCollapse(folder.id)">
+            <button class="w-5.5 h-5.5 flex items-center justify-center rounded text-ttertiary folder-toggle" :aria-label="isCollapsed(folder.id) ? `展开${folder.name}` : `收起${folder.name}`" @click="toggleCollapse(folder)">
               <svg :class="['chevron', { collapsed: isCollapsed(folder.id) }]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <polyline points="9 18 15 12 9 6"/>
               </svg>

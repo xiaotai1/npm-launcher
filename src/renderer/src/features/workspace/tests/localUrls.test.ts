@@ -14,3 +14,8 @@ test('忽略非本地地址并去重', () => {
 test('将 0.0.0.0 归一成 localhost', () => {
   assert.equal(normalizeLocalUrl('http://0.0.0.0:8080'), 'http://localhost:8080')
 })
+
+test('识别并归一化 IPv6 回环地址', () => {
+  assert.deepEqual(findLocalUrls('Local: http://[::1]:5173/ ready'), ['http://localhost:5173'])
+  assert.equal(normalizeLocalUrl('https://[::1]:8443/path'), 'https://localhost:8443/path')
+})

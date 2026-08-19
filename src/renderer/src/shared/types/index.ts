@@ -121,6 +121,8 @@ export interface DesktopAPI {
   maximize: () => Promise<void>
   close: () => Promise<void>
   isMaximized: () => Promise<boolean>
+  readClipboardText: () => Promise<string>
+  writeClipboardText: (text: string) => Promise<void>
   ptySpawn: (id: string, cols: number, rows: number, cwd: string, nodeVersion?: string) => Promise<boolean>
   ptyWrite: (id: string, data: string) => Promise<boolean>
   ptyResize: (id: string, cols: number, rows: number) => Promise<boolean>

@@ -40,7 +40,7 @@ test('还原修改后给出明确提示', () => {
 })
 
 test('保存项目设置根据落盘结果提示成功或失败', () => {
-  assert.match(appSource, /const saved = await window\.electronAPI\.updateProject\(project\)/)
+  assert.match(appSource, /const saved = await window\.desktopAPI\.updateProject\(project\)/)
   assert.match(appSource, /if \(!saved\)[\s\S]*showToast\('项目设置保存失败', 'error'\)/)
   assert.match(appSource, /showToast\('项目设置已保存', 'success'\)/)
 })
@@ -69,8 +69,25 @@ test('项目设置使用无外框的全页布局', () => {
   assert.match(workspaceSource, /\.info-panel :deep\(\.settings-page\)/)
 })
 
+test('项目设置目录使用标准 tab 语义支持首次按下切换', () => {
+  assert.match(infoSource, /class="settings-nav"[^>]*role="tablist"/)
+  assert.match(infoSource, /role="tab"/)
+  assert.match(infoSource, /:aria-selected="activeSection === item\.id"/)
+  assert.match(infoSource, /role="tabpanel"/)
+})
+
+test('项目设置分区立即挂载且淡入不超过 100ms', () => {
+  assert.equal(infoSource.includes('mode="out-in"'), false)
+
+  const duration = infoSource.match(/\.settings-section\s*\{[^}]*animation:\s*fadeIn\s+([\d.]+)(ms|s)/)
+  assert.ok(duration)
+  const durationMs = Number(duration[1]) * (duration[2] === 's' ? 1000 : 1)
+  assert.ok(durationMs <= 100, `设置分区淡入耗时 ${durationMs}ms，超过 100ms`)
+})
+
 test('移除项目操作保持低干扰并明确保留本地文件', () => {
-  assert.match(infoSource, /settings-remove-row/)
+  assert.match(infoSource, /class="danger-zone"/)
+  assert.match(infoSource, /class="danger-remove-btn"/)
   assert.match(infoSource, /从启动器移除/)
   assert.match(infoSource, /不会删除本地目录/)
   assert.match(infoSource, /title="移除项目"/)

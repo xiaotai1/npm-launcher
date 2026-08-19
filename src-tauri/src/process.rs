@@ -46,6 +46,47 @@ fn decode_output(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
+#[derive(Default)]
+struct OutputDecoder {
+    pending: Vec<u8>,
+}
+
+impl OutputDecoder {
+    fn decode(&mut self, bytes: &[u8], finish: bool) -> String {
+        self.pending.extend_from_slice(bytes);
+        if self.pending.is_empty() {
+            return String::new();
+        }
+        if finish {
+            return decode_output(&std::mem::take(&mut self.pending));
+        }
+
+        match std::str::from_utf8(&self.pending) {
+            Ok(_) => decode_output(&std::mem::take(&mut self.pending)),
+            Err(error) if error.error_len().is_none() => {
+                let valid_bytes = self
+                    .pending
+                    .drain(..error.valid_up_to())
+                    .collect::<Vec<_>>();
+                decode_output(&valid_bytes)
+            }
+            Err(_)
+                if cfg!(windows)
+                    && self
+                        .pending
+                        .last()
+                        .is_some_and(|byte| (0x81..=0xfe).contains(byte)) =>
+            {
+                let trailing = self.pending.pop();
+                let value = decode_output(&std::mem::take(&mut self.pending));
+                self.pending.extend(trailing);
+                value
+            }
+            Err(_) => decode_output(&std::mem::take(&mut self.pending)),
+        }
+    }
+}
+
 fn strip_ansi(value: &str) -> String {
     static ANSI_PATTERN: OnceLock<Regex> = OnceLock::new();
     ANSI_PATTERN
@@ -143,6 +184,9 @@ fn flush_process_logs(
     project_id: &str,
     generation: u64,
     pending: &mut Vec<(LogType, Vec<u8>)>,
+    stdout_decoder: &mut OutputDecoder,
+    stderr_decoder: &mut OutputDecoder,
+    finish: bool,
 ) {
     let mut grouped: Vec<(LogType, Vec<u8>)> = Vec::new();
     for (kind, bytes) in pending.drain(..) {
@@ -165,8 +209,28 @@ fn flush_process_logs(
     {
         return;
     }
+    drop(processes);
     for (kind, bytes) in grouped {
-        emit_log(app, project_id, kind, &decode_output(&bytes));
+        let value = match kind {
+            LogType::Stdout => stdout_decoder.decode(&bytes, false),
+            LogType::Stderr => stderr_decoder.decode(&bytes, false),
+            _ => decode_output(&bytes),
+        };
+        emit_log(app, project_id, kind, &value);
+    }
+    if finish {
+        emit_log(
+            app,
+            project_id,
+            LogType::Stdout,
+            &stdout_decoder.decode(&[], true),
+        );
+        emit_log(
+            app,
+            project_id,
+            LogType::Stderr,
+            &stderr_decoder.decode(&[], true),
+        );
     }
 }
 
@@ -180,6 +244,8 @@ fn consume_process_messages(
         let mut closed_streams = 0;
         let mut exit_code = None;
         let mut pending = Vec::new();
+        let mut stdout_decoder = OutputDecoder::default();
+        let mut stderr_decoder = OutputDecoder::default();
         let mut flush_deadline: Option<Instant> = None;
         loop {
             let wait = flush_deadline
@@ -195,17 +261,41 @@ fn consume_process_messages(
                 Ok(ProcessMessage::StreamClosed) => closed_streams += 1,
                 Ok(ProcessMessage::Exited(code)) => exit_code = Some(code),
                 Err(mpsc::RecvTimeoutError::Timeout) => {
-                    flush_process_logs(&app, &project_id, generation, &mut pending);
+                    flush_process_logs(
+                        &app,
+                        &project_id,
+                        generation,
+                        &mut pending,
+                        &mut stdout_decoder,
+                        &mut stderr_decoder,
+                        false,
+                    );
                     flush_deadline = None;
                 }
                 Err(mpsc::RecvTimeoutError::Disconnected) => break,
             }
             if pending.len() >= LOG_MAX_BUFFER_SIZE {
-                flush_process_logs(&app, &project_id, generation, &mut pending);
+                flush_process_logs(
+                    &app,
+                    &project_id,
+                    generation,
+                    &mut pending,
+                    &mut stdout_decoder,
+                    &mut stderr_decoder,
+                    false,
+                );
                 flush_deadline = None;
             }
             if closed_streams >= 2 && exit_code.is_some() {
-                flush_process_logs(&app, &project_id, generation, &mut pending);
+                flush_process_logs(
+                    &app,
+                    &project_id,
+                    generation,
+                    &mut pending,
+                    &mut stdout_decoder,
+                    &mut stderr_decoder,
+                    true,
+                );
                 break;
             }
         }
@@ -458,4 +548,21 @@ pub fn is_process_running(state: &AppState, project_id: &str) -> bool {
         .lock()
         .map(|processes| processes.contains_key(project_id))
         .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::OutputDecoder;
+
+    #[test]
+    fn utf8_中文跨读取块时不会产生替换字符() {
+        let bytes = "启动成功".as_bytes();
+        let mut decoder = OutputDecoder::default();
+        let first = decoder.decode(&bytes[..2], false);
+        let second = decoder.decode(&bytes[2..], true);
+
+        assert_eq!(first, "");
+        assert_eq!(format!("{first}{second}"), "启动成功");
+        assert!(!second.contains('\u{fffd}'));
+    }
 }

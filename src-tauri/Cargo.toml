@@ -1,6 +1,6 @@
 [package]
 name = "npm-launcher"
-version = "1.0.7"
+version = "1.0.8"
 description = "可视化管理多个 NPM 项目的桌面工作台"
 authors = ["xiaotai"]
 edition = "2021"
@@ -14,6 +14,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+tauri-plugin-clipboard-manager = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }

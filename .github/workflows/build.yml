@@ -49,6 +49,15 @@ jobs:
       - name: TypeScript 类型检查
         run: npm run typecheck
 
+      - name: 前端测试
+        run: npm test
+
+      - name: Rust 测试
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: Rust 静态检查
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+
       - name: 构建安装包
         run: npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
 

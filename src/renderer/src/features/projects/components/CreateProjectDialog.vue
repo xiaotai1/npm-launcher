@@ -32,8 +32,6 @@ const availableScripts = ref<string[]>([])
 const loadingScripts = ref(false)
 const scriptMessage = ref('选择包含 package.json 的项目目录')
 const dialogRef = ref<HTMLElement | null>(null)
-const projectNameInput = ref<HTMLInputElement | null>(null)
-const folderNameInput = ref<HTMLInputElement | null>(null)
 
 const canSubmit = computed(() => mode.value === 'project'
   ? canCreateProject(projectDraft.value)
@@ -50,16 +48,8 @@ function resetState() {
   scriptMessage.value = '选择包含 package.json 的项目目录'
 }
 
-function focusCurrentField() {
-  nextTick(() => {
-    if (mode.value === 'project') projectNameInput.value?.focus()
-    else folderNameInput.value?.focus()
-  })
-}
-
 function selectMode(nextMode: CreateMode) {
   mode.value = nextMode
-  focusCurrentField()
 }
 
 function requestClose() {
@@ -131,10 +121,16 @@ function submit() {
   requestClose()
 }
 
+function handleSubmitKeydown(event: KeyboardEvent) {
+  if (event.isComposing || !(event.target instanceof HTMLInputElement) || event.target.readOnly) return
+  event.preventDefault()
+  submit()
+}
+
 watch(() => props.visible, visible => {
   if (visible) {
     resetState()
-    focusCurrentField()
+    nextTick(() => dialogRef.value?.focus())
   } else {
     resetState()
   }
@@ -151,6 +147,7 @@ watch(() => props.visible, visible => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="create-dialog-title"
+          tabindex="-1"
           @keydown="handleDialogKeydown"
         >
           <header class="dialog-header">
@@ -158,7 +155,7 @@ watch(() => props.visible, visible => {
               <p>WORKSPACE</p>
               <h2 id="create-dialog-title">新建工作项</h2>
             </div>
-            <button class="dialog-close" type="button" aria-label="关闭创建窗口" @click="requestClose">
+            <button class="dialog-close" type="button" aria-label="关闭创建窗口" data-first-mouse-immediate @click="requestClose">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
             </button>
           </header>
@@ -174,18 +171,18 @@ watch(() => props.visible, visible => {
             </button>
           </div>
 
-          <form class="dialog-form" :aria-busy="loadingScripts" @submit.prevent="submit">
+          <form class="dialog-form" :aria-busy="loadingScripts" @submit.prevent="submit" @keydown.enter="handleSubmitKeydown">
             <template v-if="mode === 'project'">
               <div class="field-group">
                 <label for="create-project-name">项目名称</label>
-                <input id="create-project-name" ref="projectNameInput" v-model="projectDraft.name" autocomplete="off" placeholder="例如 admin-console" />
+                <input id="create-project-name" v-model="projectDraft.name" autocomplete="off" placeholder="例如 admin-console" />
               </div>
 
               <div class="field-group">
                 <label for="create-project-path">项目目录</label>
                 <div class="path-control">
-                  <input id="create-project-path" v-model="projectDraft.path" readonly aria-describedby="create-project-path-hint" placeholder="选择包含 package.json 的目录" @click="selectFolder" />
-                  <button type="button" class="browse-button" :disabled="loadingScripts" @click="selectFolder">浏览</button>
+                  <input id="create-project-path" v-model="projectDraft.path" readonly aria-describedby="create-project-path-hint" placeholder="选择包含 package.json 的目录" data-first-mouse-immediate @click="selectFolder" />
+                  <button type="button" class="browse-button" :disabled="loadingScripts" data-first-mouse-immediate @click="selectFolder">浏览</button>
                 </div>
                 <span id="create-project-path-hint" class="field-hint" aria-live="polite">{{ scriptMessage }}</span>
               </div>
@@ -213,13 +210,13 @@ watch(() => props.visible, visible => {
               </div>
               <div class="field-group">
                 <label for="create-folder-name">文件夹名称</label>
-                <input id="create-folder-name" ref="folderNameInput" v-model="folderName" autocomplete="off" placeholder="例如 业务应用" />
+                <input id="create-folder-name" v-model="folderName" autocomplete="off" placeholder="例如 业务应用" />
               </div>
             </template>
 
             <footer class="dialog-actions">
-              <button type="button" class="cancel-button" @click="requestClose">取消</button>
-              <button type="submit" class="submit-button" :disabled="!canSubmit">{{ submitLabel }}</button>
+              <button type="button" class="cancel-button" data-first-mouse-immediate @click="requestClose">取消</button>
+              <button type="submit" class="submit-button" :disabled="!canSubmit" data-first-mouse-immediate>{{ submitLabel }}</button>
             </footer>
           </form>
         </section>
@@ -229,7 +226,7 @@ watch(() => props.visible, visible => {
 </template>
 
 <style scoped>
-.create-dialog-backdrop { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 28px; background: var(--modal-backdrop); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.create-dialog-backdrop { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 28px; background: var(--modal-backdrop); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); -webkit-app-region: no-drag; }
 .create-dialog { width: min(460px, calc(100vw - 40px)); overflow: hidden; border: 1px solid var(--glass-border); border-radius: 18px; color: var(--text-primary); background: var(--glass-fill-strong); backdrop-filter: blur(28px) saturate(170%); -webkit-backdrop-filter: blur(28px) saturate(170%); box-shadow: var(--glass-shadow); }
 .create-dialog::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--glass-edge); pointer-events: none; }
 .dialog-header { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 20px; border-bottom: 1px solid var(--border-muted); }.dialog-header p { margin: 0 0 4px; color: var(--text-tertiary); font: 700 9px/1 var(--font-mono); letter-spacing: .14em; }.dialog-header h2 { margin: 0; font-size: 17px; letter-spacing: -.025em; }.dialog-close { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; color: var(--text-tertiary); }.dialog-close:hover { color: var(--text-primary); background: var(--bg-hover); }

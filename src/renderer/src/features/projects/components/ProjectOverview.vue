@@ -445,7 +445,7 @@ function getStatusColor(projectId: string) {
 .overview-header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 96px; padding: 22px 28px; border-bottom: 1px solid var(--border-muted); background: var(--glass-fill-strong); backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(var(--glass-saturate)); }
 .section-eyebrow { margin: 0 0 6px; color: var(--text-tertiary); font: 700 10px/1 var(--font-mono); letter-spacing: .18em; }
 .overview-title-block { display: flex; flex-direction: column; gap: 2px; }
-.overview-header h1 { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--text-primary); font-size: 22px; font-weight: 750; letter-spacing: -0.01em; }
+.overview-header h1 { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--text-primary); font-size: 22px; font-weight: 750; letter-spacing: 0; }
 .overview-title-accent { color: var(--accent-primary); font-weight: 500; opacity: 0.6; }
 .overview-title-tag { display: inline-flex; align-items: center; padding: 3px 8px; border: 1px solid var(--accent-border); border-radius: 999px; color: var(--accent-primary); background: var(--accent-glow); font: 700 9px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
 .overview-subtitle { display: flex; align-items: center; gap: 7px; margin: 6px 0 0; color: var(--text-secondary); font-size: 12px; }

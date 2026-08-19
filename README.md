@@ -76,10 +76,15 @@ npm run dev
 常用检查和构建命令：
 
 ```bash
+npm test                # 前端单元测试与源码结构回归测试
 npm run typecheck       # TypeScript 类型检查
 npm run build:frontend  # 构建 Vue 前端
 npm run build           # 编译当前平台 Rust 应用，不生成安装包
+cargo test --manifest-path src-tauri/Cargo.toml
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 ```
+
+提交前建议依次运行 `npm test`、`npm run typecheck`、`cargo test` 和 Clippy。GitHub Actions 会在 Windows x64、macOS Intel 与 macOS Apple Silicon 构建任务中执行相同门禁。
 
 ## 打包
 
@@ -105,14 +110,26 @@ GitHub Actions 会分别在 Windows x64、macOS Intel 和 macOS Apple Silicon ru
 - macOS Intel DMG
 - macOS Apple Silicon DMG
 
+### 发布签名
+
+仓库默认工作流可以生成未签名安装包，适合内部测试。对外分发前需要在对应平台配置证书：
+
+- macOS：Apple Developer ID Application 证书、签名身份、Apple ID 或 App Store Connect API 凭据，并完成 notarization 与 staple。
+- Windows：受信任的代码签名证书，并在上传产物前使用 `signtool` 对安装版和便携版签名。
+
+证书和账号凭据不能写入仓库，应通过 GitHub Actions Secrets 注入。未配置时，macOS Gatekeeper 或 Windows SmartScreen 可能显示来源警告。
+
 ## 项目结构
 
 ```text
 src-tauri/
 ├── Cargo.toml              # Rust 依赖与目标平台配置
 ├── tauri.conf.json         # Tauri 公共配置
-├── tauri.macos.conf.json   # macOS 窗口配置
+├── tauri.macos.conf.json   # macOS 标题栏与窗口配置
 ├── tauri.windows.conf.json # Windows 窗口与 NSIS 配置
+├── build.rs                # Tauri 构建入口
+├── capabilities/           # 主窗口权限声明
+├── icons/                  # Windows 与 macOS 应用图标
 └── src/
     ├── commands.rs         # 前端命令入口
     ├── config.rs           # 配置持久化
@@ -132,13 +149,11 @@ src/renderer/
         └── desktop/api.ts  # Tauri invoke/event 统一适配层
 ```
 
-旧 `src/main`、`src/preload` 和测试文件仅作为迁移对照保留，不进入 Tauri 构建链。
-
 ## 配置与安全
 
 - 沿用系统配置目录中的 `npm-launcher/config.json`，现有配置可直接读取
 - Tauri capability 只开放主窗口基础权限，文件对话框和打开路径由 Rust 后端调用
-- 外部 URL 仅允许打开 `http/https` 的 `localhost` 或 `127.0.0.1`
+- 外部 URL 仅允许打开 `http/https` 的 `localhost`、IPv4 回环/监听地址或 IPv6 回环地址 `[::1]`
 - 前端不直接访问 Node.js、文件系统或子进程 API
 - Windows 默认使用系统 WebView2，不随安装包内置固定运行时
 

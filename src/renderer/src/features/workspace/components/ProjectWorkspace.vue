@@ -44,6 +44,10 @@ function editProject() {
   emit('update:activeTab', 'info')
   emit('edit')
 }
+
+function selectTab(tab: 'logs' | 'terminal' | 'info') {
+  emit('update:activeTab', tab)
+}
 </script>
 
 <template>
@@ -61,13 +65,13 @@ function editProject() {
       @open-url="emit('open-url', $event)"
       @set-command="command => emit('set-command', project.id, command)"
     />
-    <nav class="workspace-tabs workspace-tab-strip" aria-label="项目工作区">
-      <button :class="{ active: activeTab === 'logs' }" @click="emit('update:activeTab', 'logs')">运行日志</button>
-      <button :class="{ active: activeTab === 'terminal' }" @click="emit('update:activeTab', 'terminal')">交互终端</button>
-      <button :class="{ active: activeTab === 'info' }" @click="emit('update:activeTab', 'info')">项目设置</button>
+    <nav class="workspace-tabs workspace-tab-strip" role="tablist" aria-label="项目工作区">
+      <button id="logs-workspace-tab" role="tab" :aria-selected="activeTab === 'logs'" aria-controls="logs-workspace-panel" :class="{ active: activeTab === 'logs' }" @click="selectTab('logs')">运行日志</button>
+      <button id="terminal-workspace-tab" role="tab" :aria-selected="activeTab === 'terminal'" aria-controls="terminal-workspace-panel" :class="{ active: activeTab === 'terminal' }" @click="selectTab('terminal')">交互终端</button>
+      <button id="info-workspace-tab" role="tab" :aria-selected="activeTab === 'info'" aria-controls="info-workspace-panel" :class="{ active: activeTab === 'info' }" @click="selectTab('info')">项目设置</button>
     </nav>
     <div class="workspace-panels">
-      <div v-show="activeTab === 'logs'" class="workspace-panel">
+      <div id="logs-workspace-panel" v-show="activeTab === 'logs'" class="workspace-panel" role="tabpanel" aria-labelledby="logs-workspace-tab">
         <LogConsole
           :is-running="status?.status === 'running'"
           :project-id="project.id"
@@ -80,10 +84,10 @@ function editProject() {
           @export-result="(success, message) => emit('export-result', success, message)"
         />
       </div>
-      <div class="workspace-panel" :class="{ hidden: activeTab !== 'terminal' }">
+      <div id="terminal-workspace-panel" class="workspace-panel" :class="{ hidden: activeTab !== 'terminal' }" role="tabpanel" aria-labelledby="terminal-workspace-tab">
         <Terminal :id="`pty-${project.id}`" :cwd="project.path" :visible="activeTab === 'terminal'" :node-version="project.nodeVersion" />
       </div>
-      <div v-show="activeTab === 'info'" class="workspace-panel info-panel">
+      <div id="info-workspace-panel" v-show="activeTab === 'info'" class="workspace-panel info-panel" role="tabpanel" aria-labelledby="info-workspace-tab">
         <ProjectInfoPanel
           :project="project"
           :edit-trigger="editTrigger"

@@ -50,17 +50,20 @@ pub fn save_config(state: State<'_, AppState>, config_value: AppConfig) -> bool 
 }
 
 #[tauri::command]
-pub fn export_config(app: AppHandle, state: State<'_, AppState>) -> ConfigTransferResult {
+pub async fn export_config(app: AppHandle) -> ConfigTransferResult {
     let date = chrono::Local::now().format("%Y-%m-%d");
     let filename = format!("npm-launcher-config-{date}.json");
-    let selected = app
+    let mut dialog = app
         .dialog()
         .file()
         .set_title("导出配置")
         .set_directory(desktop_directory(&app))
         .set_file_name(filename)
-        .add_filter("配置文件", &["json"])
-        .blocking_save_file();
+        .add_filter("配置文件", &["json"]);
+    if let Some(window) = app.get_webview_window("main") {
+        dialog = dialog.set_parent(&window);
+    }
+    let selected = dialog.blocking_save_file();
     let Some(selected) = selected else {
         return ConfigTransferResult {
             success: false,
@@ -78,6 +81,7 @@ pub fn export_config(app: AppHandle, state: State<'_, AppState>) -> ConfigTransf
             }
         }
     };
+    let state = app.state::<AppState>();
     let result = serde_json::to_string_pretty(&config::load_config(&state.config_path))
         .map_err(|error| format!("序列化配置失败：{error}"))
         .and_then(|content| {
@@ -98,13 +102,16 @@ pub fn export_config(app: AppHandle, state: State<'_, AppState>) -> ConfigTransf
 }
 
 #[tauri::command]
-pub fn import_config(app: AppHandle, state: State<'_, AppState>) -> ConfigTransferResult {
-    let selected = app
+pub async fn import_config(app: AppHandle) -> ConfigTransferResult {
+    let mut dialog = app
         .dialog()
         .file()
         .set_title("导入配置")
-        .add_filter("配置文件", &["json"])
-        .blocking_pick_file();
+        .add_filter("配置文件", &["json"]);
+    if let Some(window) = app.get_webview_window("main") {
+        dialog = dialog.set_parent(&window);
+    }
+    let selected = dialog.blocking_pick_file();
     let Some(selected) = selected else {
         return ConfigTransferResult {
             success: false,
@@ -122,6 +129,7 @@ pub fn import_config(app: AppHandle, state: State<'_, AppState>) -> ConfigTransf
             }
         }
     };
+    let state = app.state::<AppState>();
     let result = fs::read_to_string(&path)
         .map_err(|error| format!("读取配置失败：{error}"))
         .and_then(|content| {
@@ -133,11 +141,15 @@ pub fn import_config(app: AppHandle, state: State<'_, AppState>) -> ConfigTransf
             config::save_config(&state.config_path, &value)
         });
     match result {
-        Ok(()) => ConfigTransferResult {
-            success: true,
-            path: Some(path.to_string_lossy().into_owned()),
-            error: None,
-        },
+        Ok(()) => {
+            process::stop_all_processes(&app);
+            terminal::kill_all_terminals(&state);
+            ConfigTransferResult {
+                success: true,
+                path: Some(path.to_string_lossy().into_owned()),
+                error: None,
+            }
+        }
         Err(error) => ConfigTransferResult {
             success: false,
             path: None,
@@ -204,27 +216,56 @@ pub fn move_project_to_folder(
 }
 
 #[tauri::command]
-pub fn get_node_version(state: State<'_, AppState>) -> NodeVersionResult {
-    environment::get_node_version(&state)
+pub async fn get_node_version(app: AppHandle) -> NodeVersionResult {
+    match tauri::async_runtime::spawn_blocking(move || {
+        environment::get_node_version(&app.state::<AppState>())
+    })
+    .await
+    {
+        Ok(result) => result,
+        Err(error) => NodeVersionResult {
+            version: None,
+            error: Some(format!("Node.js 版本探测任务异常：{error}")),
+        },
+    }
 }
 
 #[tauri::command]
-pub fn get_node_versions(state: State<'_, AppState>) -> NodeVersionsResult {
-    environment::get_node_versions(&state)
+pub async fn get_node_versions(app: AppHandle) -> NodeVersionsResult {
+    match tauri::async_runtime::spawn_blocking(move || {
+        environment::get_node_versions(&app.state::<AppState>())
+    })
+    .await
+    {
+        Ok(result) => result,
+        Err(error) => NodeVersionsResult {
+            versions: Vec::new(),
+            current: None,
+            error: Some(format!("Node.js 版本列表探测任务异常：{error}")),
+        },
+    }
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub fn switch_node_version(state: State<'_, AppState>, version: String) -> ActionResult {
-    environment::switch_node_version(&state, &version)
+pub async fn switch_node_version(app: AppHandle, version: String) -> ActionResult {
+    match tauri::async_runtime::spawn_blocking(move || {
+        let state = app.state::<AppState>();
+        environment::switch_node_version(&state, &version)
+    })
+    .await
+    {
+        Ok(result) => result,
+        Err(error) => ActionResult::failure(format!("Node.js 版本切换任务异常：{error}")),
+    }
 }
 
 #[tauri::command]
-pub fn select_folder(app: AppHandle) -> PathSelectionResult {
-    let selected = app
-        .dialog()
-        .file()
-        .set_title("选择项目目录")
-        .blocking_pick_folder();
+pub async fn select_folder(app: AppHandle) -> PathSelectionResult {
+    let mut dialog = app.dialog().file().set_title("选择项目目录");
+    if let Some(window) = app.get_webview_window("main") {
+        dialog = dialog.set_parent(&window);
+    }
+    let selected = dialog.blocking_pick_folder();
     match selected.and_then(|path| selected_path(path).ok()) {
         Some(path) => PathSelectionResult {
             canceled: false,
@@ -314,16 +355,27 @@ pub fn open_in_vscode(app: AppHandle, folder_path: String) -> ActionResult {
 }
 
 #[tauri::command]
-pub fn open_local_url(app: AppHandle, url: String) -> ActionResult {
-    let parsed = match url::Url::parse(&url) {
-        Ok(parsed) => parsed,
-        Err(error) => return ActionResult::failure(format!("打开地址失败：{error}")),
+fn is_allowed_local_url(value: &str) -> bool {
+    let Ok(parsed) = url::Url::parse(value) else {
+        return false;
     };
-    if !matches!(parsed.scheme(), "http" | "https")
-        || !matches!(parsed.host_str(), Some("localhost" | "127.0.0.1"))
-    {
+    if !matches!(parsed.scheme(), "http" | "https") {
+        return false;
+    }
+    match parsed.host() {
+        Some(url::Host::Domain(host)) => host.eq_ignore_ascii_case("localhost"),
+        Some(url::Host::Ipv4(address)) => address.is_loopback() || address.is_unspecified(),
+        Some(url::Host::Ipv6(address)) => address.is_loopback(),
+        None => false,
+    }
+}
+
+#[tauri::command]
+pub fn open_local_url(app: AppHandle, url: String) -> ActionResult {
+    if !is_allowed_local_url(&url) {
         return ActionResult::failure("仅支持打开本地访问地址");
     }
+    let parsed = url::Url::parse(&url).expect("本地地址已通过解析校验");
     match app.opener().open_url(parsed.as_str(), None::<&str>) {
         Ok(()) => ActionResult::success(),
         Err(error) => ActionResult::failure(error.to_string()),
@@ -391,12 +443,11 @@ pub fn get_process_status(state: State<'_, AppState>, project_id: String) -> Pro
     process::get_process_status(&state, &project_id)
 }
 
-#[tauri::command(rename_all = "camelCase")]
-pub fn start_all_projects(
-    app: AppHandle,
-    state: State<'_, AppState>,
+fn start_all_projects_blocking(
+    app: &AppHandle,
     project_ids: Vec<String>,
 ) -> StartAllProjectsResult {
+    let state = app.state::<AppState>();
     let app_config = config::load_config(&state.config_path);
     let mut result = StartAllProjectsResult::default();
     for project_id in project_ids {
@@ -419,7 +470,7 @@ pub fn start_all_projects(
         let start_result = project_start_error(&state, project).map_or_else(
             || {
                 process::start_project_process(
-                    &app,
+                    app,
                     &project.id,
                     &project.path,
                     &project.command,
@@ -441,6 +492,29 @@ pub fn start_all_projects(
         }
     }
     result
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub async fn start_all_projects(
+    app: AppHandle,
+    project_ids: Vec<String>,
+) -> StartAllProjectsResult {
+    match tauri::async_runtime::spawn_blocking(move || {
+        start_all_projects_blocking(&app, project_ids)
+    })
+    .await
+    {
+        Ok(result) => result,
+        Err(error) => StartAllProjectsResult {
+            success: 0,
+            failed: 1,
+            failures: vec![ProjectStartFailure {
+                project_id: String::new(),
+                project_name: "批量启动".to_string(),
+                message: format!("批量启动任务异常：{error}"),
+            }],
+        },
+    }
 }
 
 #[tauri::command]
@@ -479,7 +553,7 @@ fn safe_log_filename(filename: &str) -> String {
 }
 
 #[tauri::command]
-pub fn export_log(app: AppHandle, filename: String, content: String) -> ConfigTransferResult {
+pub async fn export_log(app: AppHandle, filename: String, content: String) -> ConfigTransferResult {
     if content.trim().is_empty() {
         return ConfigTransferResult {
             success: false,
@@ -488,14 +562,17 @@ pub fn export_log(app: AppHandle, filename: String, content: String) -> ConfigTr
         };
     }
     let filename = safe_log_filename(&filename);
-    let selected = app
+    let mut dialog = app
         .dialog()
         .file()
         .set_title("导出日志")
         .set_directory(desktop_directory(&app))
         .set_file_name(filename)
-        .add_filter("日志文件", &["log"])
-        .blocking_save_file();
+        .add_filter("日志文件", &["log"]);
+    if let Some(window) = app.get_webview_window("main") {
+        dialog = dialog.set_parent(&window);
+    }
+    let selected = dialog.blocking_save_file();
     let Some(selected) = selected else {
         return ConfigTransferResult {
             success: false,
@@ -606,4 +683,18 @@ pub fn pty_resize(state: State<'_, AppState>, id: String, cols: u16, rows: u16) 
 #[tauri::command]
 pub fn pty_kill(state: State<'_, AppState>, id: String) -> bool {
     terminal::kill_terminal(&state, &id)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_allowed_local_url;
+
+    #[test]
+    fn 本地地址校验支持_ipv4_和_ipv6_回环() {
+        assert!(is_allowed_local_url("http://localhost:5173"));
+        assert!(is_allowed_local_url("https://127.0.0.1:8443/path"));
+        assert!(is_allowed_local_url("http://[::1]:3000"));
+        assert!(!is_allowed_local_url("https://example.com"));
+        assert!(!is_allowed_local_url("file:///tmp/index.html"));
+    }
 }

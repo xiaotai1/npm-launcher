@@ -18,6 +18,7 @@ test('项目展示信息提取路径最后一级目录', () => {
 test('项目展示信息从本地地址提取端口', () => {
   assert.equal(extractLocalPort('http://localhost:5202'), ':5202')
   assert.equal(extractLocalPort('https://127.0.0.1:5173/app'), ':5173')
+  assert.equal(extractLocalPort('http://[::1]:5202'), ':5202')
   assert.equal(extractLocalPort('http://example.com'), null)
 })
 

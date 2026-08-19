@@ -77,6 +77,8 @@ export const desktopAPI: DesktopAPI = {
   maximize: () => invoke<void>('window_maximize'),
   close: () => invoke<void>('window_close'),
   isMaximized: () => invoke<boolean>('window_is_maximized'),
+  readClipboardText: () => invoke<string>('plugin:clipboard-manager|read_text'),
+  writeClipboardText: text => invoke<void>('plugin:clipboard-manager|write_text', { text }),
   ptySpawn: (id, cols, rows, cwd, nodeVersion) =>
     invoke<boolean>('pty_spawn', { id, cols, rows, cwd, nodeVersion }),
   ptyWrite: (id, data) => invoke<boolean>('pty_write', { id, data }),

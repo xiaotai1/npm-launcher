@@ -7,7 +7,8 @@ const appSource = readFileSync('src/renderer/src/app/App.vue', 'utf-8')
 const themeSource = readFileSync('src/renderer/src/shared/styles/main.css', 'utf-8')
 
 test('侧栏区分总览导航和项目列表层级', () => {
-  assert.match(sidebarSource, /sidebar-nav-block/)
+  assert.match(sidebarSource, /sidebar-list-block/)
+  assert.match(sidebarSource, /class="overview-nav"/)
   assert.match(sidebarSource, /sidebar-list-heading/)
 })
 
@@ -24,7 +25,8 @@ test('侧栏项目副标题用端口或目录名区分同名项目', () => {
 })
 
 test('侧栏项目选中态和运行态使用不同视觉语义', () => {
-  assert.match(sidebarSource, /\.project-card\.active::before[\s\S]*background: var\(--accent-primary\)/)
+  assert.match(sidebarSource, /\.project-card::before[\s\S]*background: var\(--accent-primary\)/)
+  assert.match(sidebarSource, /\.project-card\.active::before\s*\{[^}]*opacity:\s*1/)
   assert.equal(/\.project-card\.active::before[\s\S]*background: var\(--indicator\)/.test(sidebarSource), false)
 })
 

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "NPM Launcher",
-  "version": "1.0.7",
-  "identifier": "com.npm-launcher.app",
+  "version": "1.0.8",
+  "identifier": "com.xiaotai.npmlauncher",
   "build": {
     "beforeDevCommand": "npm run dev:frontend",
     "devUrl": "http://localhost:5173",
@@ -20,6 +20,7 @@
         "minHeight": 700,
         "resizable": true,
         "fullscreen": false,
+        "acceptFirstMouse": true,
         "backgroundColor": "#0f172a"
       }
     ],

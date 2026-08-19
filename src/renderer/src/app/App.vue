@@ -12,6 +12,7 @@ import { applyTheme, installSystemThemeListener } from './useAppTheme'
 import { findLocalUrls } from '../features/workspace/model/localUrls'
 import { appendSessionLogEntry } from '../features/terminal/model/sessionLogs'
 import { clearLaunchFailure, mergeLaunchFailures, setLaunchFailure, type LaunchFailureState } from '../features/workspace/model/launchFailures'
+import { installFirstMouseActivation } from '../shared/window/firstMouseActivation'
 
 type WorkspaceTab = 'logs' | 'terminal' | 'info'
 
@@ -21,6 +22,7 @@ const nodeVersion = ref<string | null>(null)
 const nodeVersions = ref<string[]>([])
 const currentNodeVersion = ref<string | null>(null)
 const switchingVersion = ref(false)
+const refreshingVersions = ref(false)
 const selectedProjectId = ref<string | null>(null)
 const processStatuses = ref<Record<string, ProcessStatus>>({})
 const projectUrls = ref<Record<string, string>>({})
@@ -45,6 +47,7 @@ let cleanupStatus: (() => void) | null = null
 let cleanupLogs: (() => void) | null = null
 let cleanupErrorAnalysis: (() => void) | null = null
 let cleanupSystemTheme: (() => void) | null = null
+let cleanupFirstMouseActivation: (() => void) | null = null
 
 const selectedProject = computed(() => {
   if (!selectedProjectId.value || !config.value) return null
@@ -78,14 +81,11 @@ async function loadConfig() {
   if (!selectedProjectId.value) activeView.value = 'overview'
 }
 
-async function loadNodeVersion() {
-  nodeVersion.value = (await window.desktopAPI.getNodeVersion()).version
-}
-
 async function loadNodeVersions() {
   const result = await window.desktopAPI.getNodeVersions()
   nodeVersions.value = result.versions
   currentNodeVersion.value = result.current
+  nodeVersion.value = result.current
 }
 
 function showOverview() {
@@ -116,9 +116,25 @@ function setActiveProjectTab(tab: WorkspaceTab) {
   projectTabs.value = { ...projectTabs.value, [selectedProjectId.value]: tab }
 }
 
+async function persistConfigChange(operation: () => Promise<boolean>, errorMessage: string) {
+  try {
+    const saved = await operation()
+    if (!saved) {
+      showToast(errorMessage, 'error')
+      return false
+    }
+    await loadConfig()
+    return true
+  } catch (error) {
+    console.error(errorMessage, error)
+    showToast(errorMessage, 'error')
+    return false
+  }
+}
+
 async function addProject(project: Project) {
-  await window.desktopAPI.addProject(project)
-  await loadConfig()
+  const saved = await persistConfigChange(() => window.desktopAPI.addProject(project), '项目创建失败')
+  if (!saved) return
   selectProject(project.id)
 }
 
@@ -140,23 +156,23 @@ async function updateProject(project: Project) {
 }
 
 async function deleteProject(id: string) {
-  await window.desktopAPI.deleteProject(id)
+  const saved = await persistConfigChange(() => window.desktopAPI.deleteProject(id), '项目删除失败')
+  if (!saved) return
   launchFailures.value = clearLaunchFailure(launchFailures.value, id)
   const nextTabs = { ...projectTabs.value }
   delete nextTabs[id]
   projectTabs.value = nextTabs
-  await loadConfig()
   if (selectedProjectId.value === id) selectedProjectId.value = config.value?.projects[0]?.id || null
   if (!selectedProjectId.value) activeView.value = 'overview'
 }
 
-async function reorderProjects(ids: string[]) { await window.desktopAPI.reorderProjects(ids); await loadConfig() }
-async function toggleFavorite(id: string) { await window.desktopAPI.toggleFavorite(id); await loadConfig() }
-async function addFolder(folder: Folder) { await window.desktopAPI.addFolder(folder); await loadConfig() }
-async function reorderFolders(ids: string[]) { await window.desktopAPI.reorderFolders(ids); await loadConfig() }
-async function deleteFolder(id: string) { await window.desktopAPI.deleteFolder(id); await loadConfig() }
-async function renameFolder(folder: Folder) { await window.desktopAPI.updateFolder(folder); await loadConfig() }
-async function moveToFolder(projectId: string, folderId: string | null) { await window.desktopAPI.moveProjectToFolder(projectId, folderId); await loadConfig() }
+async function reorderProjects(ids: string[]) { await persistConfigChange(() => window.desktopAPI.reorderProjects(ids), '项目排序保存失败') }
+async function toggleFavorite(id: string) { await persistConfigChange(() => window.desktopAPI.toggleFavorite(id), '收藏状态保存失败') }
+async function addFolder(folder: Folder) { await persistConfigChange(() => window.desktopAPI.addFolder(folder), '文件夹创建失败') }
+async function reorderFolders(ids: string[]) { await persistConfigChange(() => window.desktopAPI.reorderFolders(ids), '文件夹排序保存失败') }
+async function deleteFolder(id: string) { await persistConfigChange(() => window.desktopAPI.deleteFolder(id), '文件夹删除失败') }
+async function updateFolder(folder: Folder) { await persistConfigChange(() => window.desktopAPI.updateFolder(folder), '文件夹设置保存失败') }
+async function moveToFolder(projectId: string, folderId: string | null) { await persistConfigChange(() => window.desktopAPI.moveProjectToFolder(projectId, folderId), '项目分组保存失败') }
 
 async function startProjectById(projectId: string) {
   const project = config.value?.projects.find(item => item.id === projectId)
@@ -266,14 +282,19 @@ async function importConfig() {
 
 async function switchNodeVersion(version: string) {
   switchingVersion.value = true
-  const result = await window.desktopAPI.switchNodeVersion(version)
-  switchingVersion.value = false
-  if (result.success) {
-    const normalized = version.startsWith('v') ? version : `v${version}`
-    nodeVersion.value = normalized
-    currentNodeVersion.value = normalized
-    showToast(`已切换到 Node ${normalized}`, 'success')
-  } else showToast(`切换失败: ${result.error || '未知错误'}`, 'error')
+  try {
+    const result = await window.desktopAPI.switchNodeVersion(version)
+    if (result.success) {
+      const normalized = version.startsWith('v') ? version : `v${version}`
+      const refreshed = await refreshVersions(false)
+      if (refreshed) showToast(`已切换到 Node ${currentNodeVersion.value || nodeVersion.value || normalized}`, 'success')
+      else showToast(`已切换到 Node ${normalized}，版本状态刷新失败`, 'warning')
+    } else showToast(`切换失败: ${result.error || '未知错误'}`, 'error')
+  } catch (error) {
+    showToast(`切换失败: ${error instanceof Error ? error.message : String(error)}`, 'error')
+  } finally {
+    switchingVersion.value = false
+  }
 }
 
 async function startAllProjects() {
@@ -289,17 +310,20 @@ async function stopAllProjects() { await window.desktopAPI.stopAllProjects(); sh
 async function setProjectNodeVersion(projectId: string, version: string | null) {
   const project = config.value?.projects.find(item => item.id === projectId)
   if (!project) return
-  if (version) project.nodeVersion = version
-  else delete project.nodeVersion
-  await window.desktopAPI.updateProject(toRaw(project))
-  await loadConfig()
+  const nextProject = { ...project }
+  if (version) nextProject.nodeVersion = version
+  else delete nextProject.nodeVersion
+  await persistConfigChange(() => window.desktopAPI.updateProject(toRaw(nextProject)), '项目 Node.js 版本保存失败')
 }
 
 async function setProjectCommand(projectId: string, command: string) {
   const project = config.value?.projects.find(item => item.id === projectId)
   if (!project || project.command === command) return
-  await window.desktopAPI.updateProject(toRaw({ ...project, command }))
-  await loadConfig()
+  const saved = await persistConfigChange(
+    () => window.desktopAPI.updateProject(toRaw({ ...project, command })),
+    '项目启动方案保存失败'
+  )
+  if (!saved) return
   launchFailures.value = clearLaunchFailure(launchFailures.value, projectId)
   showToast(`已切换启动方案: ${command}`, 'success')
 }
@@ -311,14 +335,44 @@ async function openProjectFolderById(projectId: string) {
   if (!result.success) showToast(result.error || '打开文件夹失败', 'error')
 }
 
-async function refreshVersions() { await Promise.all([loadNodeVersion(), loadNodeVersions()]) }
+async function refreshVersions(notify = true) {
+  if (refreshingVersions.value) return false
+  refreshingVersions.value = true
+  try {
+    const versionsResult = await window.desktopAPI.getNodeVersions()
+    nodeVersions.value = versionsResult.versions
+    currentNodeVersion.value = versionsResult.current
+    nodeVersion.value = versionsResult.current
+    const error = versionsResult.error
+    if (error) {
+      if (notify) showToast(`刷新失败: ${error}`, 'error')
+      return false
+    }
+    if (notify) showToast('Node 版本列表已刷新', 'success')
+    return true
+  } catch (error) {
+    if (notify) showToast(`刷新失败: ${error instanceof Error ? error.message : String(error)}`, 'error')
+    return false
+  } finally {
+    refreshingVersions.value = false
+  }
+}
 
 async function toggleTheme() {
   if (!config.value) return
   const themes: AppConfig['theme'][] = ['light', 'dark', 'system']
-  config.value.theme = themes[(themes.indexOf(config.value.theme) + 1) % themes.length]
+  const previousTheme = config.value.theme
+  config.value.theme = themes[(themes.indexOf(previousTheme) + 1) % themes.length]
   applyTheme(config.value.theme)
-  await window.desktopAPI.saveConfig(toRaw(config.value))
+  try {
+    const saved = await window.desktopAPI.saveConfig(toRaw(config.value))
+    if (saved) return
+  } catch (error) {
+    console.error('主题设置保存失败', error)
+  }
+  config.value.theme = previousTheme
+  applyTheme(previousTheme)
+  showToast('主题设置保存失败', 'error')
 }
 
 function getStatusColor(projectId: string) {
@@ -353,8 +407,12 @@ function isPrimaryShortcutPressed(event: KeyboardEvent) {
     : event.ctrlKey && !event.metaKey
 }
 
+function hasOpenModal() {
+  return document.querySelector('[role="dialog"], [role="alertdialog"]') !== null
+}
+
 function handleGlobalShortcut(event: KeyboardEvent) {
-  if (!isPrimaryShortcutPressed(event) || event.altKey || event.shiftKey || event.repeat || isEditableShortcutTarget(event.target)) return
+  if (hasOpenModal() || !isPrimaryShortcutPressed(event) || event.altKey || event.shiftKey || event.repeat || isEditableShortcutTarget(event.target)) return
   const key = event.key.toLowerCase()
   if (key === 'n') {
     event.preventDefault()
@@ -394,7 +452,8 @@ function onResizeStart(event: MouseEvent) {
 }
 
 onMounted(async () => {
-  await Promise.all([loadConfig(), loadNodeVersion(), loadNodeVersions()])
+  if (isMac) cleanupFirstMouseActivation = installFirstMouseActivation()
+  await Promise.all([loadConfig(), loadNodeVersions()])
   applyTheme(config.value?.theme || 'system')
   cleanupStatus = window.desktopAPI.onProcessStatus(handleStatus)
   cleanupLogs = window.desktopAPI.onLogData(handleLogData)
@@ -403,7 +462,7 @@ onMounted(async () => {
   window.addEventListener('keydown', handleGlobalShortcut)
 })
 
-onUnmounted(() => { cleanupStatus?.(); cleanupLogs?.(); cleanupErrorAnalysis?.(); cleanupSystemTheme?.(); window.removeEventListener('keydown', handleGlobalShortcut) })
+onUnmounted(() => { cleanupStatus?.(); cleanupLogs?.(); cleanupErrorAnalysis?.(); cleanupSystemTheme?.(); cleanupFirstMouseActivation?.(); window.removeEventListener('keydown', handleGlobalShortcut) })
 watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
 </script>
 
@@ -413,7 +472,7 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
     <ErrorAnalysisDialog :visible="showErrorAnalysis" :analysis="errorAnalysis" @close="closeErrorAnalysis" />
     <AppHeader
       :node-version="nodeVersion" :available-versions="nodeVersions" :current-version="currentNodeVersion"
-      :switching="switchingVersion" :theme="config?.theme || 'system'"
+      :switching="switchingVersion" :refreshing="refreshingVersions" :theme="config?.theme || 'system'"
       @toggle-theme="toggleTheme" @switch-version="switchNodeVersion" @refresh-versions="refreshVersions"
       @export-config="exportConfig" @import-config="importConfig"
     />
@@ -425,7 +484,7 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
           :project-urls="projectUrls"
           @select-overview="showOverview" @select="selectProject" @add="addProject" @reorder="reorderProjects"
           @edit="startEditProject" @delete="deleteProject" @toggle-favorite="toggleFavorite" @add-folder="addFolder"
-          @reorder-folders="reorderFolders" @delete-folder="deleteFolder" @rename-folder="renameFolder" @move-to-folder="moveToFolder"
+          @reorder-folders="reorderFolders" @delete-folder="deleteFolder" @rename-folder="updateFolder" @update-folder="updateFolder" @move-to-folder="moveToFolder"
         />
         <div v-if="sidebarCollapsed" class="collapsed-navigation">
           <button :class="{ active: activeView === 'overview' }" aria-label="项目总览" @click="showOverview">
