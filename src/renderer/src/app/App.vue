@@ -460,7 +460,25 @@ onMounted(async () => {
   cleanupErrorAnalysis = window.desktopAPI.onErrorAnalysis?.(handleErrorAnalysis) || null
   cleanupSystemTheme = installSystemThemeListener(() => config.value?.theme || 'system')
   window.addEventListener('keydown', handleGlobalShortcut)
+  await restoreProcessStatuses()
 })
+
+// 页面刷新后事件推送不会回放当前状态，这里主动批量查询一次，
+// 恢复仍在运行的项目状态（不产生活动记录，避免刷新后出现虚假的启动活动）。
+async function restoreProcessStatuses() {
+  const projects = config.value?.projects || []
+  if (projects.length === 0) return
+  try {
+    const statuses = await window.desktopAPI.getProcessStatuses(projects.map(project => project.id))
+    for (const status of statuses) {
+      if (status.status === 'running') {
+        processStatuses.value[status.projectId] = status
+      }
+    }
+  } catch {
+    // 查询失败时静默等待后续事件推送
+  }
+}
 
 onUnmounted(() => { cleanupStatus?.(); cleanupLogs?.(); cleanupErrorAnalysis?.(); cleanupSystemTheme?.(); cleanupFirstMouseActivation?.(); window.removeEventListener('keydown', handleGlobalShortcut) })
 watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })

@@ -99,8 +99,7 @@ watch(() => props.status?.status, () => {
         <h1 :title="project.name">{{ project.name }}</h1>
         <span :class="['context-status', status?.status || 'stopped']">
           <i aria-hidden="true"></i>
-          {{ status?.status === 'running' ? '运行中' : status?.status === 'error' ? '异常' : '未启动' }}
-          <span v-if="status?.pid">· PID {{ status.pid }}</span>
+          <span class="context-status-text">{{ status?.status === 'running' ? '运行中' : status?.status === 'error' ? '异常' : '未启动' }}<span v-if="status?.pid"> · PID {{ status.pid }}</span></span>
         </span>
       </div>
       <div class="project-context-meta">
@@ -148,7 +147,7 @@ watch(() => props.status?.status, () => {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v8A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5z"/></svg>
       </button>
       <button class="icon-action" aria-label="用 VS Code 打开项目" data-tooltip="用 VS Code 打开" @click="emit('open-vscode')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m16 5 5 3v8l-5 3-9-7z"/><path d="m7 12-4-3 2-2 4 3m-2 2-4 3 2 2 4-3"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.15 2.587L18.21.21a1.494 1.494 0 0 0-1.705.29l-9.46 8.63-4.12-3.128a.999.999 0 0 0-1.276.057L.327 7.261A1 1 0 0 0 .326 8.74L3.899 12 .326 15.26a1 1 0 0 0 .001 1.479L1.65 17.94a.999.999 0 0 0 1.276.057l4.12-3.128 9.46 8.63a1.492 1.492 0 0 0 1.704.29l4.942-2.377A1.5 1.5 0 0 0 24 20.06V3.939a1.5 1.5 0 0 0-.85-1.352zm-5.146 14.861L10.826 12l7.178-5.448v10.896z"/></svg>
       </button>
       <button v-if="localUrl" class="button-secondary" :title="localUrl" :disabled="status?.status !== 'running'" @click="emit('open-url', localUrl)">打开页面</button>
       <button class="button-secondary" @click="emit('edit')">编辑</button>
@@ -164,8 +163,9 @@ watch(() => props.status?.status, () => {
 .project-context-main { position: relative; min-width: 0; }
 .project-title-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 h1 { min-width: 0; margin: 0; overflow: hidden; color: var(--text-primary); font-size: 18px; line-height: 1.2; letter-spacing: 0; text-overflow: ellipsis; white-space: nowrap; }
-.context-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid currentColor; border-radius: 999px; color: var(--text-tertiary); background: linear-gradient(180deg, color-mix(in srgb, currentColor 18%, transparent) 0%, color-mix(in srgb, currentColor 8%, transparent) 100%); font: 11px var(--font-mono); }
-.context-status i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 7px currentColor; }
+.context-status { flex: none; max-width: 100%; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid currentColor; border-radius: 999px; color: var(--text-tertiary); background: linear-gradient(180deg, color-mix(in srgb, currentColor 18%, transparent) 0%, color-mix(in srgb, currentColor 8%, transparent) 100%); font: 11px var(--font-mono); white-space: nowrap; }
+.context-status i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 7px currentColor; }
+.context-status-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .context-status.running { color: var(--success); border-color: color-mix(in srgb, var(--success) 30%, transparent); }
 .context-status.error { color: var(--error); border-color: color-mix(in srgb, var(--error) 30%, transparent); }
 .project-context-meta { display: flex; align-items: center; gap: 10px; margin-top: 9px; color: var(--text-tertiary); font: 12px var(--font-mono); }

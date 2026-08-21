@@ -63,6 +63,7 @@ export const desktopAPI: DesktopAPI = {
   startProject: projectId => invoke<StartProjectResult>('start_project', { projectId }),
   stopProject: projectId => invoke<boolean>('stop_project', { projectId }),
   getProcessStatus: projectId => invoke<ProcessStatus>('get_process_status', { projectId }),
+  getProcessStatuses: projectIds => invoke<ProcessStatus[]>('get_process_statuses', { projectIds }),
   startAllProjects: projectIds => invoke<StartAllProjectsResult>('start_all_projects', { projectIds }),
   stopAllProjects: () => invoke<boolean>('stop_all_projects'),
   onLogData: callback => subscribe<LogEntry>('log-data', callback),

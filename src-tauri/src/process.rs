@@ -542,6 +542,30 @@ pub fn get_process_status(state: &AppState, project_id: &str) -> ProcessStatus {
     }
 }
 
+/// 批量查询进程状态。页面刷新后前端依赖此快照恢复运行状态，
+/// 因为事件推送只覆盖状态变化，不会回放当前状态。
+pub fn get_process_statuses(state: &AppState, project_ids: &[String]) -> Vec<ProcessStatus> {
+    let processes = state.processes.lock().ok();
+    project_ids
+        .iter()
+        .map(|project_id| {
+            let pid = processes
+                .as_ref()
+                .and_then(|processes| processes.get(project_id).map(|handle| handle.pid));
+            ProcessStatus {
+                project_id: project_id.clone(),
+                status: if pid.is_some() {
+                    ProcessState::Running
+                } else {
+                    ProcessState::Stopped
+                },
+                pid,
+                exit_code: None,
+            }
+        })
+        .collect()
+}
+
 pub fn is_process_running(state: &AppState, project_id: &str) -> bool {
     state
         .processes
