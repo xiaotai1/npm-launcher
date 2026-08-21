@@ -41,7 +41,7 @@
 /* ===== Theme: 间距 & 字号（补偿 14px 根字号） ===== */
 @theme {
 	--spacing: 4px;
-	--text-xs: 12px;
+	--text-xs: 13px;
 	--text-xs--line-height: 1.5;
 
 	--animate-dot-pulse: dotPulse 1.5s ease-in-out infinite;
@@ -373,7 +373,7 @@
 		font-family:
 			-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Inter',
 			Roboto, sans-serif;
-		font-size: 14px;
+		font-size: 15px;
 		line-height: 1.5;
 		color: var(--text-primary);
 		background: var(--ios-app-bg);
@@ -680,7 +680,7 @@ select:focus-visible,
 	min-height: 34px;
 	padding: 0 14px;
 	border-radius: 8px;
-	font-size: 12px;
+	font-size: 13px;
 	font-weight: 700;
 }
 

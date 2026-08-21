@@ -183,7 +183,7 @@ onBeforeUnmount(restorePreviousFocus)
 .dialog-header p {
   margin: 0 0 4px;
   color: var(--text-tertiary);
-  font: 700 9px/1 var(--font-mono);
+  font: 700 10px/1 var(--font-mono);
   letter-spacing: .14em;
 }
 
@@ -248,7 +248,7 @@ onBeforeUnmount(restorePreviousFocus)
 .dialog-copy p {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.65;
   overflow-wrap: anywhere;
 }
@@ -280,7 +280,7 @@ onBeforeUnmount(restorePreviousFocus)
   min-height: 36px;
   padding: 0 15px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 

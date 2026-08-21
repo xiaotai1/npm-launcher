@@ -536,7 +536,7 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
 .collapsed-navigation { height: 100%; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 6px; overflow-y: auto; }
 .collapsed-navigation button { position: relative; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; color: var(--text-tertiary); }
 .collapsed-navigation button:hover,.collapsed-navigation button.active { color: var(--accent-primary); background: var(--bg-selected); }
-.collapsed-project-mark { width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-secondary); background: var(--bg-surface); font-size: 11px; font-weight: 700; line-height: 1; }
+.collapsed-project-mark { width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-secondary); background: var(--bg-surface); font-size: 12px; font-weight: 700; line-height: 1; }
 .collapsed-project-button:hover .collapsed-project-mark,.collapsed-project-button.active .collapsed-project-mark { color: var(--accent-primary); border-color: var(--accent-border); }
 .collapsed-status-dot { position: absolute; right: 4px; bottom: 4px; width: 7px; height: 7px; border: 2px solid var(--bg-sidebar); border-radius: 50%; box-sizing: content-box; }
 </style>

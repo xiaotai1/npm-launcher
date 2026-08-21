@@ -76,7 +76,7 @@ async function initTerminal() {
   terminal = new Terminal({
     cursorBlink: true,
     cursorStyle: 'bar',
-    fontSize: 13,
+    fontSize: 14,
     lineHeight: 1.45,
     fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', 'Consolas', 'Menlo', monospace",
     fontWeight: 400,
@@ -342,7 +342,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   overflow: hidden;
   color: var(--text-tertiary);
-  font: 11px/1 var(--font-mono);
+  font: 12px/1 var(--font-mono);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -377,7 +377,7 @@ onBeforeUnmount(() => {
   padding: 0 10px;
   border-radius: 8px;
   color: var(--text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 650;
   white-space: nowrap;
   transition: color 160ms ease, background 160ms ease;

@@ -42,25 +42,25 @@ function severityClass(severity: string): string {
                 </svg>
               </span>
               <h3 class="text-[15px] font-semibold text-tprimary tracking-[-0.2px]">错误分析</h3>
-              <span class="ml-auto text-[11px] font-mono text-ttertiary">退出代码: {{ analysis.exitCode }}</span>
+              <span class="ml-auto text-[12px] font-mono text-ttertiary">退出代码: {{ analysis.exitCode }}</span>
             </div>
 
-            <p class="text-[13px] text-tsecondary leading-[1.7] mb-4">{{ analysis.summary }}</p>
+            <p class="text-[14px] text-tsecondary leading-[1.7] mb-4">{{ analysis.summary }}</p>
 
             <div v-if="analysis.matches.length > 0" class="space-y-3 mb-5">
               <div v-for="(match, i) in analysis.matches" :key="i" class="p-3 rounded-lg border border-border bg-elevated">
                 <div class="flex items-center gap-2 mb-2">
-                  <span :class="['inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold severity-badge', severityClass(match.severity)]">
+                  <span :class="['inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold severity-badge', severityClass(match.severity)]">
                     {{ severityLabel(match.severity) }}
                   </span>
-                  <span class="text-[13px] font-medium text-tprimary">{{ match.name }}</span>
+                  <span class="text-[14px] font-medium text-tprimary">{{ match.name }}</span>
                 </div>
                 <div class="mb-2 space-y-0.5">
-                  <div v-for="(line, j) in match.lines" :key="j" class="font-mono text-[11px] text-ttertiary leading-[1.6] truncate">
+                  <div v-for="(line, j) in match.lines" :key="j" class="font-mono text-[12px] text-ttertiary leading-[1.6] truncate">
                     {{ line }}
                   </div>
                 </div>
-                <div class="flex items-start gap-1.5 text-[12px] text-tsecondary">
+                <div class="flex items-start gap-1.5 text-[13px] text-tsecondary">
                   <svg class="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.913 4.087l-.707.707M21 12h-1M4 12H3m3.293-4.293l-.707-.707M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18z"/></svg>
                   <span>{{ match.suggestion }}</span>
                 </div>
@@ -68,11 +68,11 @@ function severityClass(severity: string): string {
             </div>
 
             <div v-else class="p-3 rounded-lg border border-border bg-elevated mb-5">
-              <p class="text-[12px] text-ttertiary">未匹配到已知错误模式，请查看运行日志面板排查问题。</p>
+              <p class="text-[13px] text-ttertiary">未匹配到已知错误模式，请查看运行日志面板排查问题。</p>
             </div>
 
             <div class="flex gap-2.5 justify-end">
-              <button class="px-4 py-2 text-[13px] font-medium rounded-lg transition-all duration-180 ease-out modal-btn cancel" @click="onClose">
+              <button class="px-4 py-2 text-[14px] font-medium rounded-lg transition-all duration-180 ease-out modal-btn cancel" @click="onClose">
                 关闭
               </button>
             </div>

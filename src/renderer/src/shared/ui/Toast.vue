@@ -28,8 +28,8 @@ function close() {
 
 <template>
   <Transition name="toast">
-    <div v-if="visible" role="status" aria-live="polite" data-first-mouse-target class="fixed top-15 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-2.5 rounded-[10px] text-[13px] font-medium z-9999 cursor-pointer shadow-lg backdrop-blur-xs border border-solid max-w-[90vw]" :class="type || 'error'" @click="close">
-      <span class="w-4.5 h-4.5 flex items-center justify-center rounded-full text-[11px] font-bold shrink-0 toast-icon">{{ type === 'success' ? '✓' : type === 'warning' ? '!' : '✕' }}</span>
+    <div v-if="visible" role="status" aria-live="polite" data-first-mouse-target class="fixed top-15 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-2.5 rounded-[10px] text-[14px] font-medium z-9999 cursor-pointer shadow-lg backdrop-blur-xs border border-solid max-w-[90vw]" :class="type || 'error'" @click="close">
+      <span class="w-4.5 h-4.5 flex items-center justify-center rounded-full text-[12px] font-bold shrink-0 toast-icon">{{ type === 'success' ? '✓' : type === 'warning' ? '!' : '✕' }}</span>
       <span class="leading-snug toast-msg">{{ message }}</span>
     </div>
   </Transition>

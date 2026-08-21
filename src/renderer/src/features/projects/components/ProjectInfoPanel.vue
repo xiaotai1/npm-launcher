@@ -272,7 +272,7 @@ function onConfirmDelete() {
 .settings-header p {
   margin: 5px 0 0;
   color: var(--text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -366,13 +366,13 @@ function onConfirmDelete() {
 }
 
 .settings-nav-text strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
 .settings-nav-text small {
   color: var(--text-tertiary);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.4;
 }
 
@@ -403,7 +403,7 @@ function onConfirmDelete() {
 
 .settings-field > span {
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 650;
 }
 
@@ -417,7 +417,7 @@ function onConfirmDelete() {
   border-radius: 12px;
   color: var(--text-primary);
   background: var(--bg-surface);
-  font-size: 12px;
+  font-size: 13px;
   transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 
@@ -470,7 +470,7 @@ function onConfirmDelete() {
 .settings-field small {
   margin-top: -1px;
   color: var(--text-tertiary);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
@@ -486,7 +486,7 @@ function onConfirmDelete() {
   min-height: 36px;
   padding: 0 13px;
   border-radius: 9px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -569,13 +569,13 @@ function onConfirmDelete() {
 
 .danger-zone-text strong {
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 
 .danger-zone-text span {
   color: var(--text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -587,7 +587,7 @@ function onConfirmDelete() {
   border-radius: 9px;
   color: var(--error);
   background: var(--bg-surface);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
 }

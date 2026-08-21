@@ -70,7 +70,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 <template>
   <header data-tauri-drag-region class="flex items-center justify-between border-b border-border bg-surface relative select-none app-header glass-topbar" :class="{ 'mac-titlebar': isMac }">
     <div data-tauri-drag-region class="flex items-center header-left" :class="{ 'mac-title-area': isMac }">
-      <span v-if="!isMac" class="text-[13px] font-semibold text-tsecondary app-title">NPM Launcher</span>
+      <span v-if="!isMac" class="text-[14px] font-semibold text-tsecondary app-title">NPM Launcher</span>
     </div>
     <div class="flex items-center">
       <div class="flex items-center gap-1.5 header-right" :class="{ 'mac-header-right': isMac }">
@@ -87,14 +87,14 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
             <path d="M12 2l8.66 5v10L12 22l-8.66-5V7z"/>
             <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/>
           </svg>
-          <span class="text-accent font-mono text-[11.5px]">{{ switching ? '切换中...' : (nodeVersion || '...') }}</span>
-          <span class="text-ttertiary text-[9px] transition-transform duration-250 ease-in-out dropdown-arrow" :class="{ open: showDropdown }">▾</span>
+          <span class="text-accent font-mono text-[12.5px]">{{ switching ? '切换中...' : (nodeVersion || '...') }}</span>
+          <span class="text-ttertiary text-[10px] transition-transform duration-250 ease-in-out dropdown-arrow" :class="{ open: showDropdown }">▾</span>
         </button>
         <Transition name="dropdown">
           <div v-if="showDropdown" class="absolute top-full mt-2 right-0 w-65 bg-surface border border-border rounded-xl p-1 z-100 animate-scale-in version-dropdown">
             <div class="flex items-center justify-between px-1 pt-1">
-              <span class="px-2.5 pt-1.75 pb-1.25 text-[11px] font-semibold text-ttertiary tracking-[0.3px]">已安装版本</span>
-              <span class="text-[10px] text-blue-500 font-medium mr-2">仅识别 nvm</span>
+              <span class="px-2.5 pt-1.75 pb-1.25 text-[12px] font-semibold text-ttertiary tracking-[0.3px]">已安装版本</span>
+              <span class="text-[11px] text-blue-500 font-medium mr-2">仅识别 nvm</span>
               <button
                 class="w-7 h-7 flex items-center justify-center rounded-md text-ttertiary mr-1 refresh-btn"
                 :class="{ refreshing }"
@@ -126,7 +126,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
                 暂无已安装版本
               </div>
             </div>
-            <div class="px-3 py-2 text-[11px] text-ttertiary border-t border-border mt-1">使用终端输入 <code class="font-mono text-accent bg-accent-glow px-1 rounded-sm text-[10px]">{{ nvmListCommand }}</code> 查看更多版本</div>
+            <div class="px-3 py-2 text-[12px] text-ttertiary border-t border-border mt-1">使用终端输入 <code class="font-mono text-accent bg-accent-glow px-1 rounded-sm text-[11px]">{{ nvmListCommand }}</code> 查看更多版本</div>
           </div>
         </Transition>
       </div>
@@ -292,7 +292,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   padding: 0 10px;
   border-radius: 8px;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 650;
   text-align: left;
 }

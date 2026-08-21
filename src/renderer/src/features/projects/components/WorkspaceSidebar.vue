@@ -397,7 +397,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       <input
         v-model="searchQuery"
         placeholder="搜索项目..."
-        class="search-input w-full py-1.75 px-7 text-[12px] rounded-[7px] transition-all duration-200 ease-in-out box-border"
+        class="search-input w-full py-1.75 px-7 text-[13px] rounded-[7px] transition-all duration-200 ease-in-out box-border"
       />
       <button v-if="searchQuery" class="search-clear absolute right-1.5 top-1/2 -translate-y-1/2 w-5.5 h-5.5 flex items-center justify-center rounded text-ttertiary" aria-label="清空搜索" @click="searchQuery = ''">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -431,7 +431,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
       <!-- 根级别收藏项目 -->
       <template v-if="rootFavorites.length">
-        <div class="flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold text-ttertiary section-label">
+        <div class="flex items-center gap-2 px-3 py-1.5 text-[12px] font-semibold text-ttertiary section-label">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
           收藏项目
         </div>
@@ -464,8 +464,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
               <span class="w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-300 status-dot" :class="{ running: getStatusInfo(project.id).text === '运行中' }" :style="{ background: getStatusInfo(project.id).color }"></span>
             </div>
             <div class="flex items-center justify-between gap-2">
-              <span class="text-[10px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command" :title="project.path">{{ projectMeta(project) }}</span>
-              <span class="text-[9px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
+              <span class="text-[11px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command" :title="project.path">{{ projectMeta(project) }}</span>
+              <span class="text-[10px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
             </div>
           </div>
           <button class="shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn active" @click="onToggleFavorite(project.id, $event)" title="取消收藏" aria-label="取消收藏">
@@ -511,7 +511,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
               </svg>
             </span>
             <span class="flex-1 text-xs font-medium text-tsecondary whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out folder-name">{{ folder.name }}</span>
-            <span class="text-[10px] px-2 rounded-[10px] min-w-5.5 text-center folder-count">{{ folderProjects(folder.id).length }}</span>
+            <span class="text-[11px] px-2 rounded-[10px] min-w-5.5 text-center folder-count">{{ folderProjects(folder.id).length }}</span>
           </template>
         </div>
         <!-- 文件夹内的项目 -->
@@ -547,8 +547,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
                 <span class="w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-300 status-dot" :class="{ running: getStatusInfo(project.id).text === '运行中' }" :style="{ background: getStatusInfo(project.id).color }"></span>
               </div>
               <div class="flex items-center justify-between gap-2">
-                <span class="text-[10px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command" :title="project.path">{{ projectMeta(project) }}</span>
-                <span class="text-[9px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
+                <span class="text-[11px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command" :title="project.path">{{ projectMeta(project) }}</span>
+                <span class="text-[10px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
               </div>
             </div>
             <button :class="['shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn', { active: project.favorite }]" @click="onToggleFavorite(project.id, $event)" :title="project.favorite ? '取消收藏' : '收藏'" :aria-label="project.favorite ? '取消收藏' : '收藏'">
@@ -590,8 +590,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
             <span class="w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-300 status-dot" :class="{ running: getStatusInfo(project.id).text === '运行中' }" :style="{ background: getStatusInfo(project.id).color }"></span>
           </div>
           <div class="flex items-center justify-between gap-2">
-            <span class="text-[10px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command" :title="project.path">{{ projectMeta(project) }}</span>
-            <span class="text-[9px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
+            <span class="text-[11px] text-ttertiary font-mono whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-150 ease-out card-command" :title="project.path">{{ projectMeta(project) }}</span>
+            <span class="text-[10px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
           </div>
         </div>
         <button :class="['shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn', { active: project.favorite }]" @click="onToggleFavorite(project.id, $event)" :title="project.favorite ? '取消收藏' : '收藏'" :aria-label="project.favorite ? '取消收藏' : '收藏'">
@@ -600,7 +600,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
         </button>
       </div>
 
-      <div v-if="filteredProjects.length === 0" class="text-center py-12 px-4.5 text-ttertiary text-[13px]">
+      <div v-if="filteredProjects.length === 0" class="text-center py-12 px-4.5 text-ttertiary text-[14px]">
         <p>{{ searchQuery ? '未找到匹配项目' : '暂无项目' }}</p>
         <p class="text-xs mt-1.5 opacity-60">{{ searchQuery ? '尝试其他关键词' : '点击"新建"添加' }}</p>
       </div>
@@ -710,7 +710,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   border-radius: 8px;
   border: 1px solid transparent;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 650;
   text-align: left;
 }
@@ -758,7 +758,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   border-radius: 999px;
   color: var(--text-tertiary);
   background: var(--bg-subtle);
-  font-size: 10px;
+  font-size: 11px;
   text-align: center;
   transition: all 200ms ease;
 }
@@ -771,7 +771,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   margin: 12px 16px 6px;
   padding: 0;
   color: var(--text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -816,7 +816,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .sidebar-brand-title {
   overflow: hidden;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 780;
   letter-spacing: -0.18px;
   line-height: 1.12;
@@ -826,7 +826,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 .sidebar-brand-sub {
   color: var(--text-primary);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 650;
   letter-spacing: 0.08em;
   line-height: 1.2;
@@ -856,7 +856,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.24),
     0 8px 16px color-mix(in srgb, var(--accent-primary) 18%, transparent);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease;
 }
@@ -1178,7 +1178,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   padding: 0 8px;
   border-radius: 7px;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 650;
   line-height: 1;
   text-align: left;

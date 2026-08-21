@@ -164,32 +164,32 @@ watch(() => props.status?.status, () => {
 .project-context-main { position: relative; min-width: 0; }
 .project-title-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 h1 { min-width: 0; margin: 0; overflow: hidden; color: var(--text-primary); font-size: 18px; line-height: 1.2; letter-spacing: 0; text-overflow: ellipsis; white-space: nowrap; }
-.context-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid currentColor; border-radius: 999px; color: var(--text-tertiary); background: linear-gradient(180deg, color-mix(in srgb, currentColor 18%, transparent) 0%, color-mix(in srgb, currentColor 8%, transparent) 100%); font: 10px var(--font-mono); }
+.context-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid currentColor; border-radius: 999px; color: var(--text-tertiary); background: linear-gradient(180deg, color-mix(in srgb, currentColor 18%, transparent) 0%, color-mix(in srgb, currentColor 8%, transparent) 100%); font: 11px var(--font-mono); }
 .context-status i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 7px currentColor; }
 .context-status.running { color: var(--success); border-color: color-mix(in srgb, var(--success) 30%, transparent); }
 .context-status.error { color: var(--error); border-color: color-mix(in srgb, var(--error) 30%, transparent); }
-.project-context-meta { display: flex; align-items: center; gap: 10px; margin-top: 9px; color: var(--text-tertiary); font: 11px var(--font-mono); }
+.project-context-meta { display: flex; align-items: center; gap: 10px; margin-top: 9px; color: var(--text-tertiary); font: 12px var(--font-mono); }
 .project-path { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .node-meta { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border: 1px solid var(--border-muted); border-radius: 6px; background: color-mix(in srgb, var(--bg-subtle) 60%, transparent); }
 .command-picker-wrap { position: relative; }
 .command-picker { height: 36px; min-width: 132px; max-width: 192px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--border-default); border-radius: 10px; color: var(--text-secondary); background: linear-gradient(180deg, var(--bg-surface) 0%, color-mix(in srgb, var(--bg-subtle) 80%, transparent) 100%); box-shadow: var(--shadow-sm); transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
 .command-picker:hover:not(:disabled), .command-picker[aria-expanded='true'] { border-color: var(--accent-border); background: var(--bg-hover); transform: translateY(-1px); box-shadow: var(--shadow-md); }
 .command-picker:disabled { cursor: default; opacity: 1; }
-.command-picker-label { flex: none; color: var(--text-tertiary); font-family: var(--font-sans); font-size: 11px; font-weight: 700; }
-.command-picker strong { flex: 1; min-width: 0; overflow: hidden; color: var(--accent-primary); font: 700 13px/1 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.command-picker-label { flex: none; color: var(--text-tertiary); font-family: var(--font-sans); font-size: 12px; font-weight: 700; }
+.command-picker strong { flex: 1; min-width: 0; overflow: hidden; color: var(--accent-primary); font: 700 14px/1 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
 .command-picker svg { flex: none; margin-left: auto; color: var(--accent-primary); opacity: .85; }
 /* Teleport 到 body，position: fixed + viewport 坐标，脱离一切祖先裁切/堆叠上下文 */
 .command-menu { position: fixed; z-index: 10000; min-width: 140px; padding: 5px; border: 1px solid var(--glass-border); border-radius: 12px; background: var(--glass-fill-strong); backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(var(--glass-saturate)); box-shadow: var(--glass-shadow); animation: glassIn 0.18s cubic-bezier(0.16, 1, 0.3, 1); }
-.command-option { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 8px; border-radius: 6px; color: var(--text-secondary); background: transparent; font: 700 12px/1 var(--font-mono); text-align: left; }
+.command-option { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 8px; border-radius: 6px; color: var(--text-secondary); background: transparent; font: 700 13px/1 var(--font-mono); text-align: left; }
 .command-option:hover { color: var(--accent-primary); background: var(--bg-hover); }
 .command-option.active { color: var(--accent-primary); background: var(--accent-glow); }
 .command-option svg { flex: none; }
 .project-context-actions { position: relative; z-index: 2; display: flex; align-items: center; gap: 7px; flex: none; }
 .icon-action { position: relative; width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--border-default); border-radius: 10px; color: var(--text-secondary); background: linear-gradient(180deg, var(--bg-surface) 0%, color-mix(in srgb, var(--bg-subtle) 80%, transparent) 100%); transition: transform 160ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease; }
 .icon-action:hover { transform: translateY(-1px); color: var(--accent-primary); border-color: var(--accent-border); background: var(--bg-hover); box-shadow: var(--shadow-md); }
-.icon-action::after { content: attr(data-tooltip); position: absolute; right: 50%; bottom: -40px; z-index: 200; transform: translateX(50%) translateY(-2px); padding: 6px 9px; border: 1px solid var(--border-default); border-radius: 7px; color: var(--text-primary); background: var(--bg-surface); box-shadow: var(--shadow-md); font-size: 11px; font-weight: 650; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 140ms ease, transform 140ms ease; }
+.icon-action::after { content: attr(data-tooltip); position: absolute; right: 50%; bottom: -40px; z-index: 200; transform: translateX(50%) translateY(-2px); padding: 6px 9px; border: 1px solid var(--border-default); border-radius: 7px; color: var(--text-primary); background: var(--bg-surface); box-shadow: var(--shadow-md); font-size: 12px; font-weight: 650; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 140ms ease, transform 140ms ease; }
 .icon-action:hover::after { opacity: 1; transform: translateX(50%) translateY(0); }
-.context-primary { min-width: 76px; min-height: 36px; padding: 0 16px; border-radius: 10px; color: #fff; background: var(--accent-primary); box-shadow: 0 4px 12px var(--accent-glow); font-size: 12px; font-weight: 700; transition: transform 160ms ease, box-shadow 180ms ease, background 180ms ease; }
+.context-primary { min-width: 76px; min-height: 36px; padding: 0 16px; border-radius: 10px; color: #fff; background: var(--accent-primary); box-shadow: 0 4px 12px var(--accent-glow); font-size: 13px; font-weight: 700; transition: transform 160ms ease, box-shadow 180ms ease, background 180ms ease; }
 .context-primary:hover { transform: translateY(-1px); background: var(--accent-primary-hover); box-shadow: 0 8px 18px var(--accent-glow); }
 .context-primary.stop { background: var(--error); box-shadow: 0 3px 10px color-mix(in srgb, var(--error) 30%, transparent); }
 .context-primary.stop:hover { background: color-mix(in srgb, var(--error) 88%, #000); box-shadow: 0 6px 16px color-mix(in srgb, var(--error) 34%, transparent); }

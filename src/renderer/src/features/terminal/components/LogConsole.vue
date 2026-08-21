@@ -84,7 +84,7 @@ function initTerminal() {
 
   terminal = new Terminal({
     cursorBlink: false,
-    fontSize: 13,
+    fontSize: 14,
     lineHeight: 1.4,
     fontFamily: "'Consolas', 'JetBrains Mono', 'Fira Code', monospace",
     theme: currentReadonlyLogTheme(),
@@ -226,16 +226,16 @@ async function copyLaunchCommand() {
   <div class="flex-1 flex flex-col min-h-50 overflow-hidden">
     <div class="flex items-center justify-between px-4 py-2 bg-surface console-header">
       <div class="flex items-center gap-2.5">
-        <span class="text-[10px] font-semibold text-ttertiary uppercase tracking-[0.8px]">控制台</span>
-        <span v-if="isRunning" class="flex items-center gap-1.25 text-[10px] font-semibold text-success-c">
+        <span class="text-[11px] font-semibold text-ttertiary uppercase tracking-[0.8px]">控制台</span>
+        <span v-if="isRunning" class="flex items-center gap-1.25 text-[11px] font-semibold text-success-c">
           <span class="running-dot w-1.25 h-1.25 rounded-full bg-success-c animate-dot-pulse"></span>
           运行中
         </span>
-        <span v-else-if="hasSessionLogs" class="flex items-center gap-1.25 text-[10px] font-semibold text-ttertiary">
+        <span v-else-if="hasSessionLogs" class="flex items-center gap-1.25 text-[11px] font-semibold text-ttertiary">
           <span class="w-1.25 h-1.25 rounded-full bg-ttertiary"></span>
           已停止
         </span>
-        <span v-else class="flex items-center gap-1.25 text-[10px] font-semibold text-ttertiary">
+        <span v-else class="flex items-center gap-1.25 text-[11px] font-semibold text-ttertiary">
           <span class="w-1.25 h-1.25 rounded-full bg-ttertiary/60"></span>
           等待运行
         </span>
@@ -254,7 +254,7 @@ async function copyLaunchCommand() {
         </div>
         <button
           v-if="hasError"
-          class="flex items-center gap-1 py-0.5 px-2 text-[10px] font-medium text-error border border-error/30 rounded hover:bg-error/10 transition-colors"
+          class="flex items-center gap-1 py-0.5 px-2 text-[11px] font-medium text-error border border-error/30 rounded hover:bg-error/10 transition-colors"
           @click="emit('analyze-errors')"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -262,7 +262,7 @@ async function copyLaunchCommand() {
         </button>
         <button
           v-if="canExport"
-          class="flex items-center gap-1 py-0.5 px-2 text-[10px] font-medium text-ttertiary border border-border rounded hover:bg-hover transition-colors"
+          class="flex items-center gap-1 py-0.5 px-2 text-[11px] font-medium text-ttertiary border border-border rounded hover:bg-hover transition-colors"
           :disabled="exporting"
           @click="exportLog"
         >
@@ -271,7 +271,7 @@ async function copyLaunchCommand() {
         </button>
         <button
           v-if="hasSessionLogs"
-          class="flex items-center gap-1 py-1 px-2.5 min-h-7 text-[11px] font-medium text-ttertiary border border-border rounded-md hover:bg-hover transition-colors"
+          class="flex items-center gap-1 py-1 px-2.5 min-h-7 text-[12px] font-medium text-ttertiary border border-border rounded-md hover:bg-hover transition-colors"
           @click="clear"
         >
           清空
@@ -400,7 +400,7 @@ async function copyLaunchCommand() {
   border-radius: 6px;
   color: var(--text-secondary);
   background: var(--bg-subtle);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .log-tools select {
@@ -424,7 +424,7 @@ async function copyLaunchCommand() {
   border: 1px solid var(--border-default);
   border-radius: 6px;
   color: var(--text-tertiary);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .log-tools button:hover {
@@ -468,32 +468,32 @@ async function copyLaunchCommand() {
 .console-empty-grid { position: absolute; inset: 0; background-image: radial-gradient(color-mix(in srgb, var(--text-tertiary) 22%, transparent) 1px, transparent 1px); background-size: 22px 22px; opacity: 0.32; mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 35%, transparent 78%); -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 35%, transparent 78%); }
 .console-empty-icon { display: grid; place-items: center; width: 64px; height: 64px; margin-bottom: 4px; border: 1px solid var(--accent-border); border-radius: 18px; color: var(--accent-primary); background: color-mix(in srgb, var(--accent-glow) 70%, var(--bg-surface)); box-shadow: 0 8px 28px var(--accent-glow), inset 0 1px 0 color-mix(in srgb, var(--bg-surface) 60%, transparent); }
 .console-empty h3 { margin: 0; color: var(--text-primary); font-size: 17px; font-weight: 750; letter-spacing: -0.01em; }
-.console-empty > p { margin: 0; max-width: 380px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
+.console-empty > p { margin: 0; max-width: 380px; color: var(--text-secondary); font-size: 13.5px; line-height: 1.65; }
 
 /* 命令预览卡 */
 .console-empty-card { pointer-events: auto; width: 100%; max-width: 520px; margin-top: 8px; padding: 14px 16px; border: 1px solid var(--border-default); border-radius: 14px; background: color-mix(in srgb, var(--bg-surface) 90%, transparent); box-shadow: var(--shadow-md); text-align: left; animation: scaleIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
 .console-empty-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
-.console-empty-card-tag { display: inline-flex; align-items: center; padding: 2px 8px; border: 1px solid var(--accent-border); border-radius: 999px; color: var(--accent-primary); background: var(--accent-glow); font: 700 9px/1.4 var(--font-mono); letter-spacing: 0.12em; }
-.console-empty-card-runtime { color: var(--text-tertiary); font: 700 10px/1 var(--font-mono); letter-spacing: 0.04em; }
+.console-empty-card-tag { display: inline-flex; align-items: center; padding: 2px 8px; border: 1px solid var(--accent-border); border-radius: 999px; color: var(--accent-primary); background: var(--accent-glow); font: 700 10px/1.4 var(--font-mono); letter-spacing: 0.12em; }
+.console-empty-card-runtime { color: var(--text-tertiary); font: 700 11px/1 var(--font-mono); letter-spacing: 0.04em; }
 .console-empty-command { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border-muted); border-radius: 10px; background: var(--console-bg); }
-.console-empty-prompt { color: var(--accent-primary); font: 700 14px/1 var(--font-mono); }
-.console-empty-command code { flex: 1; min-width: 0; overflow: hidden; color: var(--text-primary); font: 700 14px/1.4 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
-.console-empty-copy { display: inline-flex; align-items: center; gap: 4px; min-height: 26px; padding: 0 9px; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-tertiary); background: transparent; font-size: 10px; font-weight: 700; transition: color 160ms ease, background 160ms ease, border-color 160ms ease; }
+.console-empty-prompt { color: var(--accent-primary); font: 700 15px/1 var(--font-mono); }
+.console-empty-command code { flex: 1; min-width: 0; overflow: hidden; color: var(--text-primary); font: 700 15px/1.4 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.console-empty-copy { display: inline-flex; align-items: center; gap: 4px; min-height: 26px; padding: 0 9px; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-tertiary); background: transparent; font-size: 11px; font-weight: 700; transition: color 160ms ease, background 160ms ease, border-color 160ms ease; }
 .console-empty-copy:hover { color: var(--accent-primary); border-color: var(--accent-border); background: var(--accent-glow); }
-.console-empty-meta { display: flex; align-items: center; gap: 14px; margin-top: 10px; color: var(--text-tertiary); font-size: 10.5px; }
+.console-empty-meta { display: flex; align-items: center; gap: 14px; margin-top: 10px; color: var(--text-tertiary); font-size: 11.5px; }
 .console-empty-meta-item { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
 .console-empty-meta-item span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* 启动操作区 */
 .console-empty-actions { pointer-events: auto; display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 4px; flex-wrap: wrap; }
-.console-empty-action { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 16px; border: none; border-radius: 10px; color: #fff; background: var(--accent-primary); box-shadow: 0 6px 18px var(--accent-glow); font-size: 12px; font-weight: 700; transition: transform 160ms ease, box-shadow 200ms ease, background 200ms ease; }
+.console-empty-action { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 16px; border: none; border-radius: 10px; color: #fff; background: var(--accent-primary); box-shadow: 0 6px 18px var(--accent-glow); font-size: 13px; font-weight: 700; transition: transform 160ms ease, box-shadow 200ms ease, background 200ms ease; }
 .console-empty-action:hover { transform: translateY(-1px); background: var(--accent-primary-hover); box-shadow: 0 9px 22px color-mix(in srgb, var(--accent-primary) 30%, transparent); }
 .console-empty-shortcuts { display: inline-flex; align-items: center; gap: 12px; }
-.console-empty-shortcut { display: inline-flex; align-items: center; gap: 5px; color: var(--text-tertiary); font-size: 11px; font-weight: 700; }
+.console-empty-shortcut { display: inline-flex; align-items: center; gap: 5px; color: var(--text-tertiary); font-size: 12px; font-weight: 700; }
 .console-empty-shortcut.muted { opacity: 0.76; }
-.console-empty-shortcut kbd { display: inline-grid; place-items: center; min-width: 34px; height: 30px; padding: 0 9px; border: 1px solid color-mix(in srgb, var(--border-default) 86%, #fff); border-bottom-width: 3px; border-radius: 9px; color: var(--text-secondary); background: linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 84%, #fff), var(--bg-elevated)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), inset 0 -1px 0 rgba(0, 0, 0, 0.06), 0 2px 4px rgba(30, 45, 65, 0.1); font: 800 13px/1 var(--font-mono); letter-spacing: -0.02em; }
+.console-empty-shortcut kbd { display: inline-grid; place-items: center; min-width: 34px; height: 30px; padding: 0 9px; border: 1px solid color-mix(in srgb, var(--border-default) 86%, #fff); border-bottom-width: 3px; border-radius: 9px; color: var(--text-secondary); background: linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 84%, #fff), var(--bg-elevated)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), inset 0 -1px 0 rgba(0, 0, 0, 0.06), 0 2px 4px rgba(30, 45, 65, 0.1); font: 800 14px/1 var(--font-mono); letter-spacing: -0.02em; }
 .console-empty-shortcut kbd:first-child { min-width: 40px; font-size: 15px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', var(--font-mono); }
-.console-empty-shortcut > span:not(:last-child) { color: var(--text-tertiary); font-size: 14px; font-weight: 800; }
+.console-empty-shortcut > span:not(:last-child) { color: var(--text-tertiary); font-size: 15px; font-weight: 800; }
 :global(:root[data-theme='dark']) .console-empty-shortcut kbd { border-color: rgba(148, 163, 184, 0.24); border-bottom-color: rgba(148, 163, 184, 0.34); background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.96)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.28), 0 2px 5px rgba(0, 0, 0, 0.28); }
 
 /* 控制台终端区域：使用 xterm 主题背景，与上层玻璃面板衔接 */
@@ -506,8 +506,8 @@ async function copyLaunchCommand() {
 }
 
 /* 颜色提示行 */
-.console-empty-tips { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; padding: 8px 14px; border: 1px solid var(--border-muted); border-radius: 999px; background: color-mix(in srgb, var(--bg-surface) 60%, transparent); font-size: 10.5px; }
-.console-empty-tip { display: inline-flex; align-items: center; gap: 5px; color: var(--text-secondary); font: 700 10px/1 var(--font-mono); letter-spacing: 0.04em; }
+.console-empty-tips { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; padding: 8px 14px; border: 1px solid var(--border-muted); border-radius: 999px; background: color-mix(in srgb, var(--bg-surface) 60%, transparent); font-size: 11.5px; }
+.console-empty-tip { display: inline-flex; align-items: center; gap: 5px; color: var(--text-secondary); font: 700 11px/1 var(--font-mono); letter-spacing: 0.04em; }
 .console-empty-tip.muted { color: var(--text-tertiary); font-weight: 500; letter-spacing: 0; font-family: var(--font-ui); }
 .console-empty-divider { width: 1px; height: 12px; background: var(--border-muted); }
 .tip-dot { width: 7px; height: 7px; border-radius: 50%; }

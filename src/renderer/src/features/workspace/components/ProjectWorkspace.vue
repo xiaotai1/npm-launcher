@@ -108,7 +108,7 @@ function selectTab(tab: 'logs' | 'terminal' | 'info') {
 
 .workspace-tabs { min-height: 46px; display: flex; align-items: stretch; gap: 2px; padding: 6px 14px 0; background: var(--glass-fill); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); border-bottom: 1px solid var(--glass-border); position: relative; }
 
-.workspace-tabs button { position: relative; min-height: 40px; padding: 0 14px; border: 1px solid transparent; border-radius: 8px 8px 0 0; color: var(--text-tertiary); font-size: 12px; font-weight: 650; transition: color 160ms ease, background 160ms ease; }
+.workspace-tabs button { position: relative; min-height: 40px; padding: 0 14px; border: 1px solid transparent; border-radius: 8px 8px 0 0; color: var(--text-tertiary); font-size: 13px; font-weight: 650; transition: color 160ms ease, background 160ms ease; }
 
 .workspace-tabs button::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: 0; height: 2px; border-radius: 2px 2px 0 0; background: var(--accent-primary); opacity: 0; transform: scaleX(0.6); transition: opacity 180ms ease, transform 180ms cubic-bezier(0.16, 1, 0.3, 1); }
 
