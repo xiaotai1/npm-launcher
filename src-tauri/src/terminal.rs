@@ -285,6 +285,7 @@ pub fn kill_all_terminals(state: &AppState) {
     }
 }
 
+#[cfg_attr(windows, allow(dead_code))]
 pub fn broadcast_to_all_terminals(state: &AppState, command: &str) {
     let sessions = state
         .terminals
