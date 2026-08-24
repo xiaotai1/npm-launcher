@@ -466,9 +466,7 @@ onMounted(async () => {
   await restoreProcessStatuses()
 })
 
-<<<<<<< HEAD
 onUnmounted(() => { cleanupStatus?.(); cleanupLogs?.(); cleanupErrorAnalysis?.(); cleanupSystemTheme?.(); cleanupDefaultContextMenuGuard?.(); cleanupFirstMouseActivation?.(); window.removeEventListener('keydown', handleGlobalShortcut) })
-=======
 // 页面刷新后事件推送不会回放当前状态，这里主动批量查询一次，
 // 恢复仍在运行的项目状态（不产生活动记录，避免刷新后出现虚假的启动活动）。
 async function restoreProcessStatuses() {
