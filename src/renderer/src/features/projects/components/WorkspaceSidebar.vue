@@ -1251,7 +1251,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, var(--accent-primary), var(--accent-primary-hover));
+  background: linear-gradient(90deg, transparent, var(--accent-border) 18%, var(--accent-border) 82%, transparent);
   z-index: 2;
 }
 </style>
