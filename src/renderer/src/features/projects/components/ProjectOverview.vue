@@ -39,7 +39,7 @@ const sessionSummary = computed(() => ({
   error: props.activities.filter(item => item.type === 'error').length,
   lastTime: props.activities[0] ? formatActivityTime(props.activities[0].timestamp) : '暂无'
 }))
-const addProjectSlots = computed(() => props.projects.length > 0 ? 1 : 0)
+const showAddFab = computed(() => props.projects.length > 0)
 
 function projectName(projectId: string) {
   return props.projects.find(project => project.id === projectId)?.name || '已删除项目'
@@ -199,19 +199,18 @@ function getStatusColor(projectId: string) {
           @stop="emit('stop', $event)"
           @open-url="emit('open-url', $event)"
         />
-        <button
-          v-for="index in addProjectSlots"
-          :key="`placeholder-${index}`"
-          type="button"
-          class="project-empty-slot"
-          @click="emit('add-project')"
-        >
-          <span class="project-empty-plus">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-          </span>
-          <span class="project-empty-text">添加项目</span>
-        </button>
       </div>
+
+      <button
+        v-if="showAddFab"
+        type="button"
+        class="project-fab"
+        aria-label="添加项目"
+        @click="emit('add-project')"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+        <span class="project-fab-label">添加项目</span>
+      </button>
     </div>
 
     <div v-else class="overview-empty">
@@ -337,11 +336,16 @@ function getStatusColor(projectId: string) {
 
 /* 项目网格：占满主区剩余空间，2 列独立滚动 */
 .project-grid { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-content: start; align-items: start; padding: 2px 2px 2px 0; margin-top: clamp(14px, 1.4vw, 20px); }
-.project-empty-slot { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 14px; border: 1px dashed var(--border-default); border-radius: 12px; color: var(--text-tertiary); background: transparent; text-align: center; cursor: pointer; transition: border-color 160ms ease, color 160ms ease, background 160ms ease; }
-.project-empty-slot:hover { color: var(--accent-primary); border-color: var(--accent-border); background: var(--accent-glow); }
-.project-empty-plus { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: var(--bg-subtle); color: var(--text-secondary); flex: none; }
-.project-empty-slot:hover .project-empty-plus { color: var(--accent-primary); background: color-mix(in srgb, var(--accent-primary) 14%, transparent); }
-.project-empty-text { color: inherit; font-size: 12.5px; font-weight: 650; }
+.project-empty-slot { display: none; }
+
+/* 圆形悬浮按钮（FAB）：总览页有项目时显示在主区右下角 */
+.project-fab { position: absolute; right: 40px; bottom: 40px; z-index: 6; display: flex; align-items: center; justify-content: center; gap: 0; padding: 0; width: 52px; height: 52px; border: 1px solid color-mix(in srgb, var(--accent-primary) 60%, transparent); border-radius: 50%; color: #fff; background: var(--accent-primary); box-shadow: 0 8px 20px color-mix(in srgb, var(--accent-primary) 30%, transparent), 0 2px 6px rgba(15, 23, 42, 0.14); cursor: pointer; transition: width 240ms cubic-bezier(0.16, 1, 0.3, 1), gap 240ms cubic-bezier(0.16, 1, 0.3, 1), padding 240ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms ease, transform 180ms ease; overflow: hidden; white-space: nowrap; }
+.project-fab svg { display: block; flex: none; }
+.project-fab-label { max-width: 0; opacity: 0; color: inherit; font-size: 13px; font-weight: 700; letter-spacing: 0.01em; transition: max-width 240ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease, padding-left 240ms ease; }
+.project-fab:hover { width: 144px; gap: 8px; padding: 0 18px 0 18px; border-radius: 26px; box-shadow: 0 12px 28px color-mix(in srgb, var(--accent-primary) 40%, transparent), 0 4px 10px rgba(15, 23, 42, 0.18); transform: translateY(-2px); }
+.project-fab:hover .project-fab-label { max-width: 80px; opacity: 1; }
+.project-fab:active { transform: translateY(0); }
+.project-fab:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 3px; }
 
 /* 项目卡片在总览中：去掉强制 glass-fill 覆盖，避免深色背景下出现明显的深色矩形 */
 .project-grid :deep(.project-overview-card) { backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); }
