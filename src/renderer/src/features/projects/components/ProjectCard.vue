@@ -124,7 +124,7 @@ function formatLocalUrl(url: string) {
 </template>
 
 <style scoped>
-.project-overview-card { position: relative; min-width: 0; min-height: 208px; display: flex; flex-direction: column; justify-content: flex-start; gap: 12px; padding: 16px; overflow: hidden; border: 1px solid var(--border-default); border-radius: 14px; background: var(--bg-surface); box-shadow: var(--shadow-card); cursor: pointer; transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease, background 180ms ease; }
+.project-overview-card { position: relative; min-width: 0; min-height: 208px; display: flex; flex-direction: column; justify-content: flex-start; gap: 12px; padding: 16px; border: 1px solid var(--border-default); border-radius: 14px; background: var(--bg-surface); box-shadow: var(--shadow-card); cursor: pointer; transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease, background 180ms ease; }
 .project-overview-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--border-gradient); opacity: 0.6; pointer-events: none; }
 .project-overview-card.running { border-color: color-mix(in srgb, var(--success) 16%, var(--border-default)); background: color-mix(in srgb, var(--success-bg) 22%, var(--bg-surface)); }
 .project-overview-card.error { border-color: color-mix(in srgb, var(--error) 18%, var(--border-default)); background: color-mix(in srgb, var(--error-bg) 18%, var(--bg-surface)); }

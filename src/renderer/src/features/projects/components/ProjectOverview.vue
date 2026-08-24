@@ -206,9 +206,10 @@ function getStatusColor(projectId: string) {
           class="project-empty-slot"
           @click="emit('add-project')"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-          <strong>添加项目</strong>
-          <span>创建新的工作区项目</span>
+          <span class="project-empty-plus">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+          </span>
+          <span class="project-empty-text">添加项目</span>
         </button>
       </div>
     </div>
@@ -335,16 +336,15 @@ function getStatusColor(projectId: string) {
 .failure-actions button:hover { color: var(--error); border-color: color-mix(in srgb, var(--error) 36%, var(--border-default)); background: var(--error-bg); }
 
 /* 项目网格：占满主区剩余空间，2 列独立滚动 */
-.project-grid { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-content: start; align-items: stretch; padding: 2px 2px 2px 0; margin-top: clamp(14px, 1.4vw, 20px); }
-.project-empty-slot { min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 18px; border: 1px dashed var(--glass-border); border-radius: 16px; color: var(--text-tertiary); background: var(--glass-fill); backdrop-filter: blur(calc(var(--glass-blur) + 4px)) saturate(calc(var(--glass-saturate) - 20%)); -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 4px)) saturate(calc(var(--glass-saturate) - 20%)); text-align: center; }
-.project-empty-slot:hover { color: var(--accent-primary); border-color: var(--accent-border); background: var(--glass-fill-hover); }
-.project-empty-slot strong { color: var(--text-secondary); font-size: 13px; }
-.project-empty-slot span { font-size: 11px; }
+.project-grid { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-content: start; align-items: start; padding: 2px 2px 2px 0; margin-top: clamp(14px, 1.4vw, 20px); }
+.project-empty-slot { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 14px; border: 1px dashed var(--border-default); border-radius: 12px; color: var(--text-tertiary); background: transparent; text-align: center; cursor: pointer; transition: border-color 160ms ease, color 160ms ease, background 160ms ease; }
+.project-empty-slot:hover { color: var(--accent-primary); border-color: var(--accent-border); background: var(--accent-glow); }
+.project-empty-plus { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: var(--bg-subtle); color: var(--text-secondary); flex: none; }
+.project-empty-slot:hover .project-empty-plus { color: var(--accent-primary); background: color-mix(in srgb, var(--accent-primary) 14%, transparent); }
+.project-empty-text { color: inherit; font-size: 12.5px; font-weight: 650; }
 
-/* 玻璃化项目卡片：让背景色与页面装饰统一，消除"上下色差" */
-.project-grid :deep(.project-overview-card) { background: var(--glass-fill); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); border-color: transparent; box-shadow: var(--glass-shadow); }
-.project-grid :deep(.project-overview-card.running) { background: color-mix(in srgb, var(--success-bg) 30%, var(--glass-fill)); }
-.project-grid :deep(.project-overview-card.error) { background: color-mix(in srgb, var(--error-bg) 22%, var(--glass-fill)); }
+/* 项目卡片在总览中：去掉强制 glass-fill 覆盖，避免深色背景下出现明显的深色矩形 */
+.project-grid :deep(.project-overview-card) { backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); }
 
 /* 旧的侧栏/运行时/活动等样式已随总览重构移除 */
 :global(:root[data-theme='dark']) .runtime-panel { background: rgba(22, 28, 40, 0.85); border-color: rgba(255, 255, 255, 0.08); }
