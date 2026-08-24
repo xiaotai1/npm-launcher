@@ -280,7 +280,7 @@ const empty = computed(() => filteredCommands.value.length === 0)
 
 .command-palette-input-wrap { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border-muted); }
 .command-palette-search-icon { color: var(--text-tertiary); flex: none; }
-.command-palette-input { flex: 1; min-width: 0; padding: 4px 0; border: none; outline: none; background: transparent; color: var(--text-primary); font: 15px/1.4 var(--font-sans, system-ui); }
+.command-palette-input { flex: 1; min-width: 0; padding: 4px 6px; border: none; outline: none; background: transparent; color: var(--text-primary); font: 15px/1.4 var(--font-sans, system-ui); }
 .command-palette-input::placeholder { color: var(--text-tertiary); }
 .command-palette-esc { display: inline-grid; place-items: center; min-width: 28px; height: 22px; padding: 0 6px; border: 1px solid var(--border-default); border-radius: 5px; color: var(--text-tertiary); background: var(--bg-surface); font: 700 11px/1 var(--font-mono); }
 
