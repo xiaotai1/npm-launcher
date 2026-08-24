@@ -6,6 +6,7 @@ import WorkspaceSidebar from '../features/projects/components/WorkspaceSidebar.v
 import ProjectWorkspace from '../features/workspace/components/ProjectWorkspace.vue'
 import { activityFromStatus, appendActivity, clearActivities } from '../features/workspace/model/workspaceState'
 import Toast from '../shared/ui/Toast.vue'
+import CommandPalette from '../shared/ui/CommandPalette.vue'
 import AppHeader from '../shared/window/AppHeader.vue'
 import type { ActiveView, ActivityItem, AppConfig, ErrorAnalysis, Folder, LogEntry, ProcessStatus, Project } from '../shared/types'
 import { applyTheme, installSystemThemeListener } from './useAppTheme'
@@ -38,6 +39,7 @@ const toastType = ref<'success' | 'error' | 'warning'>('error')
 const toastSequence = ref(0)
 const errorAnalysis = ref<ErrorAnalysis | null>(null)
 const showErrorAnalysis = ref(false)
+const showCommandPalette = ref(false)
 
 const sidebarCollapsed = ref(false)
 const sidebarWidth = ref(parseInt(localStorage.getItem('sidebarWidth') || '272', 10))
@@ -104,6 +106,20 @@ function selectProject(id: string) {
 function openAddProject() {
   if (sidebarCollapsed.value) sidebarCollapsed.value = false
   workspaceSidebarRef.value?.openAddForm()
+}
+
+function openCommandPalette() {
+  showErrorAnalysis.value = false
+  showCommandPalette.value = true
+}
+
+function closeCommandPalette() {
+  showCommandPalette.value = false
+}
+
+function handlePaletteAction(action: () => void) {
+  action()
+  closeCommandPalette()
 }
 
 function startEditProject(id: string) {
@@ -423,7 +439,7 @@ function handleGlobalShortcut(event: KeyboardEvent) {
   }
   if (key === 'k') {
     event.preventDefault()
-    showToast('命令面板即将开放', 'warning')
+    openCommandPalette()
     return
   }
   if (key === 'r') {
@@ -491,6 +507,19 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
   <div class="app-shell">
         <Toast :message="toastMessage" :type="toastType" :sequence="toastSequence" />
     <ErrorAnalysisDialog :visible="showErrorAnalysis" :analysis="errorAnalysis" @close="closeErrorAnalysis" />
+    <CommandPalette
+      :visible="showCommandPalette"
+      :projects="config?.projects || []"
+      :statuses="processStatuses"
+      @close="closeCommandPalette"
+      @add-project="handlePaletteAction(openAddProject)"
+      @import-config="handlePaletteAction(importConfig)"
+      @toggle-theme="handlePaletteAction(toggleTheme)"
+      @start-all="handlePaletteAction(() => startAllProjects())"
+      @stop-all="handlePaletteAction(() => stopAllProjects())"
+      @start-project="(id) => handlePaletteAction(() => startProjectById(id))"
+      @stop-project="(id) => handlePaletteAction(() => stopProjectById(id))"
+    />
     <AppHeader
       :node-version="nodeVersion" :available-versions="nodeVersions" :current-version="currentNodeVersion"
       :switching="switchingVersion" :refreshing="refreshingVersions" :theme="config?.theme || 'system'"
