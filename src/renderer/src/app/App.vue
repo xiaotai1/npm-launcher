@@ -12,6 +12,7 @@ import { applyTheme, installSystemThemeListener } from './useAppTheme'
 import { findLocalUrls } from '../features/workspace/model/localUrls'
 import { appendSessionLogEntry } from '../features/terminal/model/sessionLogs'
 import { clearLaunchFailure, mergeLaunchFailures, setLaunchFailure, type LaunchFailureState } from '../features/workspace/model/launchFailures'
+import { installDefaultContextMenuGuard } from '../shared/window/defaultContextMenuGuard'
 import { installFirstMouseActivation } from '../shared/window/firstMouseActivation'
 
 type WorkspaceTab = 'logs' | 'terminal' | 'info'
@@ -47,6 +48,7 @@ let cleanupStatus: (() => void) | null = null
 let cleanupLogs: (() => void) | null = null
 let cleanupErrorAnalysis: (() => void) | null = null
 let cleanupSystemTheme: (() => void) | null = null
+let cleanupDefaultContextMenuGuard: (() => void) | null = null
 let cleanupFirstMouseActivation: (() => void) | null = null
 
 const selectedProject = computed(() => {
@@ -452,6 +454,7 @@ function onResizeStart(event: MouseEvent) {
 }
 
 onMounted(async () => {
+  cleanupDefaultContextMenuGuard = installDefaultContextMenuGuard()
   if (isMac) cleanupFirstMouseActivation = installFirstMouseActivation()
   await Promise.all([loadConfig(), loadNodeVersions()])
   applyTheme(config.value?.theme || 'system')
@@ -462,7 +465,7 @@ onMounted(async () => {
   window.addEventListener('keydown', handleGlobalShortcut)
 })
 
-onUnmounted(() => { cleanupStatus?.(); cleanupLogs?.(); cleanupErrorAnalysis?.(); cleanupSystemTheme?.(); cleanupFirstMouseActivation?.(); window.removeEventListener('keydown', handleGlobalShortcut) })
+onUnmounted(() => { cleanupStatus?.(); cleanupLogs?.(); cleanupErrorAnalysis?.(); cleanupSystemTheme?.(); cleanupDefaultContextMenuGuard?.(); cleanupFirstMouseActivation?.(); window.removeEventListener('keydown', handleGlobalShortcut) })
 watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
 </script>
 
