@@ -443,6 +443,11 @@ pub fn get_process_status(state: State<'_, AppState>, project_id: String) -> Pro
     process::get_process_status(&state, &project_id)
 }
 
+#[tauri::command(rename_all = "camelCase")]
+pub fn get_process_statuses(state: State<'_, AppState>, project_ids: Vec<String>) -> Vec<ProcessStatus> {
+    process::get_process_statuses(&state, &project_ids)
+}
+
 fn start_all_projects_blocking(
     app: &AppHandle,
     project_ids: Vec<String>,

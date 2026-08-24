@@ -343,16 +343,12 @@ fn timestamp_millis() -> u128 {
 }
 
 #[cfg(windows)]
-fn powershell_literal(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "''"))
-}
-
-#[cfg(windows)]
 fn update_windows_junction(
     junction: &str,
-    target: Option<&Path>,
+    target: &Path,
     rollback_target: Option<&Path>,
-) -> Result<String, String> {
+    expected_version: &str,
+) -> Result<(), String> {
     use std::os::windows::process::CommandExt;
 
     const CREATE_NO_WINDOW: u32 = 0x08000000;
@@ -360,49 +356,98 @@ fn update_windows_junction(
     let temp_dir = env::temp_dir();
     let batch_path = temp_dir.join(format!("nvm-switch-{suffix}.bat"));
     let output_path = temp_dir.join(format!("nvm-switch-{suffix}.txt"));
-    let script_path = temp_dir.join(format!("nvm-switch-{suffix}.ps1"));
-    let batch = "@echo off\r\nsetlocal EnableExtensions DisableDelayedExpansion\r\nif exist \"%NPM_LAUNCHER_LINK%\" rmdir \"%NPM_LAUNCHER_LINK%\"\r\nif errorlevel 1 exit /b 1\r\nif not defined NPM_LAUNCHER_TARGET exit /b 0\r\nmklink /J \"%NPM_LAUNCHER_LINK%\" \"%NPM_LAUNCHER_TARGET%\" > \"%NPM_LAUNCHER_OUTPUT%\" 2>&1\r\nif not errorlevel 1 exit /b 0\r\nset \"NPM_LAUNCHER_SWITCH_ERROR=%errorlevel%\"\r\nif not defined NPM_LAUNCHER_ROLLBACK goto switch_failed\r\nmklink /J \"%NPM_LAUNCHER_LINK%\" \"%NPM_LAUNCHER_ROLLBACK%\" >> \"%NPM_LAUNCHER_OUTPUT%\" 2>&1\r\n:switch_failed\r\nexit /b %NPM_LAUNCHER_SWITCH_ERROR%\r\n";
+
+    let link = junction.to_string();
+    let target_str = target.to_string_lossy().to_string();
+    let rollback_str = rollback_target
+        .map(|path| path.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let expected = expected_version.trim_start_matches('v').to_string();
+    let output_str = output_path.to_string_lossy().to_string();
+
+    // 注意：UAC 提权进程不会继承调用者的进程环境变量，因此所有路径直接内嵌进 batch 内容，
+    // 绝不依赖 %NPM_LAUNCHER_*% 环境变量传参。
+    let batch = format!(
+        "@echo off\r\n\
+         setlocal EnableExtensions DisableDelayedExpansion\r\n\
+         set \"LINK={link}\"\r\n\
+         set \"TARGET={target}\"\r\n\
+         set \"ORIGINAL={rollback}\"\r\n\
+         set \"EXPECTED={expected}\"\r\n\
+         set \"OUTPUT={output}\"\r\n\
+         if exist \"%LINK%\" rmdir \"%LINK%\"\r\n\
+         if errorlevel 1 (echo rmdir-failed > \"%OUTPUT%\" & exit /b 1)\r\n\
+         if not defined TARGET exit /b 0\r\n\
+         mklink /J \"%LINK%\" \"%TARGET%\" > \"%OUTPUT%\" 2>&1\r\n\
+         if errorlevel 1 exit /b 2\r\n\
+         if not defined EXPECTED exit /b 0\r\n\
+         set \"ACTUAL=\"\r\n\
+         \"%LINK%\\node.exe\" --version > \"%OUTPUT%.ver\" 2>&1\r\n\
+         if exist \"%OUTPUT%.ver\" set /p ACTUAL=<\"%OUTPUT%.ver\"\r\n\
+         if not defined ACTUAL set \"ACTUAL=unknown\"\r\n\
+         set \"ACTUAL=%ACTUAL:v=%\"\r\n\
+         if \"%ACTUAL%\"==\"%EXPECTED%\" exit /b 0\r\n\
+         if not defined ORIGINAL goto :fail\r\n\
+         rmdir \"%LINK%\" >nul 2>&1\r\n\
+         mklink /J \"%LINK%\" \"%ORIGINAL%\" > \"%OUTPUT%\" 2>&1\r\n\
+         echo version-mismatch expected=%EXPECTED% actual=%ACTUAL% rolled-back > \"%OUTPUT%\"\r\n\
+         exit /b 3\r\n\
+         :fail\r\n\
+         echo version-mismatch expected=%EXPECTED% actual=%ACTUAL% > \"%OUTPUT%\"\r\n\
+         exit /b 3\r\n",
+        link = link,
+        target = target_str,
+        rollback = rollback_str,
+        expected = expected,
+        output = output_str
+    );
     fs::write(&batch_path, batch).map_err(|error| format!("创建切换脚本失败：{error}"))?;
 
-    let target = target
-        .map(|path| path.to_string_lossy().to_string())
-        .unwrap_or_default();
-    let rollback_target = rollback_target
-        .map(|path| path.to_string_lossy().to_string())
-        .unwrap_or_default();
-    let script = format!(
-        "$env:NPM_LAUNCHER_LINK = {}\r\n$env:NPM_LAUNCHER_TARGET = {}\r\n$env:NPM_LAUNCHER_ROLLBACK = {}\r\n$env:NPM_LAUNCHER_OUTPUT = {}\r\n$batchPath = {}\r\ntry {{\r\n  $arguments = '/d /c \"' + $batchPath + '\"'\r\n  $process = Start-Process -FilePath cmd.exe -ArgumentList $arguments -Verb RunAs -Wait -PassThru -WindowStyle Hidden -ErrorAction Stop\r\n  exit $process.ExitCode\r\n}} catch {{\r\n  $_ | Out-File -LiteralPath $env:NPM_LAUNCHER_OUTPUT -Encoding utf8\r\n  exit 1\r\n}}\r\n",
-        powershell_literal(junction),
-        powershell_literal(&target),
-        powershell_literal(&rollback_target),
-        powershell_literal(&output_path.to_string_lossy()),
-        powershell_literal(&batch_path.to_string_lossy())
+    // 通过 powershell 提权运行自包含 batch（1 次 UAC）
+    let launcher = format!(
+        "$p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/d','/c','\"{}\"' -Verb RunAs -Wait -PassThru -WindowStyle Hidden -ErrorAction Stop; exit $p.ExitCode",
+        batch_path.to_string_lossy()
     );
-    if let Err(error) = fs::write(&script_path, script) {
-        let _ = fs::remove_file(&batch_path);
-        return Err(format!("创建提权脚本失败：{error}"));
-    }
-
     let mut command = Command::new("powershell");
     command
-        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"])
-        .arg(&script_path)
+        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command"])
+        .arg(&launcher)
         .creation_flags(CREATE_NO_WINDOW);
     let result = run_with_timeout(command, WINDOWS_UAC_TIMEOUT);
     let output = fs::read_to_string(&output_path).unwrap_or_default();
     let _ = fs::remove_file(&batch_path);
-    let _ = fs::remove_file(&script_path);
     let _ = fs::remove_file(&output_path);
+    let _ = fs::remove_file(PathBuf::from(format!("{output_str}.ver")));
 
     let command_output = result?;
     if !command_output.status.success() {
-        return Err(if output.trim().is_empty() {
-            "管理员授权被取消或 Node.js 版本切换失败".to_string()
+        let text = output.trim();
+        if text.is_empty() {
+            return Err("管理员授权被取消或 Node.js 版本切换失败".to_string());
+        }
+        return Err(if text.starts_with("version-mismatch") {
+            let mut expected = String::new();
+            let mut actual = String::new();
+            for part in text.split_whitespace() {
+                if let Some(value) = part.strip_prefix("expected=") {
+                    expected = value.to_string();
+                }
+                if let Some(value) = part.strip_prefix("actual=") {
+                    actual = value.to_string();
+                }
+            }
+            if text.contains("rolled-back") {
+                format!("Node.js 版本校验失败（期望 v{expected}，实际 v{actual}），已恢复原版本")
+            } else {
+                format!("Node.js 版本校验失败（期望 v{expected}，实际 v{actual}）")
+            }
+        } else if text.starts_with("rmdir-failed") {
+            "删除 Node.js 链接失败，可能被其他进程占用".to_string()
         } else {
-            output.trim().to_string()
+            format!("Node.js 版本切换失败：{text}")
         });
     }
-    Ok(output.trim().to_string())
+    Ok(())
 }
 
 #[cfg(windows)]
@@ -435,41 +480,17 @@ fn switch_windows_version(
         return Err("nvm 路径包含不支持的字符".to_string());
     }
 
-    update_windows_junction(&nvm_symlink, Some(&target), original_target.as_deref())?;
+    update_windows_junction(&nvm_symlink, &target, original_target.as_deref(), version)?;
 
-    let validation = (|| {
-        let actual_target = fs::canonicalize(&nvm_symlink)
-            .map_err(|error| format!("校验 NVM_SYMLINK 失败：{error}"))?;
-        let expected_target = fs::canonicalize(&target)
-            .map_err(|error| format!("校验目标 Node.js 目录失败：{error}"))?;
-        if !actual_target
-            .to_string_lossy()
-            .eq_ignore_ascii_case(&expected_target.to_string_lossy())
-        {
-            return Err("NVM_SYMLINK 未指向目标 Node.js 版本".to_string());
-        }
-
-        let command = command_with_env("node", &["--version"], environment);
-        let version_output = run_with_timeout(command, COMMAND_TIMEOUT)?;
-        let actual_version = String::from_utf8_lossy(&version_output.stdout)
-            .trim()
-            .trim_start_matches('v')
-            .to_string();
-        if !version_output.status.success() || actual_version != version.trim_start_matches('v') {
-            return Err(format!("Node.js 版本校验失败，当前为 v{actual_version}"));
-        }
-        Ok(())
-    })();
-
-    if let Err(error) = validation {
-        return match update_windows_junction(
-            &nvm_symlink,
-            original_target.as_deref(),
-            Some(&target),
-        ) {
-            Ok(_) => Err(format!("{error}；已恢复原 Node.js 版本")),
-            Err(rollback_error) => Err(format!("{error}；恢复原版本失败：{rollback_error}")),
-        };
+    let actual_target = fs::canonicalize(&nvm_symlink)
+        .map_err(|error| format!("校验 NVM_SYMLINK 失败：{error}"))?;
+    let expected_target = fs::canonicalize(&target)
+        .map_err(|error| format!("校验目标 Node.js 目录失败：{error}"))?;
+    if !actual_target
+        .to_string_lossy()
+        .eq_ignore_ascii_case(&expected_target.to_string_lossy())
+    {
+        return Err("NVM_SYMLINK 未指向目标 Node.js 版本".to_string());
     }
     Ok(())
 }

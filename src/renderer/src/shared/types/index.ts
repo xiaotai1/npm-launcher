@@ -108,6 +108,7 @@ export interface DesktopAPI {
   startProject: (projectId: string) => Promise<StartProjectResult>
   stopProject: (projectId: string) => Promise<boolean>
   getProcessStatus: (projectId: string) => Promise<ProcessStatus>
+  getProcessStatuses: (projectIds: string[]) => Promise<ProcessStatus[]>
   startAllProjects: (projectIds: string[]) => Promise<StartAllProjectsResult>
   stopAllProjects: () => Promise<boolean>
   onLogData: (callback: (log: LogEntry) => void) => () => void
