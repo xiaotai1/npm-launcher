@@ -453,20 +453,6 @@ function onResizeStart(event: MouseEvent) {
   document.addEventListener('mouseup', stop)
 }
 
-onMounted(async () => {
-  cleanupDefaultContextMenuGuard = installDefaultContextMenuGuard()
-  if (isMac) cleanupFirstMouseActivation = installFirstMouseActivation()
-  await Promise.all([loadConfig(), loadNodeVersions()])
-  applyTheme(config.value?.theme || 'system')
-  cleanupStatus = window.desktopAPI.onProcessStatus(handleStatus)
-  cleanupLogs = window.desktopAPI.onLogData(handleLogData)
-  cleanupErrorAnalysis = window.desktopAPI.onErrorAnalysis?.(handleErrorAnalysis) || null
-  cleanupSystemTheme = installSystemThemeListener(() => config.value?.theme || 'system')
-  window.addEventListener('keydown', handleGlobalShortcut)
-  await restoreProcessStatuses()
-})
-
-onUnmounted(() => { cleanupStatus?.(); cleanupLogs?.(); cleanupErrorAnalysis?.(); cleanupSystemTheme?.(); cleanupDefaultContextMenuGuard?.(); cleanupFirstMouseActivation?.(); window.removeEventListener('keydown', handleGlobalShortcut) })
 // 页面刷新后事件推送不会回放当前状态，这里主动批量查询一次，
 // 恢复仍在运行的项目状态（不产生活动记录，避免刷新后出现虚假的启动活动）。
 async function restoreProcessStatuses() {
@@ -484,8 +470,20 @@ async function restoreProcessStatuses() {
   }
 }
 
-onUnmounted(() => { cleanupStatus?.(); cleanupLogs?.(); cleanupErrorAnalysis?.(); cleanupSystemTheme?.(); cleanupFirstMouseActivation?.(); window.removeEventListener('keydown', handleGlobalShortcut) })
->>>>>>> 32ebbdd58de5fa7062f7cec69c5d0f71401583b2
+onMounted(async () => {
+  cleanupDefaultContextMenuGuard = installDefaultContextMenuGuard()
+  if (isMac) cleanupFirstMouseActivation = installFirstMouseActivation()
+  await Promise.all([loadConfig(), loadNodeVersions()])
+  applyTheme(config.value?.theme || 'system')
+  cleanupStatus = window.desktopAPI.onProcessStatus(handleStatus)
+  cleanupLogs = window.desktopAPI.onLogData(handleLogData)
+  cleanupErrorAnalysis = window.desktopAPI.onErrorAnalysis?.(handleErrorAnalysis) || null
+  cleanupSystemTheme = installSystemThemeListener(() => config.value?.theme || 'system')
+  window.addEventListener('keydown', handleGlobalShortcut)
+  await restoreProcessStatuses()
+})
+
+onUnmounted(() => { cleanupStatus?.(); cleanupLogs?.(); cleanupErrorAnalysis?.(); cleanupSystemTheme?.(); cleanupDefaultContextMenuGuard?.(); cleanupFirstMouseActivation?.(); window.removeEventListener('keydown', handleGlobalShortcut) })
 watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
 </script>
 
