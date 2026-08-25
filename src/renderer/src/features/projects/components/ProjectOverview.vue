@@ -310,7 +310,7 @@ function getStatusColor(projectId: string) {
 .project-section-head { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin-top: 2px; margin-bottom: 10px; }
 .project-section-head h2 { margin: 0; color: var(--text-primary); font-size: 14px; font-weight: 750; letter-spacing: -0.01em; }
 .project-section-head p { margin: 4px 0 0; color: var(--text-tertiary); font-size: 11px; }
-.project-grid { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-content: start; align-items: start; padding: 2px 2px 2px 0; margin-top: 0; }
+.project-grid { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: max-content; gap: 12px; align-content: start; align-items: start; padding: 2px 2px 2px 0; margin-top: 0; }
 .project-empty-slot { display: none; }
 
 /* 圆形悬浮按钮（FAB）：总览页有项目时显示在主区右下角 */

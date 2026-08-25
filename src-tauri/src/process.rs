@@ -390,10 +390,8 @@ pub fn start_project_process(
         node_version,
         Some(std::path::Path::new(project_path)),
     );
-    let NodeVersionResult {
-        version: runtime_node_version,
-        ..
-    } = get_node_version_for_environment(&environment);
+    let probe_environment = environment.clone();
+    let configured_node_version = node_version.map(ToOwned::to_owned);
     environment.insert(
         "FORCE_COLOR".to_string(),
         if cfg!(windows) { "0" } else { "1" }.to_string(),
