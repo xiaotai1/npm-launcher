@@ -44,7 +44,10 @@
       "nsis": {
         "installMode": "both",
         "displayLanguageSelector": false,
-        "languages": ["SimpChinese", "English"]
+        "languages": [
+          "SimpChinese",
+          "English"
+        ]
       }
     }
   }
