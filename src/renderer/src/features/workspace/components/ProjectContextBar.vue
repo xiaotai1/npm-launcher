@@ -38,10 +38,11 @@ function updateCommandMenuPos() {
   const btn = commandPickerRef.value
   if (!btn) return
   const rect = btn.getBoundingClientRect()
+  const width = Math.min(Math.max(rect.width, 220), Math.max(window.innerWidth - 24, 220))
   commandMenuPos.value = {
     top: rect.bottom + 6,
-    left: rect.left,
-    width: Math.max(rect.width, 140)
+    left: Math.min(Math.max(rect.left, 12), Math.max(window.innerWidth - width - 12, 12)),
+    width
   }
 }
 
@@ -136,7 +137,7 @@ watch(() => props.status?.status, () => {
                 role="menuitem"
                 @click="selectCommand(command)"
               >
-                <span>{{ command }}</span>
+                <span class="command-option-label" :title="command">{{ command }}</span>
                 <svg v-if="command === project.command" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
               </button>
             </div>
@@ -189,8 +190,9 @@ h1 { min-width: 0; margin: 0; overflow: hidden; color: var(--text-primary); font
 .command-picker strong { flex: 1; min-width: 0; overflow: hidden; color: var(--accent-primary); font: 700 14px/1 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
 .command-picker svg { flex: none; margin-left: auto; color: var(--accent-primary); opacity: .85; }
 /* Teleport 到 body，position: fixed + viewport 坐标，脱离一切祖先裁切/堆叠上下文 */
-.command-menu { position: fixed; z-index: 10000; min-width: 140px; padding: 5px; border: 1px solid var(--glass-border); border-radius: 12px; background: var(--glass-fill-strong); backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(var(--glass-saturate)); box-shadow: var(--glass-shadow); animation: glassIn 0.18s cubic-bezier(0.16, 1, 0.3, 1); }
-.command-option { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 8px; border-radius: 6px; color: var(--text-secondary); background: transparent; font: 700 13px/1 var(--font-mono); text-align: left; }
+.command-menu { position: fixed; z-index: 10000; min-width: 220px; max-width: calc(100vw - 24px); max-height: min(360px, calc(100vh - 96px)); overflow-y: auto; overscroll-behavior: contain; padding: 5px; border: 1px solid var(--glass-border); border-radius: 12px; background: var(--glass-fill-strong); backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(var(--glass-saturate)); box-shadow: var(--glass-shadow); animation: glassIn 0.18s cubic-bezier(0.16, 1, 0.3, 1); scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+.command-option { width: 100%; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 8px; border-radius: 6px; color: var(--text-secondary); background: transparent; font: 700 13px/1 var(--font-mono); text-align: left; }
+.command-option-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .command-option:hover { color: var(--accent-primary); background: var(--bg-hover); }
 .command-option.active { color: var(--accent-primary); background: var(--accent-glow); }
 .command-option svg { flex: none; }

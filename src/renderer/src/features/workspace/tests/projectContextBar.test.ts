@@ -13,7 +13,9 @@ test('启动脚本选择器箭头靠右并与菜单保持同宽', () => {
   assert.match(source, /\.command-picker strong\s*\{[^}]*flex: 1/)
   assert.match(source, /\.command-picker svg\s*\{[^}]*margin-left: auto/)
   assert.match(source, /width: commandMenuPos\.width \+ 'px'/)
-  assert.match(source, /width:\s*Math\.max\(rect\.width,\s*140\)/)
+  assert.match(source, /const width = Math\.min\(Math\.max\(rect\.width,\s*220\)/)
+  assert.match(source, /max-height: min\(360px, calc\(100vh - 96px\)\)/)
+  assert.match(source, /class="command-option-label" :title="command"/)
 })
 
 test('项目页顶部优先显示运行时 Node 版本号', () => {
