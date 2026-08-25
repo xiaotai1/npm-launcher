@@ -19,8 +19,8 @@ test('终端复制粘贴使用 Tauri 原生剪贴板，避免 WebView 权限菜�
 })
 
 test('终端复制粘贴完成后清除选区再恢复焦点', () => {
-  const copyFunction = terminalSource.match(/async function copySelection\(\)[\s\S]*?\n}\n\nasync function pasteClipboard/)?.[0] || ''
-  const pasteFunction = terminalSource.match(/async function pasteClipboard\(\)[\s\S]*?\n}\n\nfunction clearTerminal/)?.[0] || ''
+  const copyFunction = terminalSource.match(/async function copySelection\(\)[\s\S]*?\r?\n}\r?\n\r?\nasync function pasteClipboard/)?.[0] || ''
+  const pasteFunction = terminalSource.match(/async function pasteClipboard\(\)[\s\S]*?\r?\n}\r?\n\r?\nfunction clearTerminal/)?.[0] || ''
 
   assert.match(copyFunction, /terminal\?\.clearSelection\(\)[\s\S]*terminal\?\.focus\(\)/)
   assert.match(pasteFunction, /terminal\?\.clearSelection\(\)[\s\S]*terminal\?\.focus\(\)/)
