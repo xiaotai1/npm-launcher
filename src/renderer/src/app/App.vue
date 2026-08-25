@@ -27,6 +27,7 @@ const switchingVersion = ref(false)
 const refreshingVersions = ref(false)
 const selectedProjectId = ref<string | null>(null)
 const processStatuses = ref<Record<string, ProcessStatus>>({})
+const launchingProjects = ref<Record<string, boolean>>({})
 const projectUrls = ref<Record<string, string>>({})
 const launchFailures = ref<LaunchFailureState>({})
 const activities = ref<ActivityItem[]>([])
@@ -195,18 +196,27 @@ async function moveToFolder(projectId: string, folderId: string | null) { await 
 async function startProjectById(projectId: string) {
   const project = config.value?.projects.find(item => item.id === projectId)
   if (!project) return
-  const result = await window.desktopAPI.startProject(project.id)
-  if (result.success) {
-    launchFailures.value = clearLaunchFailure(launchFailures.value, project.id)
-    return
+  if (launchingProjects.value[project.id]) return
+  launchingProjects.value = { ...launchingProjects.value, [project.id]: true }
+  try {
+    const result = await window.desktopAPI.startProject(project.id)
+    if (result.success) {
+      launchFailures.value = clearLaunchFailure(launchFailures.value, project.id)
+      return
+    }
+    const message = result.error || '启动前检查未通过'
+    launchFailures.value = setLaunchFailure(launchFailures.value, {
+      projectId: project.id,
+      projectName: project.name,
+      message
+    })
+    showToast(message, 'error')
+  } catch (error) {
+    console.error('启动项目失败:', error)
+    showToast('启动项目失败，请稍后重试', 'error')
+  } finally {
+    launchingProjects.value = { ...launchingProjects.value, [project.id]: false }
   }
-  const message = result.error || '启动前检查未通过'
-  launchFailures.value = setLaunchFailure(launchFailures.value, {
-    projectId: project.id,
-    projectName: project.name,
-    message
-  })
-  showToast(message, 'error')
 }
 
 async function stopProjectById(projectId: string) {
@@ -561,7 +571,7 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
       <section class="app-content">
         <ProjectOverview
           v-if="activeView === 'overview'" :projects="config?.projects || []" :statuses="processStatuses" :activities="activities" :node-version="nodeVersion"
-          :project-urls="projectUrls" :launch-failures="launchFailures"
+          :project-urls="projectUrls" :launch-failures="launchFailures" :launching-projects="launchingProjects"
           @select="selectProject" @start="startProjectById" @stop="stopProjectById" @start-all="startAllProjects" @stop-all="stopAllProjects" @add-project="openAddProject"
           @clear-activities="clearRecentActivities" @open-url="openProjectUrl" @edit-project="startEditProject" @open-folder="openProjectFolderById"
           @import-config="importConfig"
@@ -569,7 +579,7 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
         <ProjectWorkspace
           v-else-if="selectedProject" :project="selectedProject" :status="currentStatus" :active-tab="activeProjectTab" :edit-trigger="editTrigger"
           :local-url="projectUrls[selectedProject.id] || null"
-          :node-versions="nodeVersions" :global-node-version="nodeVersion" @update:active-tab="setActiveProjectTab"
+          :node-versions="nodeVersions" :global-node-version="nodeVersion" :launching="launchingProjects[selectedProject.id] || false" @update:active-tab="setActiveProjectTab"
           @start="startSelectedProject" @stop="stopSelectedProject" @edit="startEditProject(selectedProject.id)" @update="updateProject"
           @delete="deleteProject" @toast="showToast" @set-node-version="setProjectNodeVersion" @set-command="setProjectCommand" @open-url="openProjectUrl" @analyze-errors="handleAnalyzeErrors" @export-result="handleExportResult"
         />

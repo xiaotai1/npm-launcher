@@ -390,9 +390,8 @@ pub fn start_project_process(
         node_version,
         Some(std::path::Path::new(project_path)),
     );
-    let runtime_node_version = match get_node_version_for_environment(&environment) {
-        NodeVersionResult { version, .. } => version,
-    };
+    let probe_environment = environment.clone();
+    let configured_node_version = node_version.map(ToOwned::to_owned);
     environment.insert(
         "FORCE_COLOR".to_string(),
         if cfg!(windows) { "0" } else { "1" }.to_string(),
@@ -444,7 +443,7 @@ pub fn start_project_process(
         .insert(project_id.to_string(), ProcessHandle {
             pid,
             generation,
-            node_version: runtime_node_version.clone(),
+            node_version: configured_node_version.clone(),
         });
     start_log_session(&state, project_id);
 
@@ -468,8 +467,31 @@ pub fn start_project_process(
         ProcessState::Running,
         Some(pid),
         None,
-        runtime_node_version,
+        configured_node_version,
     );
+
+    let probe_app = app.clone();
+    let probe_project_id = project_id.to_string();
+    thread::spawn(move || {
+        let NodeVersionResult { version, .. } = get_node_version_for_environment(&probe_environment);
+        let state = probe_app.state::<AppState>();
+        let is_current = state
+            .processes
+            .lock()
+            .ok()
+            .and_then(|processes| processes.get(&probe_project_id).map(|handle| handle.generation == generation))
+            .unwrap_or(false);
+        if is_current {
+            emit_status(
+                &probe_app,
+                &probe_project_id,
+                ProcessState::Running,
+                Some(pid),
+                None,
+                version,
+            );
+        }
+    });
     emit_log(
         app,
         project_id,

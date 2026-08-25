@@ -8,6 +8,7 @@ const props = defineProps<{
   status: ProcessStatus | null
   globalNodeVersion: string | null
   localUrl: string | null
+  launching: boolean
 }>()
 
 const emit = defineEmits<{
@@ -142,7 +143,7 @@ watch(() => props.status?.status, () => {
           </Teleport>
         </div>
         <button v-if="status?.status === 'running'" class="context-primary stop" @click="emit('stop')">停止</button>
-        <button v-else class="context-primary" @click="emit('start')">启动</button>
+        <button v-else class="context-primary" :disabled="launching" @click="emit('start')">{{ launching ? '启动中…' : '启动' }}</button>
       </div>
     </div>
 

@@ -13,6 +13,7 @@ const props = defineProps<{
   nodeVersions: string[]
   globalNodeVersion: string | null
   localUrl: string | null
+  launching: boolean
 }>()
 
 const emit = defineEmits<{
@@ -57,6 +58,7 @@ function selectTab(tab: 'logs' | 'terminal' | 'info') {
       :status="status"
       :global-node-version="globalNodeVersion"
       :local-url="localUrl"
+      :launching="launching"
       @start="emit('start')"
       @stop="emit('stop')"
       @edit="editProject"

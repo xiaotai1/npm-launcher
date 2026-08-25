@@ -12,6 +12,7 @@ const props = defineProps<{
   nodeVersion: string | null
   projectUrls: Record<string, string>
   launchFailures: LaunchFailureState
+  launchingProjects: Record<string, boolean>
 }>()
 
 const emit = defineEmits<{
@@ -174,6 +175,7 @@ function getStatusColor(projectId: string) {
           :global-node-version="nodeVersion"
           :local-url="projectUrls[project.id] || null"
           :launch-failure="launchFailures[project.id] || null"
+          :launching="launchingProjects[project.id] || false"
           @select="emit('select', $event)"
           @start="emit('start', $event)"
           @stop="emit('stop', $event)"

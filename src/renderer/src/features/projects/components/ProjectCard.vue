@@ -10,6 +10,7 @@ const props = defineProps<{
   globalNodeVersion: string | null
   localUrl?: string | null
   launchFailure?: LaunchFailure | null
+  launching?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -22,6 +23,7 @@ const emit = defineEmits<{
 const statusLabel = computed(() => {
   if (props.status?.status === 'running') return '运行中'
   if (props.status?.status === 'error') return '异常'
+  if (props.launching) return '启动中'
   if (props.launchFailure) return '启动失败'
   return '未启动'
 })
@@ -116,9 +118,10 @@ function formatLocalUrl(url: string) {
       <button
         v-else
         class="card-action primary"
-        :aria-label="`启动 ${project.name}`"
+        :disabled="launching"
+        :aria-label="launching ? `正在启动 ${project.name}` : `启动 ${project.name}`"
         @click.stop="emit('start', project.id)"
-      >启动</button>
+      >{{ launching ? '启动中…' : '启动' }}</button>
     </footer>
   </article>
 </template>
