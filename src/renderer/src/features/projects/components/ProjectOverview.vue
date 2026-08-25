@@ -117,48 +117,24 @@ function getStatusColor(projectId: string) {
     </header>
 
     <div v-if="projects.length" class="overview-content">
-      <div class="stat-grid" aria-label="项目状态统计">
-        <article class="stat-card">
-          <div class="stat-card-head">
-            <span class="stat-card-icon icon-total">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-            </span>
-            <span>全部项目</span>
-          </div>
+      <section class="overview-summary-bar" aria-label="工作区摘要">
+        <article class="summary-pill total">
+          <span class="summary-label">全部项目</span>
           <strong>{{ counts.total }}</strong>
-          <span class="stat-card-meta">含 {{ counts.running }} 个运行中</span>
         </article>
-        <article class="stat-card running">
-          <div class="stat-card-head">
-            <span class="stat-card-icon icon-running">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="6 4 20 12 6 20 6 4" fill="currentColor" stroke="none"/></svg>
-            </span>
-            <span>运行中</span>
-          </div>
+        <article class="summary-pill running">
+          <span class="summary-label">运行中</span>
           <strong>{{ counts.running }}</strong>
-          <span class="stat-card-meta">实时守护进程</span>
         </article>
-        <article class="stat-card error">
-          <div class="stat-card-head">
-            <span class="stat-card-icon icon-error">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="12" y1="16" x2="12" y2="16.5"/></svg>
-            </span>
-            <span>异常</span>
-          </div>
+        <article class="summary-pill error" :class="{ alert: counts.error > 0 }">
+          <span class="summary-label">异常</span>
           <strong>{{ counts.error }}</strong>
-          <span class="stat-card-meta">需要立即处理</span>
         </article>
-        <article class="stat-card node">
-          <div class="stat-card-head">
-            <span class="stat-card-icon icon-node">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4 8v8l8 5 8-5V8z"/><path d="M4 8l8 5 8-5"/><path d="M12 22V13"/></svg>
-            </span>
-            <span>Node 版本</span>
-          </div>
+        <article class="summary-pill node">
+          <span class="summary-label">全局 Node</span>
           <strong>{{ nodeVersion || '—' }}</strong>
-          <span class="stat-card-meta">全局运行时</span>
         </article>
-      </div>
+      </section>
 
       <section v-if="failureItems.length" class="launch-failure-panel" aria-label="启动失败项目">
         <header>
@@ -181,6 +157,13 @@ function getStatusColor(projectId: string) {
           </article>
         </div>
       </section>
+
+      <div class="project-section-head">
+        <div>
+          <h2>项目列表</h2>
+          <p>优先处理异常项目，再启动或进入正在开发的项目。</p>
+        </div>
+      </div>
 
       <div class="project-grid">
         <ProjectCard
@@ -299,22 +282,15 @@ function getStatusColor(projectId: string) {
   box-sizing: border-box;
 }
 
-/* 统计卡片：保留四块信息，但把层级压低一点，减少总览页抢视线的装饰感 */
-.stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.stat-card { position: relative; padding: 14px 16px; border: 1px solid var(--glass-border); border-radius: 12px; background: var(--glass-fill); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); box-shadow: var(--glass-shadow); transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 200ms ease, border-color 200ms ease; overflow: hidden; }
-.stat-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, transparent 65%, color-mix(in srgb, var(--accent-primary) 6%, transparent)); opacity: 0; transition: opacity 200ms ease; }
-.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--accent-border); }
-.stat-card:hover::before { opacity: 1; }
-.stat-card-head { display: flex; align-items: center; gap: 8px; color: var(--text-tertiary); font-size: 11px; font-weight: 650; letter-spacing: .03em; }
-.stat-card-icon { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: var(--bg-subtle); color: var(--text-secondary); }
-.stat-card.running .stat-card-icon { color: var(--success); background: color-mix(in srgb, var(--success) 14%, transparent); }
-.stat-card.error .stat-card-icon { color: var(--error); background: color-mix(in srgb, var(--error) 14%, transparent); }
-.stat-card.node .stat-card-icon { color: var(--accent-primary); background: color-mix(in srgb, var(--accent-primary) 14%, transparent); }
-.stat-card strong { display: block; margin-top: 8px; color: var(--text-primary); font-size: 24px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; position: relative; z-index: 1; }
-.stat-card.running strong { color: var(--success); }
-.stat-card.error strong { color: var(--error); }
-.stat-card.node strong { color: var(--accent-primary); font-size: 20px; font-family: var(--font-mono); letter-spacing: 0; }
-.stat-card-meta { display: block; margin-top: 5px; color: var(--text-tertiary); font-size: 10px; }
+/* 顶部摘要条：比四张统计卡更像控制台，减少视觉重量，把注意力留给项目列表 */
+.overview-summary-bar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.summary-pill { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-height: 48px; padding: 11px 14px; border: 1px solid var(--glass-border); border-radius: 12px; background: color-mix(in srgb, var(--glass-fill) 86%, transparent); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); box-shadow: var(--glass-shadow); }
+.summary-label { color: var(--text-tertiary); font-size: 11px; font-weight: 650; letter-spacing: 0.03em; white-space: nowrap; }
+.summary-pill strong { color: var(--text-primary); font-size: 20px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+.summary-pill.running strong { color: var(--success); }
+.summary-pill.error strong { color: var(--error); }
+.summary-pill.error.alert { border-color: color-mix(in srgb, var(--error) 26%, var(--border-default)); background: color-mix(in srgb, var(--error-bg) 28%, var(--glass-fill)); }
+.summary-pill.node strong { color: var(--accent-primary); font-size: 17px; font-family: var(--font-mono); letter-spacing: 0; }
 
 .launch-failure-panel { margin-top: 12px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--error) 24%, var(--border-default)); border-radius: 10px; background: color-mix(in srgb, var(--error-bg) 38%, var(--bg-surface)); }
 .launch-failure-panel > header { min-height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--border-muted); }
@@ -328,8 +304,11 @@ function getStatusColor(projectId: string) {
 .failure-actions button { min-height: 26px; padding: 0 8px; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-secondary); background: var(--bg-surface); font-size: 10px; font-weight: 700; }
 .failure-actions button:hover { color: var(--error); border-color: color-mix(in srgb, var(--error) 36%, var(--border-default)); background: var(--error-bg); }
 
-/* 项目网格：占满主区剩余空间，2 列独立滚动 */
-.project-grid { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-content: start; align-items: start; padding: 2px 2px 2px 0; margin-top: clamp(12px, 1.2vw, 16px); }
+/* 项目区：明确告诉用户这里才是主要操作区 */
+.project-section-head { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin-top: 2px; margin-bottom: 10px; }
+.project-section-head h2 { margin: 0; color: var(--text-primary); font-size: 14px; font-weight: 750; letter-spacing: -0.01em; }
+.project-section-head p { margin: 4px 0 0; color: var(--text-tertiary); font-size: 11px; }
+.project-grid { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-content: start; align-items: start; padding: 2px 2px 2px 0; margin-top: 0; }
 .project-empty-slot { display: none; }
 
 /* 圆形悬浮按钮（FAB）：总览页有项目时显示在主区右下角 */
@@ -344,23 +323,6 @@ function getStatusColor(projectId: string) {
 /* 项目卡片在总览中：去掉强制 glass-fill 覆盖，避免深色背景下出现明显的深色矩形 */
 .project-grid :deep(.project-overview-card) { backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); }
 
-/* 旧的侧栏/运行时/活动等样式已随总览重构移除 */
-:global(:root[data-theme='dark']) .runtime-panel { background: rgba(22, 28, 40, 0.85); border-color: rgba(255, 255, 255, 0.08); }
-.runtime-panel > header { min-height: 38px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--border-muted); }
-.runtime-panel h2 { margin: 0; color: var(--text-primary); font-size: 12.5px; font-weight: 750; letter-spacing: -0.005em; }
-.runtime-version-tag { display: inline-flex; align-items: center; padding: 3px 8px; border: 1px solid var(--accent-border); border-radius: 999px; color: var(--accent-primary); background: var(--accent-glow); font: 700 11px/1 var(--font-mono); letter-spacing: 0.04em; }
-.runtime-summary { padding: 12px 14px; }
-.runtime-cell { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--border-muted); border-radius: 10px; background: color-mix(in srgb, var(--bg-subtle) 60%, transparent); overflow: hidden; min-width: 0; }
-.runtime-cell-label { color: var(--text-tertiary); font: 700 10px/1 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; }
-.runtime-cell strong { color: var(--text-primary); font-size: 17px; font-weight: 800; line-height: 1; letter-spacing: -0.01em; }
-.runtime-hint { margin: 0; padding: 0 14px 12px; color: var(--text-tertiary); font-size: 11.5px; line-height: 1.5; }
-
-
-/* ===== 快捷键面板（已移除，残留样式待清理） ===== */
-:global(:root[data-theme='dark']) .shortcut-key kbd { border-color: rgba(148, 163, 184, 0.24); border-bottom-color: rgba(148, 163, 184, 0.34); color: var(--text-secondary); background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.96)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.28), 0 2px 5px rgba(0, 0, 0, 0.28); }
-.shortcut-soon { padding: 2px 7px; border: 1px dashed var(--border-strong); border-radius: 999px; color: var(--text-tertiary); font: 700 10px/1.2 var(--font-mono); letter-spacing: 0.04em; }
-
-/* 旧的 activity/session 样式已随侧栏会话面板移除 */
 
 /* 空状态：hero + 引导卡片 + 快捷键，顶部对齐紧凑排列，一屏放下无滚动 */
 .overview-empty { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; padding: 8px 32px 24px; gap: 14px; }
@@ -397,9 +359,8 @@ function getStatusColor(projectId: string) {
 .shortcut-row .shortcut-desc { margin-left: 6px; color: var(--text-tertiary); }
 
 @media (max-width: 980px) {
-  .overview-main-grid { grid-template-columns: 1fr; }
-  .project-grid { grid-column: auto; grid-template-columns: 1fr; }
-  .runtime-panel { overflow: visible; }
+  .overview-summary-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .project-grid { grid-template-columns: 1fr; }
   .onboarding-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 700px) {
@@ -407,7 +368,8 @@ function getStatusColor(projectId: string) {
   .failure-actions { flex-wrap: wrap; }
   .overview-header { flex-direction: column; align-items: flex-start; }
   .overview-title-block { width: 100%; }
-  .stat-grid { grid-template-columns: 1fr; }
+  .overview-summary-bar { grid-template-columns: 1fr; }
+  .project-section-head { align-items: flex-start; }
   .empty-shortcuts { flex-direction: column; align-items: stretch; }
 }
 </style>

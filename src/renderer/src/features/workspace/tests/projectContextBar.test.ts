@@ -20,3 +20,10 @@ test('项目页顶部优先显示运行时 Node 版本号', () => {
   assert.match(source, /const projectNodeVersion = computed\(\(\) => props\.status\?\.nodeVersion \|\| props\.project\.nodeVersion \|\| props\.globalNodeVersion \|\| '—'\)/)
   assert.match(source, /<span class="node-meta">Node \{\{ projectNodeVersion \}\}<\/span>/)
 })
+
+test('项目页顶部拆分为主操作层和辅助信息层', () => {
+  assert.match(source, /class="project-context-top"/)
+  assert.match(source, /class="project-context-bottom"/)
+  assert.match(source, /class="project-context-actions primary-actions"/)
+  assert.match(source, /class="project-context-actions secondary-actions"/)
+})
