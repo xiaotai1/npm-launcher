@@ -368,6 +368,7 @@ pub fn switch_node_version(state: &AppState, version: &str) -> ActionResult {
     if !valid_version(version) {
         return ActionResult::failure("Node.js 版本格式不正确");
     }
+    #[cfg_attr(not(windows), allow(unused_mut))]
     let mut environment = get_shell_env(state);
 
     #[cfg(windows)]
