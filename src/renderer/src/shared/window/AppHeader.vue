@@ -73,10 +73,10 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       <span v-if="!isMac" class="text-[14px] font-semibold text-tsecondary app-title">NPM Launcher</span>
     </div>
     <div class="flex items-center">
-      <div class="flex items-center gap-1.5 header-right" :class="{ 'mac-header-right': isMac }">
+      <div class="flex items-center gap-1 header-right" :class="{ 'mac-header-right': isMac }">
       <div class="relative" ref="dropdownRef">
         <button
-          class="flex items-center gap-1.5 py-1 px-3.5 pl-2.5 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 ease-out node-badge"
+          class="flex items-center gap-1 py-1 px-3 pr-3 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 ease-out node-badge"
           :class="{ switching, open: showDropdown }"
           @click="toggleDropdown"
           title="点击管理 Node 版本"
@@ -211,6 +211,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 .node-badge {
   min-height: 30px;
+  padding-inline: 10px;
   background: var(--bg-subtle);
   border: 1px solid var(--border-default);
 }
