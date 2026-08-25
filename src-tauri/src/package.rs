@@ -98,22 +98,27 @@ pub fn inspect_project_health(
         return ProjectHealthResult { ok: false, issues };
     }
 
-    let package_scripts = read_package_scripts(project_path);
-    if let Some(error) = package_scripts.error {
-        issues.push(ProjectHealthIssue {
-            code: ProjectHealthIssueCode::PackageJson,
-            message: error,
-        });
-        return ProjectHealthResult { ok: false, issues };
-    }
+    if project
+        .custom_command
+        .as_deref()
+        .is_none_or(|command| command.trim().is_empty())
+    {
+        let package_scripts = read_package_scripts(project_path);
+        if let Some(error) = package_scripts.error {
+            issues.push(ProjectHealthIssue {
+                code: ProjectHealthIssueCode::PackageJson,
+                message: error,
+            });
+            return ProjectHealthResult { ok: false, issues };
+        }
 
-    if !package_scripts.scripts.contains(&project.command) {
-        issues.push(ProjectHealthIssue {
-            code: ProjectHealthIssueCode::Script,
-            message: format!("package.json 中未找到启动命令：{}", project.command),
-        });
+        if !package_scripts.scripts.contains(&project.command) {
+            issues.push(ProjectHealthIssue {
+                code: ProjectHealthIssueCode::Script,
+                message: format!("package.json 中未找到启动命令：{}", project.command),
+            });
+        }
     }
-
     if let Some(version) = project.node_version.as_deref() {
         if !node_version_installed(version) {
             issues.push(ProjectHealthIssue {

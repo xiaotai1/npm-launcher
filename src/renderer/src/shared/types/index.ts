@@ -4,6 +4,7 @@ export interface Project {
   name: string
   path: string
   command: string
+  customCommand?: string
   favorite?: boolean
   folderId?: string | null
   nodeVersion?: string

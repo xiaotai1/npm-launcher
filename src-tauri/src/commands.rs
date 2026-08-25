@@ -426,6 +426,7 @@ pub fn start_project(
         &project.id,
         &project.path,
         &project.command,
+        project.custom_command.as_deref(),
         project.node_version.as_deref(),
     ) {
         Ok(()) => ActionResult::success(),
@@ -479,6 +480,7 @@ fn start_all_projects_blocking(
                     &project.id,
                     &project.path,
                     &project.command,
+                    project.custom_command.as_deref(),
                     project.node_version.as_deref(),
                 )
                 .err()

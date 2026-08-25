@@ -372,6 +372,7 @@ pub fn start_project_process(
     project_id: &str,
     project_path: &str,
     script: &str,
+    custom_command: Option<&str>,
     node_version: Option<&str>,
 ) -> Result<(), String> {
     let state = app.state::<AppState>();
@@ -385,6 +386,10 @@ pub fn start_project_process(
     }
 
     let package_manager = detect_package_manager(std::path::Path::new(project_path));
+    let custom_command = custom_command.and_then(|command| {
+        let trimmed = command.trim();
+        (!trimmed.is_empty()).then(|| trimmed.to_string())
+    });
     let mut environment = get_project_env(
         &state,
         node_version,
@@ -401,9 +406,26 @@ pub fn start_project_process(
         environment.insert("TERM".to_string(), "dumb".to_string());
     }
 
-    let mut command = Command::new(package_manager.command());
+    let launch_label = custom_command
+        .clone()
+        .unwrap_or_else(|| format!("{} run {script}", package_manager.as_str()));
+    let mut command = if let Some(custom_command) = custom_command.as_deref() {
+        let command = if cfg!(windows) {
+            let mut command = Command::new(environment.get("COMSPEC").cloned().unwrap_or_else(|| "cmd.exe".to_string()));
+            command.args(["/d", "/s", "/c", custom_command]);
+            command
+        } else {
+            let mut command = Command::new(environment.get("SHELL").cloned().unwrap_or_else(|| "/bin/sh".to_string()));
+            command.args(["-lc", custom_command]);
+            command
+        };
+        command
+    } else {
+        let mut command = Command::new(package_manager.command());
+        command.args(["run", script]);
+        command
+    };
     command
-        .args(["run", script])
         .current_dir(project_path)
         .env_clear()
         .envs(environment)
@@ -496,7 +518,7 @@ pub fn start_project_process(
         app,
         project_id,
         LogType::Info,
-        &format!("启动: {} run {script}", package_manager.as_str()),
+        &format!("启动: {launch_label}"),
     );
     emit_log(
         app,

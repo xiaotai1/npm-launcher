@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import type { Project } from '../../../shared/types'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
 
-type ProjectSettingsDraft = Omit<Project, 'nodeVersion'> & { nodeVersion: string }
+type ProjectSettingsDraft = Omit<Project, 'nodeVersion' | 'customCommand'> & { nodeVersion: string; customCommand: string }
 
 const props = defineProps<{
   project: Project
@@ -20,7 +20,7 @@ const emit = defineEmits<{
 }>()
 
 function toDraft(project: Project): ProjectSettingsDraft {
-  return { ...project, nodeVersion: project.nodeVersion || '' }
+  return { ...project, nodeVersion: project.nodeVersion || '', customCommand: project.customCommand || '' }
 }
 
 const editForm = ref<ProjectSettingsDraft>(toDraft(props.project))
@@ -42,11 +42,13 @@ const commandOptions = computed(() => Array.from(new Set([
   editForm.value.command,
   ...editScripts.value
 ].filter(Boolean))))
+const useCustomCommand = computed(() => Boolean(editForm.value.customCommand.trim()))
 
 const isDirty = computed(() => (
   editForm.value.name.trim() !== props.project.name
   || editForm.value.path.trim() !== props.project.path
   || editForm.value.command.trim() !== props.project.command
+  || editForm.value.customCommand.trim() !== (props.project.customCommand || '')
   || editForm.value.nodeVersion !== (props.project.nodeVersion || '')
 ))
 
@@ -54,7 +56,7 @@ const canSave = computed(() => Boolean(
   isDirty.value
   && editForm.value.name.trim()
   && editForm.value.path.trim()
-  && editForm.value.command.trim()
+  && (editForm.value.command.trim() || editForm.value.customCommand.trim())
 ))
 
 async function loadScripts(path = editForm.value.path) {
@@ -92,7 +94,9 @@ async function selectFolder() {
 
   const scripts = await window.desktopAPI.getPackageScripts(result.path)
   editScripts.value = scripts.scripts
-  editForm.value.command = scripts.scripts[0] || ''
+  if (!editForm.value.customCommand.trim()) {
+    editForm.value.command = scripts.scripts[0] || ''
+  }
 }
 
 function save() {
@@ -102,9 +106,11 @@ function save() {
     ...editForm.value,
     name: editForm.value.name.trim(),
     path: editForm.value.path.trim(),
-    command: editForm.value.command.trim()
+    command: editForm.value.command.trim(),
+    customCommand: editForm.value.customCommand.trim() || undefined
   }
   if (!editForm.value.nodeVersion) delete nextProject.nodeVersion
+  if (!editForm.value.customCommand.trim()) delete nextProject.customCommand
 
   emit('update', nextProject)
 }
@@ -184,7 +190,7 @@ function onConfirmDelete() {
               <label class="settings-field">
                 <span>默认启动脚本</span>
                 <div class="settings-select">
-                  <select v-model="editForm.command" :disabled="commandOptions.length === 0">
+                  <select v-model="editForm.command" :disabled="useCustomCommand || commandOptions.length === 0">
                     <option value="" disabled>选择脚本</option>
                     <option v-for="script in commandOptions" :key="script" :value="script">{{ script }}</option>
                   </select>
@@ -192,7 +198,19 @@ function onConfirmDelete() {
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
                 </div>
-                <small v-if="editScripts.length === 0 && editForm.path">未找到 package.json 或没有可用 scripts</small>
+                <small v-if="useCustomCommand">已启用自定义命令，脚本选择不会参与启动。</small>
+                <small v-else-if="editScripts.length === 0 && editForm.path">未找到 package.json 或没有可用 scripts</small>
+              </label>
+
+              <label class="settings-field">
+                <span>自定义启动命令</span>
+                <input
+                  v-model="editForm.customCommand"
+                  autocomplete="off"
+                  placeholder="例如：node server.js 或 pnpm --filter web dev"
+                  :title="editForm.customCommand"
+                />
+                <small>留空时执行上面的脚本；填写后将直接在项目目录中执行该命令，不要求以 npm run 开头。</small>
               </label>
             </div>
           </section>
