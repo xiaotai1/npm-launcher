@@ -26,7 +26,7 @@ const commandPickerRef = ref<HTMLElement | null>(null)
 const commandMenuPos = ref({ top: 0, left: 0, width: 140 })
 const launchCommands = computed(() => buildLaunchCommands(props.project.command, packageScripts.value))
 const canSwitchCommand = computed(() => props.status?.status !== 'running' && launchCommands.value.length > 1)
-const projectNodeVersion = computed(() => props.project.nodeVersion || props.globalNodeVersion || '系统')
+const projectNodeVersion = computed(() => props.status?.nodeVersion || props.project.nodeVersion || props.globalNodeVersion || '—')
 
 async function loadPackageScripts() {
   const result = await window.desktopAPI.getPackageScripts(props.project.path)

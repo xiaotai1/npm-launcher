@@ -14,6 +14,7 @@ use crate::{config::resolve_config_path, log::SessionLogLine, terminal::PtySessi
 pub struct ProcessHandle {
     pub pid: u32,
     pub generation: u64,
+    pub node_version: Option<String>,
 }
 
 pub struct AppState {

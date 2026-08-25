@@ -38,6 +38,7 @@ export interface ProcessStatus {
   status: 'running' | 'stopped' | 'error'
   pid?: number
   exitCode?: number
+  nodeVersion?: string
 }
 
 // 日志条目

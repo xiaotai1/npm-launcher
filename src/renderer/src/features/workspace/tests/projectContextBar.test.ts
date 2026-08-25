@@ -16,7 +16,7 @@ test('启动脚本选择器箭头靠右并与菜单保持同宽', () => {
   assert.match(source, /width:\s*Math\.max\(rect\.width,\s*140\)/)
 })
 
-test('项目页顶部优先显示项目 Node 版本，未指定时才跟随全局版本', () => {
-  assert.match(source, /const projectNodeVersion = computed\(\(\) => props\.project\.nodeVersion \|\| props\.globalNodeVersion \|\| '系统'\)/)
+test('项目页顶部优先显示运行时 Node 版本号', () => {
+  assert.match(source, /const projectNodeVersion = computed\(\(\) => props\.status\?\.nodeVersion \|\| props\.project\.nodeVersion \|\| props\.globalNodeVersion \|\| '—'\)/)
   assert.match(source, /<span class="node-meta">Node \{\{ projectNodeVersion \}\}<\/span>/)
 })

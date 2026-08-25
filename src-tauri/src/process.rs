@@ -14,7 +14,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use crate::{
     environment::get_project_env,
     log::{analyze_errors, finish_log_session, record_log_line, start_log_session},
-    models::{LogEntry, LogType, ProcessState, ProcessStatus},
+    models::{LogEntry, LogType, NodeVersionResult, ProcessState, ProcessStatus},
     package::detect_package_manager,
     state::{AppState, ProcessHandle},
 };
@@ -118,6 +118,31 @@ fn format_log(value: &str, kind: &LogType) -> String {
         .join("\r\n")
 }
 
+fn get_node_version_for_environment(environment: &std::collections::HashMap<String, String>) -> NodeVersionResult {
+    let mut command = Command::new("node");
+    command
+        .arg("--version")
+        .env_clear()
+        .envs(environment)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    match command.output() {
+        Ok(output) if output.status.success() => NodeVersionResult {
+            version: Some(String::from_utf8_lossy(&output.stdout).trim().to_string()),
+            error: None,
+        },
+        Ok(output) => NodeVersionResult {
+            version: None,
+            error: Some(String::from_utf8_lossy(&output.stderr).trim().to_string()),
+        },
+        Err(error) => NodeVersionResult {
+            version: None,
+            error: Some(format!("Node.js 版本探测失败：{error}")),
+        },
+    }
+}
+
 fn emit_log(app: &AppHandle, project_id: &str, kind: LogType, value: &str) {
     let data = format_log(value, &kind);
     if data.trim().is_empty() {
@@ -142,6 +167,7 @@ fn emit_status(
     status: ProcessState,
     pid: Option<u32>,
     exit_code: Option<i32>,
+    node_version: Option<String>,
 ) {
     let _ = app.emit(
         "process-status",
@@ -150,6 +176,7 @@ fn emit_status(
             status,
             pid,
             exit_code,
+            node_version,
         },
     );
 }
@@ -322,6 +349,7 @@ fn consume_process_messages(
             },
             None,
             Some(code),
+            None,
         );
         emit_log(
             &app,
@@ -362,6 +390,9 @@ pub fn start_project_process(
         node_version,
         Some(std::path::Path::new(project_path)),
     );
+    let runtime_node_version = match get_node_version_for_environment(&environment) {
+        NodeVersionResult { version, .. } => version,
+    };
     environment.insert(
         "FORCE_COLOR".to_string(),
         if cfg!(windows) { "0" } else { "1" }.to_string(),
@@ -410,7 +441,11 @@ pub fn start_project_process(
         .processes
         .lock()
         .map_err(|_| "进程状态不可用".to_string())?
-        .insert(project_id.to_string(), ProcessHandle { pid, generation });
+        .insert(project_id.to_string(), ProcessHandle {
+            pid,
+            generation,
+            node_version: runtime_node_version.clone(),
+        });
     start_log_session(&state, project_id);
 
     let (sender, receiver) = mpsc::channel();
@@ -427,7 +462,14 @@ pub fn start_project_process(
     });
     consume_process_messages(app.clone(), project_id.to_string(), generation, receiver);
 
-    emit_status(app, project_id, ProcessState::Running, Some(pid), None);
+    emit_status(
+        app,
+        project_id,
+        ProcessState::Running,
+        Some(pid),
+        None,
+        runtime_node_version,
+    );
     emit_log(
         app,
         project_id,
@@ -491,7 +533,7 @@ pub fn stop_project_process(app: &AppHandle, project_id: &str) -> bool {
 
     emit_log(app, project_id, LogType::Info, "已手动停止");
     finish_log_session(&state, project_id, None);
-    emit_status(app, project_id, ProcessState::Stopped, None, None);
+    emit_status(app, project_id, ProcessState::Stopped, None, None, None);
     terminate_process_tree(handle.pid, false);
     true
 }
@@ -530,6 +572,11 @@ pub fn get_process_status(state: &AppState, project_id: &str) -> ProcessStatus {
         .lock()
         .ok()
         .and_then(|processes| processes.get(project_id).map(|handle| handle.pid));
+    let node_version = state
+        .processes
+        .lock()
+        .ok()
+        .and_then(|processes| processes.get(project_id).and_then(|handle| handle.node_version.clone()));
     ProcessStatus {
         project_id: project_id.to_string(),
         status: if pid.is_some() {
@@ -539,6 +586,7 @@ pub fn get_process_status(state: &AppState, project_id: &str) -> ProcessStatus {
         },
         pid,
         exit_code: None,
+        node_version,
     }
 }
 
@@ -552,6 +600,9 @@ pub fn get_process_statuses(state: &AppState, project_ids: &[String]) -> Vec<Pro
             let pid = processes
                 .as_ref()
                 .and_then(|processes| processes.get(project_id).map(|handle| handle.pid));
+            let node_version = processes
+                .as_ref()
+                .and_then(|processes| processes.get(project_id).and_then(|handle| handle.node_version.clone()));
             ProcessStatus {
                 project_id: project_id.clone(),
                 status: if pid.is_some() {
@@ -561,6 +612,7 @@ pub fn get_process_statuses(state: &AppState, project_ids: &[String]) -> Vec<Pro
                 },
                 pid,
                 exit_code: None,
+                node_version,
             }
         })
         .collect()
