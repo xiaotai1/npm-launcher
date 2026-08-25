@@ -7,9 +7,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-#[cfg(windows)]
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use regex::Regex;
 
 use crate::{
@@ -18,8 +15,6 @@ use crate::{
 };
 
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
-#[cfg(windows)]
-const WINDOWS_UAC_TIMEOUT: Duration = Duration::from_secs(60);
 
 fn current_env() -> HashMap<String, String> {
     env::vars().collect()
@@ -72,6 +67,11 @@ fn login_shell() -> String {
 
 pub fn get_shell_env(state: &AppState) -> HashMap<String, String> {
     if cfg!(windows) {
+        if let Ok(cache) = state.shell_env.lock() {
+            if let Some(environment) = cache.as_ref() {
+                return environment.clone();
+            }
+        }
         return current_env();
     }
 
@@ -84,6 +84,7 @@ pub fn get_shell_env(state: &AppState) -> HashMap<String, String> {
     let shell = login_shell();
     let mut command = Command::new(&shell);
     command.args(["-l", "-c", "env"]);
+    #[allow(unused_mut)]
     let mut environment = match run_with_timeout(command, COMMAND_TIMEOUT) {
         Ok(output) if output.status.success() => {
             let mut values = current_env();
@@ -106,6 +107,7 @@ pub fn get_shell_env(state: &AppState) -> HashMap<String, String> {
     environment
 }
 
+#[cfg(not(windows))]
 pub fn clear_shell_env_cache(state: &AppState) {
     if let Ok(mut cache) = state.shell_env.lock() {
         *cache = None;
@@ -304,24 +306,9 @@ pub fn get_node_versions(state: &AppState) -> NodeVersionsResult {
         .collect();
     versions.sort_by_key(|version| std::cmp::Reverse(parse_version(version).unwrap_or_default()));
 
-    let current = if cfg!(windows) {
-        env_value(&environment, "NVM_SYMLINK")
-            .and_then(|path| fs::read_link(path).ok())
-            .and_then(|path| {
-                path.file_name()
-                    .map(|name| name.to_string_lossy().to_string())
-            })
-            .map(|version| {
-                if version.starts_with('v') {
-                    version
-                } else {
-                    format!("v{version}")
-                }
-            })
-    } else {
-        get_node_version(state).version
-    }
-    .or_else(|| versions.first().cloned());
+    let current = get_node_version(state)
+        .version
+        .or_else(|| versions.first().cloned());
 
     NodeVersionsResult {
         versions,
@@ -330,167 +317,25 @@ pub fn get_node_versions(state: &AppState) -> NodeVersionsResult {
     }
 }
 
+#[cfg(not(windows))]
 fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }
 
 #[cfg(windows)]
-fn timestamp_millis() -> u128 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis()
-}
-
-#[cfg(windows)]
-fn update_windows_junction(
-    junction: &str,
-    target: &Path,
-    rollback_target: Option<&Path>,
-    expected_version: &str,
-) -> Result<(), String> {
-    use std::os::windows::process::CommandExt;
-
-    const CREATE_NO_WINDOW: u32 = 0x08000000;
-    let suffix = format!("{}-{}", std::process::id(), timestamp_millis());
-    let temp_dir = env::temp_dir();
-    let batch_path = temp_dir.join(format!("nvm-switch-{suffix}.bat"));
-    let output_path = temp_dir.join(format!("nvm-switch-{suffix}.txt"));
-
-    let link = junction.to_string();
-    let target_str = target.to_string_lossy().to_string();
-    let rollback_str = rollback_target
-        .map(|path| path.to_string_lossy().to_string())
-        .unwrap_or_default();
-    let expected = expected_version.trim_start_matches('v').to_string();
-    let output_str = output_path.to_string_lossy().to_string();
-
-    // 注意：UAC 提权进程不会继承调用者的进程环境变量，因此所有路径直接内嵌进 batch 内容，
-    // 绝不依赖 %NPM_LAUNCHER_*% 环境变量传参。
-    let batch = format!(
-        "@echo off\r\n\
-         setlocal EnableExtensions DisableDelayedExpansion\r\n\
-         set \"LINK={link}\"\r\n\
-         set \"TARGET={target}\"\r\n\
-         set \"ORIGINAL={rollback}\"\r\n\
-         set \"EXPECTED={expected}\"\r\n\
-         set \"OUTPUT={output}\"\r\n\
-         if exist \"%LINK%\" rmdir \"%LINK%\"\r\n\
-         if errorlevel 1 (echo rmdir-failed > \"%OUTPUT%\" & exit /b 1)\r\n\
-         if not defined TARGET exit /b 0\r\n\
-         mklink /J \"%LINK%\" \"%TARGET%\" > \"%OUTPUT%\" 2>&1\r\n\
-         if errorlevel 1 exit /b 2\r\n\
-         if not defined EXPECTED exit /b 0\r\n\
-         set \"ACTUAL=\"\r\n\
-         \"%LINK%\\node.exe\" --version > \"%OUTPUT%.ver\" 2>&1\r\n\
-         if exist \"%OUTPUT%.ver\" set /p ACTUAL=<\"%OUTPUT%.ver\"\r\n\
-         if not defined ACTUAL set \"ACTUAL=unknown\"\r\n\
-         set \"ACTUAL=%ACTUAL:v=%\"\r\n\
-         if \"%ACTUAL%\"==\"%EXPECTED%\" exit /b 0\r\n\
-         if not defined ORIGINAL goto :fail\r\n\
-         rmdir \"%LINK%\" >nul 2>&1\r\n\
-         mklink /J \"%LINK%\" \"%ORIGINAL%\" > \"%OUTPUT%\" 2>&1\r\n\
-         echo version-mismatch expected=%EXPECTED% actual=%ACTUAL% rolled-back > \"%OUTPUT%\"\r\n\
-         exit /b 3\r\n\
-         :fail\r\n\
-         echo version-mismatch expected=%EXPECTED% actual=%ACTUAL% > \"%OUTPUT%\"\r\n\
-         exit /b 3\r\n",
-        link = link,
-        target = target_str,
-        rollback = rollback_str,
-        expected = expected,
-        output = output_str
-    );
-    fs::write(&batch_path, batch).map_err(|error| format!("创建切换脚本失败：{error}"))?;
-
-    // 通过 powershell 提权运行自包含 batch（1 次 UAC）
-    let launcher = format!(
-        "$p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/d','/c','\"{}\"' -Verb RunAs -Wait -PassThru -WindowStyle Hidden -ErrorAction Stop; exit $p.ExitCode",
-        batch_path.to_string_lossy()
-    );
-    let mut command = Command::new("powershell");
-    command
-        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command"])
-        .arg(&launcher)
-        .creation_flags(CREATE_NO_WINDOW);
-    let result = run_with_timeout(command, WINDOWS_UAC_TIMEOUT);
-    let output = fs::read_to_string(&output_path).unwrap_or_default();
-    let _ = fs::remove_file(&batch_path);
-    let _ = fs::remove_file(&output_path);
-    let _ = fs::remove_file(PathBuf::from(format!("{output_str}.ver")));
-
-    let command_output = result?;
-    if !command_output.status.success() {
-        let text = output.trim();
-        if text.is_empty() {
-            return Err("管理员授权被取消或 Node.js 版本切换失败".to_string());
-        }
-        return Err(if text.starts_with("version-mismatch") {
-            let mut expected = String::new();
-            let mut actual = String::new();
-            for part in text.split_whitespace() {
-                if let Some(value) = part.strip_prefix("expected=") {
-                    expected = value.to_string();
-                }
-                if let Some(value) = part.strip_prefix("actual=") {
-                    actual = value.to_string();
-                }
-            }
-            if text.contains("rolled-back") {
-                format!("Node.js 版本校验失败（期望 v{expected}，实际 v{actual}），已恢复原版本")
-            } else {
-                format!("Node.js 版本校验失败（期望 v{expected}，实际 v{actual}）")
-            }
-        } else if text.starts_with("rmdir-failed") {
-            "删除 Node.js 链接失败，可能被其他进程占用".to_string()
-        } else {
-            format!("Node.js 版本切换失败：{text}")
-        });
-    }
-    Ok(())
-}
-
-#[cfg(windows)]
 fn switch_windows_version(
-    environment: &HashMap<String, String>,
+    environment: &mut HashMap<String, String>,
     version: &str,
 ) -> Result<(), String> {
-    let nvm_home =
-        env_value(environment, "NVM_HOME").ok_or_else(|| "未找到 NVM_HOME 环境变量".to_string())?;
-    if !Path::new(&nvm_home).is_dir() {
-        return Err("NVM_HOME 目录不存在".to_string());
-    }
-    let nvm_symlink = env_value(environment, "NVM_SYMLINK")
-        .ok_or_else(|| "未找到 NVM_SYMLINK 环境变量".to_string())?;
-    let target = installed_version_dir(environment, version)
-        .ok_or_else(|| format!("版本 {version} 未安装"))?;
-    let original_target = fs::canonicalize(&nvm_symlink).ok();
-
-    let unsafe_path = |value: &str| {
-        value
-            .chars()
-            .any(|character| matches!(character, '"' | '\r' | '\n'))
-    };
-    if unsafe_path(&nvm_symlink)
-        || unsafe_path(&target.to_string_lossy())
-        || original_target
-            .as_ref()
-            .is_some_and(|path| unsafe_path(&path.to_string_lossy()))
-    {
-        return Err("nvm 路径包含不支持的字符".to_string());
+    if !prepend_node_binary_path(environment, version) {
+        return Err(format!("版本 {version} 未安装"));
     }
 
-    update_windows_junction(&nvm_symlink, &target, original_target.as_deref(), version)?;
-
-    let actual_target = fs::canonicalize(&nvm_symlink)
-        .map_err(|error| format!("校验 NVM_SYMLINK 失败：{error}"))?;
-    let expected_target = fs::canonicalize(&target)
-        .map_err(|error| format!("校验目标 Node.js 目录失败：{error}"))?;
-    if !actual_target
-        .to_string_lossy()
-        .eq_ignore_ascii_case(&expected_target.to_string_lossy())
-    {
-        return Err("NVM_SYMLINK 未指向目标 Node.js 版本".to_string());
+    let command = command_with_env("node", &["--version"], environment);
+    let output = run_with_timeout(command, COMMAND_TIMEOUT)?;
+    let actual = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if !output.status.success() || !versions_match(version, &actual) {
+        return Err(format!("Node.js 版本校验失败，当前为 {actual}"));
     }
     Ok(())
 }
@@ -523,15 +368,20 @@ pub fn switch_node_version(state: &AppState, version: &str) -> ActionResult {
     if !valid_version(version) {
         return ActionResult::failure("Node.js 版本格式不正确");
     }
-    let environment = get_shell_env(state);
+    let mut environment = get_shell_env(state);
 
     #[cfg(windows)]
-    let result = switch_windows_version(&environment, version);
+    let result = switch_windows_version(&mut environment, version);
     #[cfg(not(windows))]
     let result = switch_unix_version(&environment, version);
 
     match result {
         Ok(()) => {
+            #[cfg(windows)]
+            if let Ok(mut cache) = state.shell_env.lock() {
+                *cache = Some(environment);
+            }
+            #[cfg(not(windows))]
             clear_shell_env_cache(state);
             #[cfg(not(windows))]
             if let Some(nvm_dir) = nvm_paths(&environment).0 {

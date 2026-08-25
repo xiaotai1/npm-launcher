@@ -26,6 +26,7 @@ const commandPickerRef = ref<HTMLElement | null>(null)
 const commandMenuPos = ref({ top: 0, left: 0, width: 140 })
 const launchCommands = computed(() => buildLaunchCommands(props.project.command, packageScripts.value))
 const canSwitchCommand = computed(() => props.status?.status !== 'running' && launchCommands.value.length > 1)
+const projectNodeVersion = computed(() => props.project.nodeVersion || props.globalNodeVersion || '系统')
 
 async function loadPackageScripts() {
   const result = await window.desktopAPI.getPackageScripts(props.project.path)
@@ -104,7 +105,7 @@ watch(() => props.status?.status, () => {
       </div>
       <div class="project-context-meta">
         <span class="project-path" :title="project.path">{{ project.path }}</span>
-        <span class="node-meta">Node {{ project.nodeVersion || globalNodeVersion || '系统' }}</span>
+        <span class="node-meta">Node {{ projectNodeVersion }}</span>
       </div>
     </div>
     <div class="project-context-actions">

@@ -137,7 +137,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       </button>
       <div ref="configMenuRef" class="relative">
         <button class="w-8 h-8 flex items-center justify-center rounded-lg text-ttertiary text-sm transition-all duration-200 ease-out config-btn" :class="{ open: showConfigMenu }" title="配置导入导出" aria-label="配置导入导出" :aria-expanded="showConfigMenu" aria-haspopup="menu" @click="showConfigMenu = !showConfigMenu">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M3 12h9"/><path d="m9 9 3 3-3 3"/></svg>
         </button>
         <Transition name="dropdown">
           <div v-if="showConfigMenu" class="absolute top-full mt-2 right-0 w-42 bg-surface border border-border rounded-xl p-1 z-100 animate-scale-in config-menu" role="menu">
