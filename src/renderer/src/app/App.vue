@@ -95,8 +95,6 @@ async function loadNodeVersions() {
 
 function showOverview() {
   activeView.value = 'overview'
-  // 切回总览时清除项目选中，避免侧边栏同时高亮"项目总览"和某个项目
-  selectedProjectId.value = null
 }
 
 function selectProject(id: string) {
@@ -540,7 +538,7 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
       <aside class="app-sidebar" :class="{ collapsed: sidebarCollapsed, resizing: isResizing }" :style="{ width: sidebarCollapsed ? '48px' : `${sidebarWidth}px` }">
         <WorkspaceSidebar
           ref="workspaceSidebarRef" v-show="!sidebarCollapsed" :active-view="activeView"
-          :projects="config?.projects || []" :folders="config?.folders || []" :selected-id="selectedProjectId" :statuses="processStatuses"
+          :projects="config?.projects || []" :folders="config?.folders || []" :selected-id="activeView === 'project' ? selectedProjectId : null" :statuses="processStatuses"
           :project-urls="projectUrls"
           @select-overview="showOverview" @select="selectProject" @add="addProject" @reorder="reorderProjects"
           @edit="startEditProject" @delete="deleteProject" @toggle-favorite="toggleFavorite" @add-folder="addFolder"
@@ -570,14 +568,15 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
       <div v-if="!sidebarCollapsed" class="sidebar-resizer" :class="{ active: isResizing }" @mousedown="onResizeStart"></div>
       <section class="app-content">
         <ProjectOverview
-          v-if="activeView === 'overview'" :projects="config?.projects || []" :statuses="processStatuses" :activities="activities" :node-version="nodeVersion"
+          v-show="activeView === 'overview'" :projects="config?.projects || []" :statuses="processStatuses" :activities="activities" :node-version="nodeVersion"
           :project-urls="projectUrls" :launch-failures="launchFailures" :launching-projects="launchingProjects"
           @select="selectProject" @start="startProjectById" @stop="stopProjectById" @start-all="startAllProjects" @stop-all="stopAllProjects" @add-project="openAddProject"
           @clear-activities="clearRecentActivities" @open-url="openProjectUrl" @edit-project="startEditProject" @open-folder="openProjectFolderById"
           @import-config="importConfig"
         />
         <ProjectWorkspace
-          v-else-if="selectedProject" :project="selectedProject" :status="currentStatus" :active-tab="activeProjectTab" :edit-trigger="editTrigger"
+          v-if="selectedProject" v-show="activeView === 'project'" :project="selectedProject" :projects="config?.projects || []" :visible="activeView === 'project'"
+          :status="currentStatus" :active-tab="activeProjectTab" :edit-trigger="editTrigger"
           :local-url="projectUrls[selectedProject.id] || null"
           :node-versions="nodeVersions" :global-node-version="nodeVersion" :launching="launchingProjects[selectedProject.id] || false" @update:active-tab="setActiveProjectTab"
           @start="startSelectedProject" @stop="stopSelectedProject" @edit="startEditProject(selectedProject.id)" @update="updateProject"
