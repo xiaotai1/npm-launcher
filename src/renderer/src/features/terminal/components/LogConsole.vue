@@ -209,9 +209,15 @@ function truncate(value: string, max: number) {
   return `${value.slice(0, head)}…${value.slice(value.length - tail)}`
 }
 
+const launchCommandText = computed(() => {
+  const project = props.project
+  if (!project) return ''
+  return project.customCommand?.trim() || `npm run ${project.command}`
+})
+
 async function copyLaunchCommand() {
   if (!props.project) return
-  const command = `npm run ${props.project.command}`
+  const command = launchCommandText.value
   try {
     await navigator.clipboard.writeText(command)
     emit('export-result', true, `已复制启动命令: ${command}`)
@@ -298,11 +304,11 @@ async function copyLaunchCommand() {
         <div v-if="project" class="console-empty-card">
           <div class="console-empty-card-head">
             <span class="console-empty-card-tag">即将执行</span>
-            <span class="console-empty-card-runtime">{{ project.nodeVersion || nodeVersion || '系统 Node' }}</span>
+            <span class="console-empty-card-runtime">Node {{ project.nodeVersion || nodeVersion || '—' }}</span>
           </div>
           <div class="console-empty-command">
             <span class="console-empty-prompt">$</span>
-            <code>npm run {{ project.command }}</code>
+            <code :title="launchCommandText">{{ launchCommandText }}</code>
             <button
               type="button"
               class="console-empty-copy"
