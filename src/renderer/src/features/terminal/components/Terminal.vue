@@ -413,53 +413,53 @@ onBeforeUnmount(() => {
   outline: none;
 }
 
-::deep(.xterm),
-::deep(.xterm-screen),
-::deep(.xterm-viewport),
-::deep(.xterm-rows) {
+:deep(.xterm),
+:deep(.xterm-screen),
+:deep(.xterm-viewport),
+:deep(.xterm-rows) {
   background: transparent !important;
   border: none;
   outline: none;
 }
 
-::deep(.xterm) {
-  padding: 14px 18px 18px;
+:deep(.xterm) {
+  /* 右侧留出滚动条宽度，避免文字贴着滚动条 */
+  padding: 14px 14px 16px 18px;
   height: 100%;
+  box-sizing: border-box;
 }
 
-::deep(.xterm-viewport) {
+:deep(.xterm-viewport) {
   background: transparent !important;
 }
 
-::deep(.xterm-rows) {
+:deep(.xterm-rows) {
   font-variant-ligatures: contextual;
 }
 
-::deep(.xterm-rows > div) {
-  letter-spacing: 0.1px;
-  line-height: 1.45;
-}
+/* 字距与行高由 xterm 的 letterSpacing/lineHeight 选项控制，
+   用 CSS 覆盖会让光标和选区错位，这里不再重复设置。 */
 
-::deep(.xterm-screen) {
+:deep(.xterm-screen) {
   height: 100%;
 }
 
-::deep(.xterm-viewport::-webkit-scrollbar) {
+:deep(.xterm-viewport::-webkit-scrollbar) {
   width: 10px;
 }
 
-::deep(.xterm-viewport::-webkit-scrollbar-track) {
+:deep(.xterm-viewport::-webkit-scrollbar-track) {
   background: transparent;
 }
 
-::deep(.xterm-viewport::-webkit-scrollbar-thumb) {
+:deep(.xterm-viewport::-webkit-scrollbar-thumb) {
   background: var(--scrollbar-thumb);
   border-radius: 5px;
   border: 3px solid transparent;
   background-clip: content-box;
 }
 
-::deep(.xterm-viewport::-webkit-scrollbar-thumb:hover) {
+:deep(.xterm-viewport::-webkit-scrollbar-thumb:hover) {
   background: var(--text-tertiary);
   background-clip: content-box;
 }
