@@ -1177,25 +1177,14 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   filter: drop-shadow(0 0 3px rgba(245, 158, 11, 0.4));
 }
 
-/* 收藏项目卡片 — 用淡金色背景 + 金色左侧条，与普通项目明显区分 */
-.project-card.favorite {
-  background: color-mix(in srgb, #f59e0b 6%, var(--glass-fill-strong));
-  border-color: color-mix(in srgb, #f59e0b 18%, transparent);
+/* 收藏项目卡片 — 平时仅靠金色星标区分；选中时沿用普通项目的淡色背景，仅左侧条用金色 */
+.project-card.favorite:hover {
+  background: var(--glass-fill-hover);
 }
-.project-card.favorite::before {
+.project-card.favorite.active::before {
   opacity: 1;
   transform: scaleY(1);
   background: #f59e0b;
-}
-.project-card.favorite.active {
-  background: color-mix(in srgb, #f59e0b 10%, var(--glass-fill-strong));
-  border-color: color-mix(in srgb, #f59e0b 30%, transparent);
-}
-.project-card.favorite:hover {
-  background: color-mix(in srgb, #f59e0b 10%, var(--glass-fill-hover));
-}
-.project-card.favorite .card-name {
-  color: var(--text-primary);
 }
 .project-card.favorite .star-btn {
   opacity: 1 !important;
