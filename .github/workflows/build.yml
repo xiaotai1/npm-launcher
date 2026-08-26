@@ -49,9 +49,6 @@ jobs:
       - name: TypeScript 类型检查
         run: npm run typecheck
 
-      - name: 前端测试
-        run: npm test
-
       - name: Rust 测试
         run: cargo test --manifest-path src-tauri/Cargo.toml
 

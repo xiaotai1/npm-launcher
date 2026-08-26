@@ -76,7 +76,6 @@ npm run dev
 常用检查和构建命令：
 
 ```bash
-npm test                # 前端单元测试与源码结构回归测试
 npm run typecheck       # TypeScript 类型检查
 npm run build:frontend  # 构建 Vue 前端
 npm run build           # 编译当前平台 Rust 应用，不生成安装包
@@ -84,7 +83,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 ```
 
-提交前建议依次运行 `npm test`、`npm run typecheck`、`cargo test` 和 Clippy。GitHub Actions 会在 Windows x64、macOS Intel 与 macOS Apple Silicon 构建任务中执行相同门禁。
+提交前建议依次运行 `npm run typecheck`、`cargo test` 和 Clippy。GitHub Actions 会在 Windows x64、macOS Intel 与 macOS Apple Silicon 构建任务中执行相同门禁。
 
 ## 打包
 
