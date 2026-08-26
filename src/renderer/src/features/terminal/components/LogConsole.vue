@@ -387,10 +387,6 @@ async function copyLaunchCommand() {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 2px;
-  border: 1px solid var(--glass-border);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--bg-surface) 82%, transparent);
 }
 
 .running-dot {
@@ -422,10 +418,14 @@ async function copyLaunchCommand() {
   min-height: 28px;
   border: 1px solid var(--border-default);
   border-radius: 8px;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   background: var(--bg-surface);
   font-size: 12px;
   line-height: 1;
+}
+
+.log-tools input::placeholder {
+  color: var(--text-tertiary);
 }
 
 .log-tools select {
