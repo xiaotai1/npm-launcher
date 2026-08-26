@@ -431,14 +431,14 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
       <!-- 根级别收藏项目 -->
       <template v-if="rootFavorites.length">
-        <div class="flex items-center gap-2 px-3 py-1.5 text-[12px] font-semibold text-ttertiary section-label">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+        <div class="flex items-center gap-2 px-3 py-1.5 text-[12px] font-semibold text-ttertiary section-label section-label-fav">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none" class="fav-star-icon"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
           收藏项目
         </div>
         <div
           v-for="project in rootFavorites"
           :key="project.id"
-          :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }, projectDragClass(project.id)]"
+          :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card favorite', { active: selectedId === project.id }, projectDragClass(project.id)]"
           :draggable="!searchQuery.trim()"
           tabindex="0"
           role="button"
@@ -565,6 +565,10 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       </template>
 
       <!-- 根级别普通项目 -->
+      <div v-if="rootNormal.length" class="flex items-center gap-2 px-3 pt-2 pb-1 text-[12px] font-semibold text-ttertiary section-label section-label-normal">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        所有项目
+      </div>
       <div
         v-for="project in rootNormal"
         :key="project.id"
@@ -901,8 +905,26 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   opacity: 0.7;
 }
 
+/* 收藏区标题 — 金色强调，与普通项目区区分 */
+.section-label-fav {
+  color: color-mix(in srgb, #f59e0b 80%, var(--text-secondary));
+}
+.section-label-fav .fav-star-icon {
+  color: #f59e0b;
+  opacity: 1;
+}
+.section-label-normal svg {
+  color: var(--text-tertiary);
+  opacity: 0.7;
+}
+
 .section-divider {
-  background: var(--divider);
+  height: 1px;
+  margin-left: 12px;
+  margin-right: 12px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  background: color-mix(in srgb, var(--text-secondary) 16%, transparent);
 }
 
 /* 文件夹 — 父子选择器 + CSS 变量 */
@@ -1153,6 +1175,30 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   opacity: 1 !important;
   color: #f59e0b;
   filter: drop-shadow(0 0 3px rgba(245, 158, 11, 0.4));
+}
+
+/* 收藏项目卡片 — 用淡金色背景 + 金色左侧条，与普通项目明显区分 */
+.project-card.favorite {
+  background: color-mix(in srgb, #f59e0b 6%, var(--glass-fill-strong));
+  border-color: color-mix(in srgb, #f59e0b 18%, transparent);
+}
+.project-card.favorite::before {
+  opacity: 1;
+  transform: scaleY(1);
+  background: #f59e0b;
+}
+.project-card.favorite.active {
+  background: color-mix(in srgb, #f59e0b 10%, var(--glass-fill-strong));
+  border-color: color-mix(in srgb, #f59e0b 30%, transparent);
+}
+.project-card.favorite:hover {
+  background: color-mix(in srgb, #f59e0b 10%, var(--glass-fill-hover));
+}
+.project-card.favorite .card-name {
+  color: var(--text-primary);
+}
+.project-card.favorite .star-btn {
+  opacity: 1 !important;
 }
 
 /* 右键菜单 — CSS 变量 + animation */
