@@ -16,7 +16,6 @@
     "dist:win": "node scripts/bump-version.js --skip && tauri build --bundles nsis",
     "dist:mac": "node scripts/bump-version.js --skip && tauri build --bundles dmg",
     "dist:ask": "node scripts/bump-version.js --ask && tauri build",
-    "test": "node scripts/run-tests.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

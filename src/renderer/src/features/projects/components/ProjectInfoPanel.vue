@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import type { Project } from '../../../shared/types'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
+import CustomSelect from '../../../shared/ui/CustomSelect.vue'
 
 type ProjectSettingsDraft = Omit<Project, 'nodeVersion' | 'customCommand'> & { nodeVersion: string; customCommand: string }
 
@@ -189,15 +190,12 @@ function onConfirmDelete() {
 
               <label class="settings-field">
                 <span>默认启动脚本</span>
-                <div class="settings-select">
-                  <select v-model="editForm.command" :disabled="useCustomCommand || commandOptions.length === 0">
-                    <option value="" disabled>选择脚本</option>
-                    <option v-for="script in commandOptions" :key="script" :value="script">{{ script }}</option>
-                  </select>
-                  <svg class="settings-select-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </div>
+                <CustomSelect
+                  v-model="editForm.command"
+                  :options="commandOptions"
+                  :disabled="useCustomCommand || commandOptions.length === 0"
+                  placeholder="选择脚本"
+                />
                 <small v-if="useCustomCommand">已启用自定义命令，脚本选择不会参与启动。</small>
                 <small v-else-if="editScripts.length === 0 && editForm.path">未找到 package.json 或没有可用 scripts</small>
               </label>
@@ -219,15 +217,11 @@ function onConfirmDelete() {
             <div class="settings-fields">
               <label class="settings-field">
                 <span>Node 版本</span>
-                <div class="settings-select">
-                  <select v-model="editForm.nodeVersion">
-                    <option value="">跟随系统{{ globalNodeVersion ? ` (${globalNodeVersion})` : '' }}</option>
-                    <option v-for="version in nodeVersions" :key="version" :value="version">{{ version }}</option>
-                  </select>
-                  <svg class="settings-select-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </div>
+                <CustomSelect
+                  v-model="editForm.nodeVersion"
+                  :options="nodeVersions"
+                  :placeholder="`跟随系统${globalNodeVersion ? ` (${globalNodeVersion})` : ''}`"
+                />
                 <small>仅识别 nvm 管理的版本；留空时使用顶部当前系统版本。</small>
               </label>
             </div>
@@ -443,39 +437,6 @@ function onConfirmDelete() {
   color: var(--text-secondary);
   font-family: var(--font-mono);
   cursor: pointer;
-}
-
-.settings-select {
-  position: relative;
-  min-width: 0;
-}
-
-.settings-select select {
-  appearance: none;
-  -webkit-appearance: none;
-  padding-right: 40px;
-  cursor: pointer;
-}
-
-.settings-select-icon {
-  position: absolute;
-  top: 50%;
-  right: 14px;
-  color: var(--text-secondary);
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-
-.settings-select:focus-within .settings-select-icon {
-  color: var(--accent-primary);
-}
-
-.settings-select select:disabled {
-  cursor: not-allowed;
-}
-
-.settings-select select:disabled + .settings-select-icon {
-  opacity: .45;
 }
 
 .settings-field input:focus,
