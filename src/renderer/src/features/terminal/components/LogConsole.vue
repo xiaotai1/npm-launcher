@@ -240,8 +240,8 @@ async function copyLaunchCommand() {
           等待运行
         </span>
       </div>
-      <div class="flex items-center gap-2">
-        <div v-if="hasLogs || hasSessionLogs" class="log-tools">
+      <div class="console-toolbar-cluster">
+        <div v-if="hasLogs || hasSessionLogs" class="log-tools console-toolbar-group">
           <select v-model="logFilter" aria-label="日志类型过滤">
             <option value="all">全部</option>
             <option value="stdout">输出</option>
@@ -254,7 +254,7 @@ async function copyLaunchCommand() {
         </div>
         <button
           v-if="hasError"
-          class="flex items-center gap-1 py-0.5 px-2 text-[11px] font-medium text-error border border-error/30 rounded hover:bg-error/10 transition-colors"
+          class="console-toolbar-button console-toolbar-button-danger"
           @click="emit('analyze-errors')"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -262,7 +262,7 @@ async function copyLaunchCommand() {
         </button>
         <button
           v-if="canExport"
-          class="flex items-center gap-1 py-0.5 px-2 text-[11px] font-medium text-ttertiary border border-border rounded hover:bg-hover transition-colors"
+          class="console-toolbar-button"
           :disabled="exporting"
           @click="exportLog"
         >
@@ -271,7 +271,7 @@ async function copyLaunchCommand() {
         </button>
         <button
           v-if="hasSessionLogs"
-          class="flex items-center gap-1 py-1 px-2.5 min-h-7 text-[12px] font-medium text-ttertiary border border-border rounded-md hover:bg-hover transition-colors"
+          class="console-toolbar-button"
           @click="clear"
         >
           清空
@@ -369,6 +369,24 @@ async function copyLaunchCommand() {
 </template>
 
 <style scoped>
+.console-toolbar-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.console-toolbar-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px;
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg-surface) 82%, transparent);
+}
+
 .running-dot {
   box-shadow: 0 0 6px var(--success);
 }
@@ -383,34 +401,36 @@ async function copyLaunchCommand() {
 }
 
 .console-header > div:last-child {
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  min-width: 0;
 }
 
 .log-tools {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 
 .log-tools select,
 .log-tools input {
-  height: 26px;
+  min-height: 28px;
   border: 1px solid var(--border-default);
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--text-secondary);
-  background: var(--bg-subtle);
+  background: var(--bg-surface);
   font-size: 12px;
+  line-height: 1;
 }
 
 .log-tools select {
-  max-width: 74px;
-  padding: 0 5px;
+  max-width: 82px;
+  padding: 0 8px;
 }
 
 .log-tools input {
-  width: 150px;
-  padding: 0 8px;
+  width: 180px;
+  max-width: min(36vw, 220px);
+  padding: 0 10px;
 }
 
 .log-tools select:focus-visible,
@@ -430,6 +450,44 @@ async function copyLaunchCommand() {
 .log-tools button:hover {
   color: var(--text-primary);
   background: var(--bg-hover);
+}
+
+.console-toolbar-button {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 10px;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  color: var(--text-tertiary);
+  background: var(--bg-surface);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.console-toolbar-button:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.console-toolbar-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.console-toolbar-button-danger {
+  color: var(--error);
+  border-color: color-mix(in srgb, var(--error) 30%, var(--border-default));
+  background: color-mix(in srgb, var(--error-bg) 50%, var(--bg-surface));
+}
+
+.console-toolbar-button-danger:hover:not(:disabled) {
+  color: var(--error);
+  background: color-mix(in srgb, var(--error-bg) 72%, var(--bg-hover));
 }
 
 :deep(.xterm),
@@ -478,7 +536,7 @@ async function copyLaunchCommand() {
 .console-empty-command { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border-muted); border-radius: 10px; background: var(--console-bg); }
 .console-empty-prompt { color: var(--accent-primary); font: 700 15px/1 var(--font-mono); }
 .console-empty-command code { flex: 1; min-width: 0; overflow: hidden; color: var(--text-primary); font: 700 15px/1.4 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
-.console-empty-copy { display: inline-flex; align-items: center; gap: 4px; min-height: 26px; padding: 0 9px; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-tertiary); background: transparent; font-size: 11px; font-weight: 700; transition: color 160ms ease, background 160ms ease, border-color 160ms ease; }
+.console-empty-copy { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 28px; padding: 0 10px; border: 1px solid var(--border-default); border-radius: 8px; color: var(--text-tertiary); background: var(--bg-surface); font-size: 12px; font-weight: 600; line-height: 1; transition: color 160ms ease, background 160ms ease, border-color 160ms ease; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); }
 .console-empty-copy:hover { color: var(--accent-primary); border-color: var(--accent-border); background: var(--accent-glow); }
 .console-empty-meta { display: flex; align-items: center; gap: 14px; margin-top: 10px; color: var(--text-tertiary); font-size: 11.5px; }
 .console-empty-meta-item { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
