@@ -22,6 +22,11 @@ fn current_env() -> HashMap<String, String> {
 
 fn run_with_timeout(mut command: Command, timeout: Duration) -> Result<Output, String> {
     command.stdout(Stdio::piped()).stderr(Stdio::piped());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
     let mut child = command
         .spawn()
         .map_err(|error| format!("命令启动失败：{error}"))?;

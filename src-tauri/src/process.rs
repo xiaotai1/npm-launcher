@@ -127,6 +127,11 @@ fn get_node_version_for_environment(environment: &std::collections::HashMap<Stri
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
     match command.output() {
         Ok(output) if output.status.success() => NodeVersionResult {
             version: Some(String::from_utf8_lossy(&output.stdout).trim().to_string()),
