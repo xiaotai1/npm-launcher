@@ -15,6 +15,7 @@ const props = defineProps<{
   visible: boolean
   nodeVersion?: string
 }>()
+const sessionId = props.id
 
 const terminalContainer = ref<HTMLDivElement>()
 let terminal: Terminal | null = null
@@ -31,7 +32,7 @@ function waitForLayout() {
 }
 
 function writeToPty(data: string) {
-  void window.desktopAPI.ptyWrite(props.id, data)
+  void window.desktopAPI.ptyWrite(sessionId, data)
 }
 
 async function copySelection() {
@@ -142,7 +143,7 @@ async function initTerminal() {
     if (fitAddon && terminal) {
       try {
         fitAddon.fit()
-        void window.desktopAPI.ptyResize(props.id, terminal.cols, terminal.rows)
+        void window.desktopAPI.ptyResize(sessionId, terminal.cols, terminal.rows)
       } catch {
         // 容器隐藏时 fit 会失败
       }
@@ -153,12 +154,12 @@ async function initTerminal() {
   let stopData: (() => void) | null = null
   try {
     stopData = await window.desktopAPI.onPtyData(({ id, data }) => {
-      if (generation === terminalGeneration && id === props.id) {
+      if (generation === terminalGeneration && id === sessionId) {
         currentTerminal.write(data)
       }
     })
     const stopExit = await window.desktopAPI.onPtyExit(({ id }) => {
-      if (generation === terminalGeneration && id === props.id) {
+      if (generation === terminalGeneration && id === sessionId) {
         currentTerminal.write('\r\n\x1b[90m[进程已退出]\x1b[0m\r\n')
       }
     })
@@ -178,9 +179,13 @@ async function initTerminal() {
   await nextTick()
   await waitForLayout()
   if (generation === terminalGeneration && fitAddon && terminal === currentTerminal) {
-    fitAddon.fit()
+    try {
+      fitAddon.fit()
+    } catch {
+      // 快速切换项目时容器可能已经隐藏，使用 xterm 默认行列启动即可。
+    }
     await window.desktopAPI.ptySpawn(
-      props.id,
+      sessionId,
       currentTerminal.cols,
       currentTerminal.rows,
       props.cwd,
@@ -210,7 +215,7 @@ async function dispose() {
   resizeObserver = null
   contextMenuHandler = null
   cleanupDragRecovery = null
-  await window.desktopAPI.ptyKill(props.id)
+  await window.desktopAPI.ptyKill(sessionId)
 }
 
 async function restoreVisibleTerminal() {
@@ -221,7 +226,7 @@ async function restoreVisibleTerminal() {
   try {
     terminal.clearSelection()
     fitAddon.fit()
-    await window.desktopAPI.ptyResize(props.id, terminal.cols, terminal.rows)
+    await window.desktopAPI.ptyResize(sessionId, terminal.cols, terminal.rows)
   } catch {
     return
   }

@@ -7,6 +7,8 @@ import ProjectContextBar from './ProjectContextBar.vue'
 
 const props = defineProps<{
   project: Project
+  projects: Project[]
+  visible: boolean
   status: ProcessStatus | null
   activeTab: 'logs' | 'terminal' | 'info'
   editTrigger: number
@@ -87,7 +89,15 @@ function selectTab(tab: 'logs' | 'terminal' | 'info') {
         />
       </div>
       <div id="terminal-workspace-panel" class="workspace-panel" :class="{ hidden: activeTab !== 'terminal' }" role="tabpanel" aria-labelledby="terminal-workspace-tab">
-        <Terminal :id="`pty-${project.id}`" :cwd="project.path" :visible="activeTab === 'terminal'" :node-version="project.nodeVersion" />
+        <Terminal
+          v-for="terminalProject in projects"
+          v-show="terminalProject.id === project.id"
+          :id="`pty-${terminalProject.id}`"
+          :key="terminalProject.id"
+          :cwd="terminalProject.path"
+          :visible="visible && activeTab === 'terminal' && terminalProject.id === project.id"
+          :node-version="terminalProject.nodeVersion"
+        />
       </div>
       <div id="info-workspace-panel" v-show="activeTab === 'info'" class="workspace-panel info-panel" role="tabpanel" aria-labelledby="info-workspace-tab">
         <ProjectInfoPanel
