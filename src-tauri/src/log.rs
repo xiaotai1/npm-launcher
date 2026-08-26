@@ -159,6 +159,16 @@ pub fn record_log_line(state: &AppState, project_id: &str, kind: &LogType, data:
     }
 }
 
+/// 返回某个项目当前会话已记录的日志行，供页面刷新后回放。
+pub fn get_session_log_lines(state: &AppState, project_id: &str) -> Vec<SessionLogLine> {
+    state
+        .logs
+        .lock()
+        .ok()
+        .and_then(|logs| logs.get(project_id).cloned())
+        .unwrap_or_default()
+}
+
 pub fn finish_log_session(state: &AppState, project_id: &str, exit_code: Option<i32>) {
     record_log_line(
         state,

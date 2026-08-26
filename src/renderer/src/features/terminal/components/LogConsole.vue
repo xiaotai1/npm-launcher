@@ -8,6 +8,7 @@ import { clearSessionLogs, getSessionLogs, subscribeSessionLogs } from '../model
 import { formatLogForView, formatLogsForExport, type LogFilter } from '../model/logView'
 import { currentTerminalTheme } from '../terminalTheme'
 import { installTerminalDragRecovery } from '../terminalDragState'
+import CustomSelect from '../../../shared/ui/CustomSelect.vue'
 
 const props = defineProps<{
   isRunning: boolean
@@ -30,9 +31,29 @@ const exporting = ref(false)
 const searchQuery = ref('')
 const logFilter = ref<LogFilter>('all')
 const hasSessionLogs = ref(false)
+const visibleLogCount = ref(0)
+const logFilterOptions = [
+  { label: '全部', value: 'all' },
+  { label: '输出', value: 'stdout' },
+  { label: '警告', value: 'stderr' },
+  { label: '错误', value: 'error' },
+  { label: '信息', value: 'info' }
+]
+const logFilterValue = computed({
+  get: () => logFilter.value as string,
+  set: (value: string) => { logFilter.value = value as LogFilter }
+})
+const hasActiveLogQuery = computed(() => logFilter.value !== 'all' || Boolean(searchQuery.value.trim()))
 const canExport = computed(() => hasSessionLogs.value)
 // 空状态：项目未启动且尚未产生任何日志时显示
 const showEmptyState = computed(() => !hasSessionLogs.value && !props.isRunning)
+// 终端里没有任何可见行时显示占位，避免看起来像卡住
+const showNoMatchState = computed(() => !showEmptyState.value && visibleLogCount.value === 0)
+
+function resetLogFilters() {
+  logFilter.value = 'all'
+  searchQuery.value = ''
+}
 const isMac = computed(() => window.desktopAPI?.platform === 'darwin')
 const primaryShortcutKey = computed(() => isMac.value ? '⌘' : 'Ctrl')
 const primaryShortcutLabel = computed(() => isMac.value ? 'Command' : 'Control')
@@ -58,6 +79,7 @@ function updateLogState() {
 function clear() {
   terminal?.clear()
   clearSessionLogs(props.projectId)
+  visibleLogCount.value = 0
   updateLogState()
 }
 
@@ -65,13 +87,17 @@ defineExpose({ clear })
 
 function writeLogEntry(log: LogEntry) {
   const data = formatLogForView(log, logFilter.value, searchQuery.value)
-  if (data) terminal?.write(data + '\r\n')
+  if (data) {
+    visibleLogCount.value += 1
+    terminal?.write(data + '\r\n')
+  }
 }
 
 function replayCurrentProjectLogs() {
   if (!terminal) return
   terminal.clearSelection()
   terminal.clear()
+  visibleLogCount.value = 0
   const logs = getSessionLogs(props.projectId)
   hasSessionLogs.value = logs.length > 0
   for (const log of logs) {
@@ -248,13 +274,12 @@ async function copyLaunchCommand() {
       </div>
       <div class="console-toolbar-cluster">
         <div v-if="hasLogs || hasSessionLogs" class="log-tools console-toolbar-group">
-          <select v-model="logFilter" aria-label="日志类型过滤">
-            <option value="all">全部</option>
-            <option value="stdout">输出</option>
-            <option value="stderr">警告</option>
-            <option value="error">错误</option>
-            <option value="info">信息</option>
-          </select>
+          <CustomSelect
+            v-model="logFilterValue"
+            class="log-filter-select"
+            :options="logFilterOptions"
+            placeholder="全部"
+          />
           <input v-model="searchQuery" aria-label="搜索日志" placeholder="搜索日志" />
           <button v-if="searchQuery" type="button" aria-label="清空搜索" @click="searchQuery = ''">清空</button>
         </div>
@@ -286,6 +311,15 @@ async function copyLaunchCommand() {
     </div>
     <div class="terminal-region">
       <div ref="terminalContainer" :class="['terminal-canvas', { hidden: showEmptyState }]"></div>
+      <div v-if="showNoMatchState" class="console-no-match" aria-live="polite">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <line x1="16.5" y1="16.5" x2="21" y2="21" />
+        </svg>
+        <p v-if="hasActiveLogQuery">没有符合当前筛选条件的日志</p>
+        <p v-else>当前没有日志输出</p>
+        <button v-if="hasActiveLogQuery" type="button" class="console-toolbar-button" @click="resetLogFilters">重置筛选</button>
+      </div>
       <div v-if="showEmptyState" class="console-empty" aria-live="polite">
         <div class="console-empty-decoration" aria-hidden="true">
           <span class="console-empty-blob console-empty-blob-a"></span>
@@ -413,35 +447,67 @@ async function copyLaunchCommand() {
   min-width: 0;
 }
 
-.log-tools select,
 .log-tools input {
   min-height: 28px;
+  width: 180px;
+  max-width: min(36vw, 220px);
+  padding: 0 10px;
   border: 1px solid var(--border-default);
   border-radius: 8px;
   color: var(--text-primary);
   background: var(--bg-surface);
   font-size: 12px;
   line-height: 1;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 
 .log-tools input::placeholder {
   color: var(--text-tertiary);
 }
 
-.log-tools select {
-  max-width: 82px;
-  padding: 0 8px;
-}
-
-.log-tools input {
-  width: 180px;
-  max-width: min(36vw, 220px);
-  padding: 0 10px;
-}
-
-.log-tools select:focus-visible,
-.log-tools input:focus-visible {
+.log-tools input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-glow);
   outline: none;
+}
+
+/* 复用项目设置里的下拉组件，仅收紧到工具栏尺寸 */
+.log-filter-select {
+  width: 98px;
+  flex: none;
+}
+
+.log-filter-select :deep(.custom-select-trigger) {
+  min-height: 28px;
+  padding: 0 26px 0 10px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.log-filter-select :deep(.custom-select-arrow) {
+  right: 8px;
+  width: 12px;
+  height: 12px;
+}
+
+.console-no-match {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-tertiary);
+  background: var(--console-bg);
+  text-align: center;
+}
+
+.console-no-match p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
 .log-tools button {

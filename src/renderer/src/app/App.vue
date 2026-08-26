@@ -11,7 +11,7 @@ import AppHeader from '../shared/window/AppHeader.vue'
 import type { ActiveView, ActivityItem, AppConfig, ErrorAnalysis, Folder, LogEntry, ProcessStatus, Project } from '../shared/types'
 import { applyTheme, installSystemThemeListener } from './useAppTheme'
 import { findLocalUrls } from '../features/workspace/model/localUrls'
-import { appendSessionLogEntry } from '../features/terminal/model/sessionLogs'
+import { appendSessionLogEntry, getSessionLogs } from '../features/terminal/model/sessionLogs'
 import { clearLaunchFailure, mergeLaunchFailures, setLaunchFailure, type LaunchFailureState } from '../features/workspace/model/launchFailures'
 import { installDefaultContextMenuGuard } from '../shared/window/defaultContextMenuGuard'
 import { installFirstMouseActivation } from '../shared/window/firstMouseActivation'
@@ -477,6 +477,23 @@ function onResizeStart(event: MouseEvent) {
   document.addEventListener('mouseup', stop)
 }
 
+// 页面刷新后内存日志会清空，这里把后端保留的当次会话日志取回来重放，
+// 避免项目仍在运行但控制台一片空白。
+async function restoreSessionLogs() {
+  const projects = config.value?.projects || []
+  for (const project of projects) {
+    // 已有内存日志说明本次会话已经在收集，不重复填充
+    if (getSessionLogs(project.id).length > 0) continue
+    try {
+      const logs = await window.desktopAPI.getSessionLogs?.(project.id)
+      if (!logs?.length) continue
+      for (const log of logs) appendSessionLogEntry({ ...log, timestamp: 0 })
+    } catch {
+      // 单个项目取不到日志时跳过，不影响其他项目
+    }
+  }
+}
+
 // 页面刷新后事件推送不会回放当前状态，这里主动批量查询一次，
 // 恢复仍在运行的项目状态（不产生活动记录，避免刷新后出现虚假的启动活动）。
 async function restoreProcessStatuses() {
@@ -505,6 +522,7 @@ onMounted(async () => {
   cleanupSystemTheme = installSystemThemeListener(() => config.value?.theme || 'system')
   window.addEventListener('keydown', handleGlobalShortcut)
   await restoreProcessStatuses()
+  await restoreSessionLogs()
 })
 
 onUnmounted(() => { cleanupStatus?.(); cleanupLogs?.(); cleanupErrorAnalysis?.(); cleanupSystemTheme?.(); cleanupDefaultContextMenuGuard?.(); cleanupFirstMouseActivation?.(); window.removeEventListener('keydown', handleGlobalShortcut) })

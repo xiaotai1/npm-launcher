@@ -359,7 +359,11 @@ fn consume_process_messages(
         emit_log(
             &app,
             &project_id,
-            LogType::Info,
+            if code == 0 {
+                LogType::Info
+            } else {
+                LogType::Error
+            },
             &format!("进程退出，代码: {code}"),
         );
         if code != 0 {

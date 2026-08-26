@@ -611,6 +611,22 @@ pub async fn export_log(app: AppHandle, filename: String, content: String) -> Co
     }
 }
 
+/// 页面刷新后回放当前会话日志（仅内存中的当次运行记录）
+#[tauri::command(rename_all = "camelCase")]
+pub fn get_session_logs(
+    state: State<'_, AppState>,
+    project_id: String,
+) -> Vec<crate::models::SessionLogEntry> {
+    log::get_session_log_lines(&state, &project_id)
+        .into_iter()
+        .map(|line| crate::models::SessionLogEntry {
+            project_id: project_id.clone(),
+            log_type: line.kind,
+            data: line.line,
+        })
+        .collect()
+}
+
 #[tauri::command(rename_all = "camelCase")]
 pub fn analyze_errors(
     state: State<'_, AppState>,

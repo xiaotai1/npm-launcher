@@ -235,6 +235,16 @@ pub struct ProjectHealthResult {
     pub issues: Vec<ProjectHealthIssue>,
 }
 
+/// 页面刷新后回放会话日志用的单行结构
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionLogEntry {
+    pub project_id: String,
+    #[serde(rename = "type")]
+    pub log_type: String,
+    pub data: String,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PtySpawnRequest {

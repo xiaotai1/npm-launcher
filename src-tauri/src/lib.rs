@@ -119,6 +119,7 @@ pub fn run() {
             commands::stop_all_projects,
             commands::export_log,
             commands::analyze_errors,
+            commands::get_session_logs,
             commands::window_minimize,
             commands::window_maximize,
             commands::window_close,

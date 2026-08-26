@@ -117,6 +117,8 @@ export interface DesktopAPI {
   onProcessStatus: (callback: (status: ProcessStatus) => void) => () => void
   exportLog: (filename: string, content: string) => Promise<{ success: boolean; path?: string; error?: string }>
   analyzeErrors: (projectId: string, exitCode: number) => Promise<ErrorAnalysis | null>
+  // 后端只保留类型与文本，没有原始时间戳
+  getSessionLogs: (projectId: string) => Promise<Omit<LogEntry, 'timestamp'>[]>
   onErrorAnalysis: (callback: (analysis: ErrorAnalysis) => void) => () => void
   platform: string
   setNativeTheme: (theme: 'light' | 'dark' | 'system') => Promise<void>

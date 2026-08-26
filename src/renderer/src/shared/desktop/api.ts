@@ -72,6 +72,8 @@ export const desktopAPI: DesktopAPI = {
   analyzeErrors: (projectId, exitCode) =>
     invoke<ErrorAnalysis | null>('analyze_errors', { projectId, exitCode }),
   onErrorAnalysis: callback => subscribe<ErrorAnalysis>('error-analysis', callback),
+  getSessionLogs: projectId =>
+    invoke<Omit<LogEntry, 'timestamp'>[]>('get_session_logs', { projectId }),
   platform: detectPlatform(),
   setNativeTheme: theme => invoke<void>('set_native_theme', { theme }),
   minimize: () => invoke<void>('window_minimize'),
