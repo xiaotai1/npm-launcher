@@ -290,21 +290,21 @@ onBeforeUnmount(() => {
       <span class="terminal-path" :title="cwd">{{ cwd }}</span>
       <div class="terminal-actions">
         <div class="terminal-primary-actions">
-          <button type="button" class="terminal-action primary" aria-label="复制选中内容" title="复制选中内容" @click="copySelection">
+          <button type="button" class="terminal-action" aria-label="复制选中内容" title="复制选中内容" @click="copySelection">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
             <span>复制</span>
           </button>
-          <button type="button" class="terminal-action primary" aria-label="粘贴剪贴板内容" title="粘贴剪贴板内容" @click="pasteClipboard">
+          <button type="button" class="terminal-action" aria-label="粘贴剪贴板内容" title="粘贴剪贴板内容" @click="pasteClipboard">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 4h8a2 2 0 0 1 2 2v1H6V6a2 2 0 0 1 2-2z"/><path d="M6 7h12v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z"/><path d="M9 3h6"/></svg>
             <span>粘贴</span>
           </button>
         </div>
         <div class="terminal-secondary-actions">
-          <button type="button" class="terminal-action secondary" aria-label="清空终端显示" title="清空终端显示" @click="clearTerminal">
+          <button type="button" class="terminal-action" aria-label="清空终端显示" title="清空终端显示" @click="clearTerminal">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><path d="M10 11v5M14 11v5"/></svg>
             <span>清空</span>
           </button>
-          <button type="button" class="terminal-action secondary" aria-label="重启交互终端" title="重启交互终端" @click="restartTerminal">
+          <button type="button" class="terminal-action" aria-label="重启交互终端" title="重启交互终端" @click="restartTerminal">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
             <span>重启</span>
           </button>
@@ -332,11 +332,12 @@ onBeforeUnmount(() => {
 }
 
 .terminal-toolbar {
-  min-height: 40px;
+  /* 与运行日志面板头部同高 */
+  min-height: 42px;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 10px 0 14px;
+  padding: 0 12px 0 16px;
   border-bottom: 1px solid var(--glass-border);
   background: var(--glass-fill);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
@@ -347,7 +348,10 @@ onBeforeUnmount(() => {
   min-width: 0;
   overflow: hidden;
   color: var(--text-tertiary);
-  font: 12px/1 var(--font-mono);
+  /* 行高留出空间，否则中文路径会被上下裁掉 */
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -364,7 +368,7 @@ onBeforeUnmount(() => {
 .terminal-secondary-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .terminal-secondary-actions {
@@ -372,34 +376,29 @@ onBeforeUnmount(() => {
   border-left: 1px solid var(--border-muted);
 }
 
+/* 与运行日志工具栏按钮保持同一规格 */
 .terminal-action {
   min-width: 0;
-  height: 30px;
+  min-height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
   padding: 0 10px;
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   color: var(--text-tertiary);
+  background: var(--bg-surface);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
+  line-height: 1;
   white-space: nowrap;
-  transition: color 160ms ease, background 160ms ease;
-}
-
-.terminal-action.primary {
-  color: var(--text-secondary);
-  background: var(--bg-subtle);
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
 }
 
 .terminal-action:hover {
-  color: var(--accent-primary);
-  background: var(--bg-hover);
-}
-
-.terminal-action.secondary:hover {
   color: var(--text-primary);
+  background: var(--bg-hover);
 }
 
 /* 终端区域：科技感顶发光 + 终端感背景 */
