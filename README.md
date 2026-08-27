@@ -3,6 +3,12 @@
 一个基于 Tauri 2、Rust 和 Vue 3 的桌面项目工作台，用于集中管理多个 NPM 项目的启动、停止、日志和终端，并集成 nvm Node.js 版本管理。支持 Windows 和 macOS。
 
 <p align="center">
+  <a href="https://github.com/xiaotai1/npm-launcher">
+    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-xiaotai1%2Fnpm--launcher-181717?style=flat&logo=github" />
+  </a>
+</p>
+
+<p align="center">
   <img src="docs/images/npm-launcher-cover.webp" alt="NPM Launcher 浅色与深色主题项目总览" width="100%">
 </p>
 
