@@ -126,50 +126,122 @@ function onToggleFavorite(projectId: string, e: Event) {
   emit('toggle-favorite', projectId)
 }
 
-// 拖拽
-function onProjectDragStart(e: DragEvent, projectId: string) {
-  if (searchQuery.value.trim()) {
-    e.preventDefault()
+// 拖拽 —— 使用指针事件实现（HTML5 DnD 在 WebView2 不可靠，dragstart 不触发）
+const pendingDrag = ref<{ type: 'project' | 'folder'; id: string; startX: number; startY: number } | null>(null)
+const justDragged = ref(false)
+
+function onProjectPointerDown(e: PointerEvent, projectId: string) {
+  if (searchQuery.value.trim()) return
+  if (e.button !== 0) return // 仅左键
+  pendingDrag.value = { type: 'project', id: projectId, startX: e.clientX, startY: e.clientY }
+}
+
+function onFolderPointerDown(e: PointerEvent, folderId: string) {
+  if (searchQuery.value.trim()) return
+  if (e.button !== 0) return
+  pendingDrag.value = { type: 'folder', id: folderId, startX: e.clientX, startY: e.clientY }
+}
+
+function onGlobalPointerMove(e: PointerEvent) {
+  if (!pendingDrag.value) return
+  const { type, id, startX, startY } = pendingDrag.value
+  // 超过阈值（5px）才真正进入拖拽，避免误触
+  const dragging = type === 'project' ? dragProjectId.value : dragFolderId.value
+  if (!dragging && Math.hypot(e.clientX - startX, e.clientY - startY) < 5) return
+  if (!dragging) {
+    if (type === 'project') dragProjectId.value = id
+    else dragFolderId.value = id
+  }
+  updateDropTarget(e)
+}
+
+function onGlobalPointerUp(e: PointerEvent) {
+  if (!pendingDrag.value) return
+  const { type, id } = pendingDrag.value
+  const dragging = type === 'project' ? dragProjectId.value : dragFolderId.value
+  if (dragging === id) {
+    finishDrag()
+    justDragged.value = true
+    // 拖拽释放后抑制紧随其后的 click，避免误触发选中
+    setTimeout(() => { justDragged.value = false }, 0)
+  }
+  pendingDrag.value = null
+  dragProjectId.value = null
+  dragFolderId.value = null
+  dropTarget.value = null
+}
+
+function onGlobalPointerCancel() {
+  pendingDrag.value = null
+  dragProjectId.value = null
+  dragFolderId.value = null
+  dropTarget.value = null
+}
+
+function updateDropTarget(e: PointerEvent) {
+  const el = document.elementFromPoint(e.clientX, e.clientY)
+  // 拖的是文件夹 → 文件夹排序
+  if (dragFolderId.value) {
+    const folderEl = el?.closest('[data-folder-id]') as HTMLElement | null
+    if (folderEl && folderEl.dataset.folderId !== dragFolderId.value) {
+      dropTarget.value = { type: 'folder', id: folderEl.dataset.folderId! }
+    } else {
+      dropTarget.value = null
+    }
     return
   }
-  dragProjectId.value = projectId
-  if (e.dataTransfer) {
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', projectId)
+  // 拖的是项目
+  if (!dragProjectId.value) return
+  const projectCard = el?.closest('[data-project-id]') as HTMLElement | null
+  if (projectCard) {
+    const targetId = projectCard.dataset.projectId!
+    const bounds = projectCard.getBoundingClientRect()
+    const placement: ProjectDropPlacement = e.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after'
+    if (canReorderProjects(props.projects, dragProjectId.value, targetId)) {
+      dropTarget.value = { type: 'project', id: targetId, placement }
+      return
+    }
+    dropTarget.value = null
+    return
   }
-}
-
-function projectDropPlacement(e: DragEvent): ProjectDropPlacement {
-  const target = e.currentTarget as HTMLElement
-  const bounds = target.getBoundingClientRect()
-  return e.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after'
-}
-
-function onProjectDragOver(e: DragEvent, targetProjectId: string) {
-  if (!dragProjectId.value || !canReorderProjects(props.projects, dragProjectId.value, targetProjectId)) return
-  e.preventDefault()
-  dropTarget.value = {
-    type: 'project',
-    id: targetProjectId,
-    placement: projectDropPlacement(e)
+  // 悬停在文件夹上 → 移入文件夹
+  const folderEl = el?.closest('[data-folder-id]') as HTMLElement | null
+  if (folderEl) {
+    dropTarget.value = { type: 'folder', id: folderEl.dataset.folderId! }
+    return
   }
-  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+  dropTarget.value = null
 }
 
-function onProjectDrop(e: DragEvent, targetProjectId: string) {
-  e.preventDefault()
-  if (dragProjectId.value && canReorderProjects(props.projects, dragProjectId.value, targetProjectId)) {
-    const projectIds = reorderProjectIds(
-      props.projects,
-      dragProjectId.value,
-      targetProjectId,
-      projectDropPlacement(e)
-    )
-    if (projectIds.some((id, index) => id !== props.projects[index]?.id)) {
+function finishDrag() {
+  const draggedId = dragProjectId.value || dragFolderId.value
+  if (!draggedId) return
+  const target = dropTarget.value
+  if (!target) return
+  if (target.type === 'project' && dragProjectId.value && target.id && target.placement) {
+    const projectIds = reorderProjectIds(props.projects, dragProjectId.value, target.id, target.placement)
+    if (projectIds.some((pId, index) => pId !== props.projects[index]?.id)) {
       emit('reorder', projectIds)
     }
+  } else if (target.type === 'folder') {
+    if (dragFolderId.value && target.id && dragFolderId.value !== target.id) {
+      // 文件夹排序
+      const currentIds = props.folders.map(f => f.id)
+      const fromIdx = currentIds.indexOf(dragFolderId.value)
+      const toIdx = currentIds.indexOf(target.id)
+      if (fromIdx !== -1 && toIdx !== -1) {
+        currentIds.splice(fromIdx, 1)
+        currentIds.splice(toIdx, 0, dragFolderId.value)
+        emit('reorder-folders', currentIds)
+      }
+    } else if (dragProjectId.value && target.id) {
+      // 项目移入文件夹
+      emit('move-to-folder', dragProjectId.value, target.id)
+    }
+  } else if (target.type === 'root' && dragProjectId.value) {
+    const project = props.projects.find(p => p.id === dragProjectId.value)
+    if (project?.folderId) emit('move-to-folder', dragProjectId.value, null)
   }
-  onDragEnd()
 }
 
 function projectDragClass(projectId: string) {
@@ -188,79 +260,17 @@ function handleProjectKeydown(e: KeyboardEvent, projectId: string) {
   }
 }
 
-function onFolderDragOver(e: DragEvent, folderId: string) {
-  e.preventDefault()
-  if (dragProjectId.value) {
-    dropTarget.value = { type: 'folder', id: folderId }
-  }
+function onProjectClick(projectId: string) {
+  // 拖拽刚结束时抑制 click，避免误触发选中
+  if (justDragged.value) return
+  emit('select', projectId)
 }
 
-function onFolderDrop(e: DragEvent, folderId: string) {
-  e.preventDefault()
-  if (dragProjectId.value) {
-    emit('move-to-folder', dragProjectId.value, folderId)
+function folderDragClass(folderId: string) {
+  return {
+    dragging: dragFolderId.value === folderId,
+    'drop-highlight': dropTarget.value?.type === 'folder' && dropTarget.value?.id === folderId
   }
-  dragProjectId.value = null
-  dropTarget.value = null
-}
-
-function onRootDragOver(e: DragEvent) {
-  e.preventDefault()
-  if (dragProjectId.value) {
-    dropTarget.value = { type: 'root' }
-  }
-}
-
-function onRootDrop(e: DragEvent) {
-  e.preventDefault()
-  if (dragProjectId.value) {
-    // 拖到根区域，移出文件夹
-    const project = props.projects.find(p => p.id === dragProjectId.value)
-    if (project?.folderId) {
-      emit('move-to-folder', dragProjectId.value, null)
-    }
-  }
-  dragProjectId.value = null
-  dropTarget.value = null
-}
-
-function onDragEnd() {
-  dragProjectId.value = null
-  dragFolderId.value = null
-  dropTarget.value = null
-}
-
-// 文件夹拖拽排序
-function onFolderDragStart(e: DragEvent, folderId: string) {
-  dragFolderId.value = folderId
-  if (e.dataTransfer) {
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', 'folder:' + folderId)
-  }
-}
-
-function onFolderDragOverForSort(e: DragEvent, folderId: string) {
-  e.preventDefault()
-  if (dragFolderId.value && dragFolderId.value !== folderId) {
-    dropTarget.value = { type: 'folder', id: folderId }
-  }
-  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
-}
-
-function onFolderDropForSort(e: DragEvent, targetFolderId: string) {
-  e.preventDefault()
-  if (dragFolderId.value && dragFolderId.value !== targetFolderId) {
-    const currentIds = props.folders.map(f => f.id)
-    const fromIdx = currentIds.indexOf(dragFolderId.value)
-    const toIdx = currentIds.indexOf(targetFolderId)
-    if (fromIdx !== -1 && toIdx !== -1) {
-      currentIds.splice(fromIdx, 1)
-      currentIds.splice(toIdx, 0, dragFolderId.value)
-      emit('reorder-folders', currentIds)
-    }
-  }
-  dragFolderId.value = null
-  dropTarget.value = null
 }
 
 // 右键菜单
@@ -427,7 +437,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
     </div>
 
     <!-- 项目列表 -->
-    <div :class="['flex-1 overflow-y-auto px-2 pt-1 pb-2 project-list-scroll', { 'is-searching': searchQuery.trim() }]" @dragover="onRootDragOver" @drop="onRootDrop">
+    <div :class="['flex-1 overflow-y-auto px-2 pt-1 pb-2 project-list-scroll', { 'is-searching': searchQuery.trim() }]" @pointermove="onGlobalPointerMove" @pointerup="onGlobalPointerUp" @pointercancel="onGlobalPointerCancel">
 
       <!-- 根级别收藏项目 -->
       <template v-if="rootFavorites.length">
@@ -439,19 +449,19 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
           v-for="project in rootFavorites"
           :key="project.id"
           :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card favorite', { active: selectedId === project.id }, projectDragClass(project.id)]"
-          :draggable="!searchQuery.trim()"
+          :data-project-id="project.id"
           tabindex="0"
           role="button"
           :aria-label="project.name"
-          @click="emit('select', project.id)"
+          @click="onProjectClick(project.id)"
           @keydown="handleProjectKeydown($event, project.id)"
           @contextmenu="onProjectContextMenu($event, project)"
-          @dragstart="onProjectDragStart($event, project.id)"
-          @dragover.stop="onProjectDragOver($event, project.id)"
-          @drop.stop="onProjectDrop($event, project.id)"
-          @dragend="onDragEnd"
+          @pointerdown="onProjectPointerDown($event, project.id)"
         >
-          <div class="shrink-0 w-3.5 flex items-center justify-center text-ttertiary opacity-0 transition-opacity duration-200 ease-out cursor-grab card-drag-handle" title="拖拽排序">
+          <div
+            class="shrink-0 w-3.5 flex items-center justify-center text-ttertiary opacity-0 transition-opacity duration-200 ease-out cursor-grab card-drag-handle"
+            title="拖拽排序"
+          >
             <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
               <circle cx="3" cy="2" r="1.2"/><circle cx="7" cy="2" r="1.2"/>
               <circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/>
@@ -478,12 +488,9 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       <!-- 文件夹 -->
       <template v-for="folder in visibleFolders" :key="folder.id">
         <div
-          :class="['flex items-center gap-1.75 py-1.75 px-2 mb-0.5 rounded-lg cursor-default transition-colors duration-150 ease-out folder-row', { 'drop-highlight': dropTarget?.type === 'folder' && dropTarget?.id === folder.id, dragging: dragFolderId === folder.id }]"
-          draggable="true"
-          @dragstart="onFolderDragStart($event, folder.id)"
-          @dragover.stop="dragFolderId ? onFolderDragOverForSort($event, folder.id) : onFolderDragOver($event, folder.id)"
-          @drop.stop="dragFolderId ? onFolderDropForSort($event, folder.id) : onFolderDrop($event, folder.id)"
-          @dragend="onDragEnd"
+          :class="['flex items-center gap-1.75 py-1.75 px-2 mb-0.5 rounded-lg cursor-default transition-colors duration-150 ease-out folder-row', folderDragClass(folder.id)]"
+          :data-folder-id="folder.id"
+          @pointerdown="onFolderPointerDown($event, folder.id)"
           @contextmenu="onFolderContextMenu($event, folder)"
         >
           <!-- 重命名模式 -->
@@ -522,19 +529,19 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
               v-for="project in folderProjects(folder.id)"
               :key="project.id"
               :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }, projectDragClass(project.id)]"
-              :draggable="!searchQuery.trim()"
+              :data-project-id="project.id"
               tabindex="0"
               role="button"
               :aria-label="project.name"
-              @click="emit('select', project.id)"
+              @click="onProjectClick(project.id)"
               @keydown="handleProjectKeydown($event, project.id)"
               @contextmenu="onProjectContextMenu($event, project)"
-              @dragstart="onProjectDragStart($event, project.id)"
-              @dragover.stop="onProjectDragOver($event, project.id)"
-              @drop.stop="onProjectDrop($event, project.id)"
-              @dragend="onDragEnd"
+              @pointerdown="onProjectPointerDown($event, project.id)"
             >
-            <div class="shrink-0 w-3.5 flex items-center justify-center text-ttertiary opacity-0 transition-opacity duration-200 ease-out cursor-grab card-drag-handle" title="拖拽排序">
+            <div
+              class="shrink-0 w-3.5 flex items-center justify-center text-ttertiary opacity-0 transition-opacity duration-200 ease-out cursor-grab card-drag-handle"
+              title="拖拽排序"
+            >
               <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
                 <circle cx="3" cy="2" r="1.2"/><circle cx="7" cy="2" r="1.2"/>
                 <circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/>
@@ -572,16 +579,16 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       <div
         v-for="project in rootNormal"
         :key="project.id"
+        :data-project-id="project.id"
         :class="['flex items-center gap-2 py-1.75 px-2 mb-0.5 rounded-[10px] cursor-pointer transition-all duration-200 ease-out relative border border-transparent project-card', { active: selectedId === project.id }, projectDragClass(project.id)]"
-        :draggable="!searchQuery.trim()"
-        @click="emit('select', project.id)"
+        @click="onProjectClick(project.id)"
         @contextmenu="onProjectContextMenu($event, project)"
-        @dragstart="onProjectDragStart($event, project.id)"
-        @dragover.stop="onProjectDragOver($event, project.id)"
-        @drop.stop="onProjectDrop($event, project.id)"
-        @dragend="onDragEnd"
+        @pointerdown="onProjectPointerDown($event, project.id)"
       >
-        <div class="shrink-0 w-3.5 flex items-center justify-center text-ttertiary opacity-0 transition-opacity duration-200 ease-out cursor-grab card-drag-handle" title="拖拽排序">
+        <div
+          class="shrink-0 w-3.5 flex items-center justify-center text-ttertiary opacity-0 transition-opacity duration-200 ease-out cursor-grab card-drag-handle"
+          title="拖拽排序"
+        >
           <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
             <circle cx="3" cy="2" r="1.2"/><circle cx="7" cy="2" r="1.2"/>
             <circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/>
@@ -1052,6 +1059,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 /* 项目卡片 — 复杂状态 + ::before 指示器 */
 .project-card {
   animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .folder-projects .project-card {
@@ -1135,6 +1144,11 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   opacity: 0.4;
 }
 
+/* 项目列表区域禁用文本选中，避免拖拽时误选中文字 */
+.project-list-scroll {
+  user-select: none;
+  -webkit-user-select: none;
+}
 .project-list-scroll.is-searching .card-drag-handle {
   opacity: 0;
 }
