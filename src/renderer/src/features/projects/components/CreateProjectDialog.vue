@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import type { Folder, Project } from '../../../shared/types'
+import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
 import {
   buildFolder,
   buildProject,
@@ -15,8 +16,10 @@ import {
 const props = withDefaults(defineProps<{
   visible: boolean
   initialMode?: CreateMode
+  existingProjects?: Project[]
 }>(), {
-  initialMode: 'project'
+  initialMode: 'project',
+  existingProjects: () => []
 })
 
 const emit = defineEmits<{
@@ -32,6 +35,8 @@ const availableScripts = ref<string[]>([])
 const loadingScripts = ref(false)
 const scriptMessage = ref('选择包含 package.json 的项目目录')
 const dialogRef = ref<HTMLElement | null>(null)
+const duplicateConfirmVisible = ref(false)
+const pendingDuplicateDraft = ref<Project | null>(null)
 
 const canSubmit = computed(() => mode.value === 'project'
   ? canCreateProject(projectDraft.value)
@@ -46,6 +51,8 @@ function resetState() {
   availableScripts.value = []
   loadingScripts.value = false
   scriptMessage.value = '选择包含 package.json 的项目目录'
+  duplicateConfirmVisible.value = false
+  pendingDuplicateDraft.value = null
 }
 
 function selectMode(nextMode: CreateMode) {
@@ -114,11 +121,31 @@ function submit() {
   if (!canSubmit.value) return
 
   if (mode.value === 'project') {
-    emit('add', buildProject(projectDraft.value, crypto.randomUUID()))
+    const project = buildProject(projectDraft.value, crypto.randomUUID())
+    // 按目录路径（path）判断是否与已有项目重复
+    const duplicated = props.existingProjects.some(existing => existing.path === project.path)
+    if (duplicated) {
+      pendingDuplicateDraft.value = project
+      duplicateConfirmVisible.value = true
+      return
+    }
+    emit('add', project)
   } else {
     emit('add-folder', buildFolder(folderName.value, crypto.randomUUID()))
   }
   requestClose()
+}
+
+function confirmDuplicate() {
+  if (pendingDuplicateDraft.value) emit('add', pendingDuplicateDraft.value)
+  pendingDuplicateDraft.value = null
+  duplicateConfirmVisible.value = false
+  requestClose()
+}
+
+function cancelDuplicate() {
+  pendingDuplicateDraft.value = null
+  duplicateConfirmVisible.value = false
 }
 
 function handleSubmitKeydown(event: KeyboardEvent) {
@@ -220,6 +247,15 @@ watch(() => props.visible, visible => {
             </footer>
           </form>
         </section>
+        <ConfirmDialog
+          :visible="duplicateConfirmVisible"
+          title="已存在相同目录的项目"
+          message="该目录路径下已经有一个项目。确定仍要创建吗？"
+          confirm-text="仍要创建"
+          cancel-text="取消"
+          @confirm="confirmDuplicate"
+          @cancel="cancelDuplicate"
+        />
       </div>
     </Transition>
   </Teleport>

@@ -800,6 +800,7 @@ onUnmounted(() => {
     />
     <CreateProjectDialog
       :visible="createDialogVisible"
+      :existing-projects="projects"
       @close="closeCreateDialog"
       @add="emit('add', $event)"
       @add-folder="emit('add-folder', $event)"
