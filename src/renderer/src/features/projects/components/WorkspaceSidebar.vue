@@ -813,15 +813,11 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   place-items: center;
   width: 30px;
   height: 30px;
-  border: 1px solid color-mix(in srgb, var(--accent-primary) 22%, var(--border-muted));
-  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 24%, var(--border-muted));
+  border-radius: 9px;
   color: var(--accent-primary);
-  background:
-    radial-gradient(circle at 28% 20%, color-mix(in srgb, #fff 72%, transparent), transparent 42%),
-    linear-gradient(145deg, color-mix(in srgb, var(--accent-glow) 86%, var(--bg-surface)), var(--bg-elevated));
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 72%, transparent),
-    0 8px 18px color-mix(in srgb, var(--accent-primary) 14%, transparent);
+  background: var(--bg-elevated);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 50%, transparent);
 }
 
 .sidebar-brand-title {
@@ -845,13 +841,10 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 :global(:root[data-theme='dark']) .sidebar-brand-mark {
-  border-color: color-mix(in srgb, var(--accent-primary) 34%, rgba(255, 255, 255, 0.08));
-  background:
-    radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.18), transparent 42%),
-    linear-gradient(145deg, rgba(72, 129, 255, 0.18), rgba(17, 24, 39, 0.72));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 10px 22px rgba(50, 102, 224, 0.2);
+  border-color: color-mix(in srgb, var(--accent-primary) 30%, rgba(255, 255, 255, 0.08));
+  background: var(--bg-elevated);
+  color: var(--accent-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .create-button {
