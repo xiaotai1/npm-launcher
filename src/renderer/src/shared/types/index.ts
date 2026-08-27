@@ -107,6 +107,7 @@ export interface DesktopAPI {
   openInFileManager: (folderPath: string) => Promise<{ success: boolean; error?: string }>
   openInVscode: (folderPath: string) => Promise<{ success: boolean; error?: string }>
   openLocalUrl: (url: string) => Promise<{ success: boolean; error?: string }>
+  openExternal: (url: string) => Promise<{ success: boolean; error?: string }>
   startProject: (projectId: string) => Promise<StartProjectResult>
   stopProject: (projectId: string) => Promise<boolean>
   getProcessStatus: (projectId: string) => Promise<ProcessStatus>

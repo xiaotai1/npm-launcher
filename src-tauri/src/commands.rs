@@ -383,6 +383,20 @@ pub fn open_local_url(app: AppHandle, url: String) -> ActionResult {
 }
 
 #[tauri::command]
+pub fn open_external_url(app: AppHandle, url: String) -> ActionResult {
+    let Ok(parsed) = url::Url::parse(&url) else {
+        return ActionResult::failure("链接无效");
+    };
+    if !matches!(parsed.scheme(), "http" | "https") {
+        return ActionResult::failure("仅支持 http/https 链接");
+    }
+    match app.opener().open_url(parsed.as_str(), None::<&str>) {
+        Ok(()) => ActionResult::success(),
+        Err(error) => ActionResult::failure(error.to_string()),
+    }
+}
+
+#[tauri::command]
 pub fn set_native_theme(app: AppHandle, theme: Theme) -> Result<(), String> {
     let window = app
         .get_webview_window("main")

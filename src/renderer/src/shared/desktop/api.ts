@@ -60,6 +60,7 @@ export const desktopAPI: DesktopAPI = {
   openInFileManager: folderPath => invoke('open_in_file_manager', { folderPath }),
   openInVscode: folderPath => invoke('open_in_vscode', { folderPath }),
   openLocalUrl: url => invoke('open_local_url', { url }),
+  openExternal: url => invoke('open_external_url', { url }),
   startProject: projectId => invoke<StartProjectResult>('start_project', { projectId }),
   stopProject: projectId => invoke<boolean>('stop_project', { projectId }),
   getProcessStatus: projectId => invoke<ProcessStatus>('get_process_status', { projectId }),

@@ -110,6 +110,7 @@ pub fn run() {
             commands::open_in_file_manager,
             commands::open_in_vscode,
             commands::open_local_url,
+            commands::open_external_url,
             commands::set_native_theme,
             commands::start_project,
             commands::stop_project,

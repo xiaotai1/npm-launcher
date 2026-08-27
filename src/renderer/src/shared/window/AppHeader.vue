@@ -63,6 +63,10 @@ function selectConfigAction(action: 'export' | 'import') {
   else emit('import-config')
 }
 
+async function openGithubRepo() {
+  await window.desktopAPI.openExternal('https://github.com/xiaotai1/npm-launcher')
+}
+
 onMounted(() => document.addEventListener('click', onClickOutside))
 onUnmounted(() => document.removeEventListener('click', onClickOutside))
 </script>
@@ -150,6 +154,15 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
           </div>
         </Transition>
       </div>
+      <a
+        class="w-8 h-8 flex items-center justify-center rounded-lg text-ttertiary transition-all duration-200 ease-out github-btn"
+        href="https://github.com/xiaotai1/npm-launcher"
+        title="GitHub 仓库"
+        aria-label="打开 GitHub 仓库"
+        @click.prevent="openGithubRepo"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.85c-3.03.66-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.03 11.03 0 015.8 0c2.21-1.49 3.18-1.18 3.18-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.41-2.69 5.38-5.25 5.66.41.35.77 1.04.77 2.1v3.1c0 .27.18.65.73.55A11 11 0 0012 1.27z"/></svg>
+      </a>
       </div>
       <WindowControls v-if="!isMac" />
     </div>
@@ -276,7 +289,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 .theme-btn:hover,
 .config-btn:hover,
-.config-btn.open {
+.config-btn.open,
+.github-btn:hover {
   background: var(--bg-hover);
   color: var(--accent-primary);
 }
