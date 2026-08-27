@@ -123,59 +123,132 @@ function closeCreateDialog() {
 // 收藏
 function onToggleFavorite(projectId: string, e: Event) {
   e.stopPropagation()
+  if (justDragged.value) return
   emit('toggle-favorite', projectId)
 }
 
 // 拖拽 —— 使用指针事件实现（HTML5 DnD 在 WebView2 不可靠，dragstart 不触发）
-const pendingDrag = ref<{ type: 'project' | 'folder'; id: string; startX: number; startY: number } | null>(null)
+const pendingDrag = ref<{
+  type: 'project' | 'folder'
+  id: string
+  pointerId: number
+  source: HTMLElement
+  startX: number
+  startY: number
+} | null>(null)
 const justDragged = ref(false)
+let dragPreview: HTMLElement | null = null
+
+function beginPointerDrag(e: PointerEvent, type: 'project' | 'folder', id: string) {
+  if (searchQuery.value.trim() || e.button !== 0) return
+  if (e.target instanceof Element && e.target.closest('button, input, textarea, select, a, [contenteditable="true"]')) return
+  if (pendingDrag.value) resetDragState(true)
+  const source = e.currentTarget as HTMLElement
+  source.setPointerCapture(e.pointerId)
+  pendingDrag.value = {
+    type,
+    id,
+    pointerId: e.pointerId,
+    source,
+    startX: e.clientX,
+    startY: e.clientY
+  }
+}
 
 function onProjectPointerDown(e: PointerEvent, projectId: string) {
-  if (searchQuery.value.trim()) return
-  if (e.button !== 0) return // 仅左键
-  pendingDrag.value = { type: 'project', id: projectId, startX: e.clientX, startY: e.clientY }
+  beginPointerDrag(e, 'project', projectId)
 }
 
 function onFolderPointerDown(e: PointerEvent, folderId: string) {
-  if (searchQuery.value.trim()) return
-  if (e.button !== 0) return
-  pendingDrag.value = { type: 'folder', id: folderId, startX: e.clientX, startY: e.clientY }
+  beginPointerDrag(e, 'folder', folderId)
+}
+
+function isActivePointer(e: PointerEvent) {
+  return pendingDrag.value?.pointerId === e.pointerId
+}
+
+function createDragPreview(source: HTMLElement) {
+  const bounds = source.getBoundingClientRect()
+  const preview = source.cloneNode(true) as HTMLElement
+  preview.classList.remove('active', 'dragging', 'drop-before', 'drop-after')
+  preview.classList.add('project-drag-preview')
+  preview.removeAttribute('data-project-id')
+  preview.removeAttribute('role')
+  preview.removeAttribute('tabindex')
+  preview.setAttribute('aria-hidden', 'true')
+  preview.style.left = `${bounds.left}px`
+  preview.style.top = `${bounds.top}px`
+  preview.style.width = `${bounds.width}px`
+  preview.style.height = `${bounds.height}px`
+  document.body.appendChild(preview)
+  dragPreview = preview
+}
+
+function updateDragPreview(e: PointerEvent) {
+  if (!dragPreview || !pendingDrag.value) return
+  dragPreview.style.setProperty('--drag-x', `${e.clientX - pendingDrag.value.startX}px`)
+  dragPreview.style.setProperty('--drag-y', `${e.clientY - pendingDrag.value.startY}px`)
+}
+
+function removeDragPreview(immediate = false) {
+  const preview = dragPreview
+  dragPreview = null
+  if (!preview) return
+  if (immediate) {
+    preview.remove()
+    return
+  }
+  preview.classList.add('leaving')
+  window.setTimeout(() => preview.remove(), 100)
+}
+
+function resetDragState(immediatePreview = false) {
+  const pending = pendingDrag.value
+  if (pending?.source.hasPointerCapture(pending.pointerId)) {
+    pending.source.releasePointerCapture(pending.pointerId)
+  }
+  pendingDrag.value = null
+  dragProjectId.value = null
+  dragFolderId.value = null
+  dropTarget.value = null
+  removeDragPreview(immediatePreview)
 }
 
 function onGlobalPointerMove(e: PointerEvent) {
-  if (!pendingDrag.value) return
-  const { type, id, startX, startY } = pendingDrag.value
+  if (!pendingDrag.value || !isActivePointer(e)) return
+  const { type, id, source, startX, startY } = pendingDrag.value
   // 超过阈值（5px）才真正进入拖拽，避免误触
   const dragging = type === 'project' ? dragProjectId.value : dragFolderId.value
   if (!dragging && Math.hypot(e.clientX - startX, e.clientY - startY) < 5) return
   if (!dragging) {
-    if (type === 'project') dragProjectId.value = id
+    if (type === 'project') {
+      dragProjectId.value = id
+      createDragPreview(source)
+    }
     else dragFolderId.value = id
   }
+  e.preventDefault()
+  updateDragPreview(e)
   updateDropTarget(e)
 }
 
 function onGlobalPointerUp(e: PointerEvent) {
-  if (!pendingDrag.value) return
+  if (!pendingDrag.value || !isActivePointer(e)) return
   const { type, id } = pendingDrag.value
   const dragging = type === 'project' ? dragProjectId.value : dragFolderId.value
   if (dragging === id) {
+    updateDropTarget(e)
     finishDrag()
     justDragged.value = true
     // 拖拽释放后抑制紧随其后的 click，避免误触发选中
     setTimeout(() => { justDragged.value = false }, 0)
   }
-  pendingDrag.value = null
-  dragProjectId.value = null
-  dragFolderId.value = null
-  dropTarget.value = null
+  resetDragState()
 }
 
-function onGlobalPointerCancel() {
-  pendingDrag.value = null
-  dragProjectId.value = null
-  dragFolderId.value = null
-  dropTarget.value = null
+function onGlobalPointerCancel(e: PointerEvent) {
+  if (!pendingDrag.value || !isActivePointer(e)) return
+  resetDragState()
 }
 
 function updateDropTarget(e: PointerEvent) {
@@ -195,19 +268,29 @@ function updateDropTarget(e: PointerEvent) {
   const projectCard = el?.closest('[data-project-id]') as HTMLElement | null
   if (projectCard) {
     const targetId = projectCard.dataset.projectId!
+    if (targetId === dragProjectId.value) {
+      dropTarget.value = null
+      return
+    }
     const bounds = projectCard.getBoundingClientRect()
     const placement: ProjectDropPlacement = e.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after'
     if (canReorderProjects(props.projects, dragProjectId.value, targetId)) {
       dropTarget.value = { type: 'project', id: targetId, placement }
       return
     }
-    dropTarget.value = null
-    return
   }
   // 悬停在文件夹上 → 移入文件夹
-  const folderEl = el?.closest('[data-folder-id]') as HTMLElement | null
+  const folderEl = el?.closest('[data-folder-drop-id]') as HTMLElement | null
   if (folderEl) {
-    dropTarget.value = { type: 'folder', id: folderEl.dataset.folderId! }
+    const folderId = folderEl.dataset.folderDropId!
+    const project = props.projects.find(item => item.id === dragProjectId.value)
+    dropTarget.value = project?.folderId === folderId ? null : { type: 'folder', id: folderId }
+    return
+  }
+  const rootEl = el?.closest('[data-project-root]')
+  const project = props.projects.find(item => item.id === dragProjectId.value)
+  if (rootEl && project?.folderId) {
+    dropTarget.value = { type: 'root' }
     return
   }
   dropTarget.value = null
@@ -371,8 +454,19 @@ function onClickOutside() {
   if (contextMenu.value.visible) closeContextMenu()
 }
 
-onMounted(() => document.addEventListener('click', onClickOutside))
-onUnmounted(() => document.removeEventListener('click', onClickOutside))
+onMounted(() => {
+  document.addEventListener('click', onClickOutside)
+  window.addEventListener('pointermove', onGlobalPointerMove)
+  window.addEventListener('pointerup', onGlobalPointerUp)
+  window.addEventListener('pointercancel', onGlobalPointerCancel)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', onClickOutside)
+  window.removeEventListener('pointermove', onGlobalPointerMove)
+  window.removeEventListener('pointerup', onGlobalPointerUp)
+  window.removeEventListener('pointercancel', onGlobalPointerCancel)
+  resetDragState(true)
+})
 </script>
 
 <template>
@@ -433,11 +527,17 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
     <div class="sidebar-list-heading">
       <span>项目列表</span>
-      <i>{{ filteredProjects.length }}</i>
     </div>
 
     <!-- 项目列表 -->
-    <div :class="['flex-1 overflow-y-auto px-2 pt-1 pb-2 project-list-scroll', { 'is-searching': searchQuery.trim() }]" @pointermove="onGlobalPointerMove" @pointerup="onGlobalPointerUp" @pointercancel="onGlobalPointerCancel">
+    <div
+      data-project-root
+      :class="['flex-1 overflow-y-auto px-2 pt-1 pb-2 project-list-scroll', {
+        'is-searching': searchQuery.trim(),
+        'is-dragging': dragProjectId || dragFolderId,
+        'drop-root': dropTarget?.type === 'root'
+      }]"
+    >
 
       <!-- 根级别收藏项目 -->
       <template v-if="rootFavorites.length">
@@ -490,6 +590,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
         <div
           :class="['flex items-center gap-1.75 py-1.75 px-2 mb-0.5 rounded-lg cursor-default transition-colors duration-150 ease-out folder-row', folderDragClass(folder.id)]"
           :data-folder-id="folder.id"
+          :data-folder-drop-id="folder.id"
           @pointerdown="onFolderPointerDown($event, folder.id)"
           @contextmenu="onFolderContextMenu($event, folder)"
         >
@@ -523,7 +624,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
         </div>
         <!-- 文件夹内的项目 -->
         <Transition name="folder-list">
-        <div v-show="!isCollapsed(folder.id)" class="pl-3.5 ml-4.5 mb-1 relative folder-projects">
+        <div v-show="!isCollapsed(folder.id)" :data-folder-drop-id="folder.id" class="pl-3.5 ml-4.5 mb-1 relative folder-projects">
           <div class="folder-projects-inner">
             <div
               v-for="project in folderProjects(folder.id)"
@@ -659,7 +760,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
               </svg>
             </span>
-            <span>删除</span>
+            <span>移除</span>
           </button>
         </template>
         <template v-if="contextMenu.type === 'folder'">
@@ -688,11 +789,11 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
     <!-- 确认弹窗 -->
     <ConfirmDialog
       :visible="confirmState.visible"
-      :title="confirmState.type === 'project' ? '删除项目' : '删除文件夹'"
+      :title="confirmState.type === 'project' ? '移除项目' : '删除文件夹'"
       :message="confirmState.type === 'project'
-        ? `确定要删除项目「${confirmState.name}」吗？此操作不可撤销。`
+        ? `确定要从启动器移除「${confirmState.name}」吗？本地目录和文件会保留。`
         : `确定要删除文件夹「${confirmState.name}」吗？其下项目将移回根级别。`"
-      confirm-text="删除"
+      :confirm-text="confirmState.type === 'project' ? '移除' : '删除'"
       :danger="true"
       @confirm="onConfirmDelete"
       @cancel="onCancelDelete"
@@ -784,14 +885,6 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   color: var(--text-tertiary);
   font-size: 12px;
   font-weight: 600;
-}
-
-.sidebar-list-heading i {
-  min-width: 20px;
-  font-style: normal;
-  text-align: center;
-  color: var(--text-tertiary);
-  opacity: 0.7;
 }
 
 /* 顶部品牌头 — 参考图风格：纯文字 logo + 副标题 */
@@ -928,13 +1021,23 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 /* 文件夹 — 父子选择器 + CSS 变量 */
+.folder-row {
+  transition: background 160ms ease-out, box-shadow 160ms ease-out, opacity 160ms ease-out, transform 160ms ease-out;
+}
+
 .folder-row:hover {
   background: var(--bg-hover);
 }
 
 .folder-row.drop-highlight {
   background: var(--accent-glow);
-  border: 1px dashed var(--accent-primary);
+  box-shadow: inset 0 0 0 1px var(--accent-primary);
+  transform: translateX(2px);
+}
+
+.folder-row.dragging {
+  opacity: 0.48;
+  transform: scale(0.98);
 }
 
 .folder-row.drop-highlight .folder-icon-shell,
@@ -1078,7 +1181,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .project-card {
-  transition: background 200ms ease, border-color 200ms ease, box-shadow 200ms ease, opacity 200ms ease;
+  transition: background 200ms ease, border-color 200ms ease, box-shadow 200ms ease, opacity 160ms ease, transform 160ms ease-out;
 }
 
 .project-card:hover {
@@ -1101,9 +1204,10 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .project-card.dragging {
-  opacity: 0.48;
+  opacity: 0.28;
   border-style: dashed !important;
   border-color: var(--accent-border) !important;
+  transform: scale(0.975);
 }
 
 .project-card.active {
@@ -1141,6 +1245,16 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .project-list-scroll {
   user-select: none;
   -webkit-user-select: none;
+  transition: background 160ms ease-out, box-shadow 160ms ease-out;
+}
+
+.project-list-scroll.is-dragging {
+  cursor: grabbing;
+}
+
+.project-list-scroll.drop-root {
+  background: color-mix(in srgb, var(--accent-glow) 45%, transparent);
+  box-shadow: inset 0 0 0 1px var(--accent-border);
 }
 .project-list-scroll.is-searching .card-drag-handle {
   opacity: 0;
@@ -1152,6 +1266,61 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 .card-drag-handle:active {
   cursor: grabbing;
+}
+
+.project-drag-preview {
+  position: fixed !important;
+  z-index: 4000;
+  box-sizing: border-box;
+  margin: 0 !important;
+  pointer-events: none !important;
+  cursor: grabbing;
+  opacity: 0.96;
+  background: var(--glass-fill-strong) !important;
+  border-color: var(--accent-border) !important;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.2), 0 0 0 1px var(--accent-border);
+  transform: translate3d(var(--drag-x, 0), var(--drag-y, 0), 0) scale(1.015);
+  transform-origin: center;
+  will-change: transform;
+  animation: projectDragPreviewIn 140ms ease-out;
+  transition: opacity 100ms ease-in, box-shadow 140ms ease-out;
+}
+
+.project-drag-preview::before {
+  display: none;
+}
+
+.project-drag-preview .star-btn {
+  opacity: 0 !important;
+}
+
+.project-drag-preview.leaving {
+  opacity: 0;
+}
+
+@keyframes projectDragPreviewIn {
+  from { opacity: 0; }
+  to { opacity: 0.96; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folder-row,
+  .project-card,
+  .project-list-scroll,
+  .project-drag-preview {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .folder-row.drop-highlight,
+  .folder-row.dragging,
+  .project-card.dragging {
+    transform: none;
+  }
+
+  .project-drag-preview {
+    transform: translate3d(var(--drag-x, 0), var(--drag-y, 0), 0);
+  }
 }
 
 .project-card.active .card-name {
