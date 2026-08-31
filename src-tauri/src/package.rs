@@ -1,4 +1,4 @@
-use std::{fs, path::Path};
+use std::{fs, path::Path, process::{Command, Stdio}};
 
 use serde_json::Value;
 
@@ -30,16 +30,32 @@ impl PackageManager {
     }
 }
 
+/// 检测指定包管理器在当前系统中是否可用
+fn is_package_manager_available(mgr: PackageManager) -> bool {
+    let program = mgr.command();
+    Command::new(&program)
+        .arg("--version")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+}
+
 pub fn detect_package_manager(project_path: &Path) -> PackageManager {
-    if project_path.join("pnpm-lock.yaml").exists() {
-        PackageManager::Pnpm
-    } else if project_path.join("yarn.lock").exists() {
-        PackageManager::Yarn
-    } else if project_path.join("bun.lockb").exists() || project_path.join("bun.lock").exists() {
-        PackageManager::Bun
-    } else {
-        PackageManager::Npm
+    // 按照锁定文件推断候选管理器，取第一个可用的
+    let candidates: &[(fn(&Path) -> bool, PackageManager)] = &[
+        (|p| p.join("pnpm-lock.yaml").exists(), PackageManager::Pnpm),
+        (|p| p.join("yarn.lock").exists(), PackageManager::Yarn),
+        (|p| p.join("bun.lockb").exists() || p.join("bun.lock").exists(), PackageManager::Bun),
+    ];
+    for (check, mgr) in candidates {
+        if check(project_path) && is_package_manager_available(*mgr) {
+            return *mgr;
+        }
     }
+    // 没有任何锁定文件，或对应的包管理器不可用时，npm 作为兜底
+    PackageManager::Npm
 }
 
 pub fn read_package_scripts(dir: &Path) -> PackageScriptsResult {
