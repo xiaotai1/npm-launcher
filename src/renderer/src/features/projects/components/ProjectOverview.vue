@@ -286,7 +286,7 @@ function getStatusColor(projectId: string) {
 
 /* 顶部摘要条：比四张统计卡更像控制台，减少视觉重量，把注意力留给项目列表 */
 .overview-summary-bar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
-.summary-pill { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-height: 48px; padding: 11px 14px; border: 1px solid var(--glass-border); border-radius: 12px; background: color-mix(in srgb, var(--glass-fill) 86%, transparent); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); box-shadow: var(--glass-shadow); }
+.summary-pill { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 11px 14px; border: 1px solid var(--glass-border); border-radius: 12px; background: color-mix(in srgb, var(--glass-fill) 86%, transparent); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); box-shadow: var(--glass-shadow); }
 .summary-label { color: var(--text-tertiary); font-size: 11px; font-weight: 650; letter-spacing: 0.03em; white-space: nowrap; }
 .summary-pill strong { color: var(--text-primary); font-size: 20px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
 .summary-pill.running strong { color: var(--success); }
