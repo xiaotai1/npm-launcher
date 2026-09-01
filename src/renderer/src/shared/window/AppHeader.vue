@@ -174,7 +174,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
           <span v-if="updateAvailable || checkingUpdate" class="config-btn-dot" :class="{ pulsing: checkingUpdate }" aria-hidden="true"></span>
         </button>
         <Transition name="dropdown">
-          <div v-if="showConfigMenu" class="absolute top-full mt-2 right-0 w-44 bg-surface border border-border rounded-xl p-1 z-100 animate-scale-in config-menu" role="menu">
+          <div v-if="showConfigMenu" class="absolute top-full mt-2 right-0 w-44 z-100 glassIn config-menu" role="menu">
             <button class="config-menu-item" type="button" role="menuitem" @click="selectConfigAction('export')">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
               <span>导出配置</span>
@@ -365,7 +365,18 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .config-menu {
-  box-shadow: var(--shadow-lg), 0 0 0 1px var(--accent-glow);
+  padding: 5px;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-surface) 50%, transparent);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow:
+    0 12px 32px rgba(15, 23, 42, 0.18),
+    0 2px 6px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
 }
 
 .config-menu-item {
@@ -384,7 +395,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .config-menu-item:hover:not(:disabled) {
-  color: var(--text-primary);
+  color: var(--accent-primary);
   background: var(--bg-hover);
 }
 

@@ -272,10 +272,26 @@ watch(() => props.modelValue, () => {
   margin: 0;
   padding: 4px;
   list-style: none;
-  border: 1px solid var(--border-muted);
+  border: 1px solid var(--glass-border);
   border-radius: 10px;
-  background: var(--bg-elevated);
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.1);
+  background: color-mix(in srgb, var(--bg-surface) 50%, transparent);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow:
+    0 12px 32px rgba(15, 23, 42, 0.18),
+    0 2px 6px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+:global(:root[data-theme='dark']) .custom-select-menu {
+  background: color-mix(in srgb, var(--bg-surface) 60%, transparent);
+  border-color: rgba(148, 163, 184, 0.18);
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.4),
+    0 2px 6px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .custom-select-option {
@@ -285,6 +301,7 @@ watch(() => props.modelValue, () => {
   padding: 7px 9px;
   border-radius: 7px;
   color: var(--text-secondary);
+  background: transparent;
   font-size: 13px;
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
@@ -293,7 +310,7 @@ watch(() => props.modelValue, () => {
 .custom-select-option:hover,
 .custom-select-option.active {
   background: var(--accent-glow);
-  color: var(--text-primary);
+  color: var(--accent-primary);
 }
 
 .custom-select-option span {
