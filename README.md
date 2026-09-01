@@ -146,7 +146,7 @@ git tag v1.0.9
 git push origin v1.0.9
 ```
 
-工作流会先创建 Draft Release；Windows x64、macOS Intel、macOS Apple Silicon 的更新元数据全部生成后，才会自动公开 Release。尚未集成 Updater 的旧版本需要手动安装一次新版，此后才能使用应用内更新。
+只需推送 Tag，不要提前在 GitHub 页面发布 Release。工作流会在 Windows x64、macOS Intel、macOS Apple Silicon 全部构建完成后创建 Release；如果同 Tag 的 Release 已存在，则会复用并补齐产物。尚未集成 Updater 的旧版本需要手动安装一次新版，此后才能使用应用内更新。
 
 ### 发布签名
 

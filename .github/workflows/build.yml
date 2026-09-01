@@ -99,8 +99,6 @@ jobs:
 
   release-build:
     if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
     environment:
       name: release
     strategy:
@@ -162,21 +160,11 @@ jobs:
       - name: Rust 静态检查
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 
-      - name: 构建并上传签名更新包
-        uses: tauri-apps/tauri-action@v1
+      - name: 构建签名更新包
+        run: npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
         env:
-          GITHUB_TOKEN: ${{ github.token }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: NPM Launcher ${{ github.ref_name }}
-          releaseDraft: true
-          generateReleaseNotes: true
-          uploadUpdaterJson: false
-          uploadUpdaterSignatures: true
-          updaterJsonPreferNsis: true
-          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
 
       - name: 整理 Windows 产物
         if: runner.os == 'Windows'
@@ -186,7 +174,10 @@ jobs:
           Copy-Item "src-tauri/target/${{ matrix.target }}/release/npm-launcher.exe" "release-output/NPM-Launcher-Portable-Windows-x64.exe"
           $installer = Get-ChildItem "src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe" | Select-Object -First 1
           if (-not $installer) { throw "未找到 NSIS 安装包" }
+          $signature = Get-Item "$($installer.FullName).sig" -ErrorAction SilentlyContinue
+          if (-not $signature) { throw "未找到 NSIS 更新签名" }
           Copy-Item $installer.FullName "release-output/NPM-Launcher-Setup-Windows-x64.exe"
+          Copy-Item $signature.FullName "release-output/NPM-Launcher-Setup-Windows-x64.exe.sig"
 
       - name: 整理 macOS Intel 产物
         if: matrix.name == 'macos-intel'
@@ -194,8 +185,13 @@ jobs:
         run: |
           mkdir -p release-output
           dmg=$(find "src-tauri/target/${{ matrix.target }}/release/bundle/dmg" -name '*.dmg' -type f | head -n 1)
+          updater=$(find "src-tauri/target/${{ matrix.target }}/release/bundle/macos" -name '*.app.tar.gz' -type f | head -n 1)
           test -n "$dmg"
+          test -n "$updater"
+          test -f "$updater.sig"
           cp "$dmg" "release-output/NPM-Launcher-macOS-Intel.dmg"
+          cp "$updater" "release-output/NPM-Launcher-Updater-macOS-Intel.app.tar.gz"
+          cp "$updater.sig" "release-output/NPM-Launcher-Updater-macOS-Intel.app.tar.gz.sig"
 
       - name: 整理 macOS Apple Silicon 产物
         if: matrix.name == 'macos-apple-silicon'
@@ -203,8 +199,13 @@ jobs:
         run: |
           mkdir -p release-output
           dmg=$(find "src-tauri/target/${{ matrix.target }}/release/bundle/dmg" -name '*.dmg' -type f | head -n 1)
+          updater=$(find "src-tauri/target/${{ matrix.target }}/release/bundle/macos" -name '*.app.tar.gz' -type f | head -n 1)
           test -n "$dmg"
+          test -n "$updater"
+          test -f "$updater.sig"
           cp "$dmg" "release-output/NPM-Launcher-macOS-Apple-Silicon.dmg"
+          cp "$updater" "release-output/NPM-Launcher-Updater-macOS-Apple-Silicon.app.tar.gz"
+          cp "$updater.sig" "release-output/NPM-Launcher-Updater-macOS-Apple-Silicon.app.tar.gz.sig"
 
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
@@ -221,8 +222,6 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
-
       - name: 下载构建产物
         uses: actions/download-artifact@v4
         with:
@@ -242,47 +241,36 @@ jobs:
             exit 1
           fi
 
-          gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" > release.json
-
-          find_asset_name() {
-            local pattern="$1"
+          require_asset() {
+            local name="$1"
             local matches
-            local count
-            matches=$(jq -c --arg pattern "$pattern" '[.assets[] | select(.name | test($pattern))]' release.json)
-            count=$(jq 'length' <<<"$matches")
-            if [[ "$count" -ne 1 ]]; then
-              printf '更新签名匹配异常，规则 %s 找到 %s 个文件：\n' "$pattern" "$count" >&2
-              jq -r '.[].name' <<<"$matches" >&2
+            mapfile -t matches < <(find release-assets -type f -name "$name" -print)
+            if [[ ${#matches[@]} -ne 1 ]]; then
+              printf '构建产物 %s 应有 1 个，实际为 %s 个\n' "$name" "${#matches[@]}" >&2
               return 1
             fi
-            jq -r '.[0].name' <<<"$matches"
+            printf '%s\n' "${matches[0]}"
           }
 
-          asset_url() {
-            local name="$1"
-            jq -er --arg name "$name" '.assets[] | select(.name == $name) | .browser_download_url' release.json
-          }
+          windows_updater=$(require_asset 'NPM-Launcher-Setup-Windows-x64.exe')
+          windows_signature=$(require_asset 'NPM-Launcher-Setup-Windows-x64.exe.sig')
+          macos_intel_updater=$(require_asset 'NPM-Launcher-Updater-macOS-Intel.app.tar.gz')
+          macos_intel_signature=$(require_asset 'NPM-Launcher-Updater-macOS-Intel.app.tar.gz.sig')
+          macos_arm_updater=$(require_asset 'NPM-Launcher-Updater-macOS-Apple-Silicon.app.tar.gz')
+          macos_arm_signature=$(require_asset 'NPM-Launcher-Updater-macOS-Apple-Silicon.app.tar.gz.sig')
 
-          windows_signature_name=$(find_asset_name '\.exe\.sig$')
-          macos_intel_signature_name=$(find_asset_name '_(x64|x86_64)\.app\.tar\.gz\.sig$')
-          macos_arm_signature_name=$(find_asset_name '_(aarch64|arm64)\.app\.tar\.gz\.sig$')
-
-          windows_updater_name=${windows_signature_name%.sig}
-          macos_intel_updater_name=${macos_intel_signature_name%.sig}
-          macos_arm_updater_name=${macos_arm_signature_name%.sig}
-
-          windows_url=$(asset_url "$windows_updater_name")
-          macos_intel_url=$(asset_url "$macos_intel_updater_name")
-          macos_arm_url=$(asset_url "$macos_arm_updater_name")
-
-          mkdir -p updater-signatures
-          gh release download "$RELEASE_TAG" --pattern "$windows_signature_name" --dir updater-signatures
-          gh release download "$RELEASE_TAG" --pattern "$macos_intel_signature_name" --dir updater-signatures
-          gh release download "$RELEASE_TAG" --pattern "$macos_arm_signature_name" --dir updater-signatures
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "NPM Launcher $RELEASE_TAG"
+          fi
+          gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" > release.json
 
           version=${RELEASE_TAG#v}
           notes=$(jq -r '.body // ""' release.json)
           pub_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          release_base_url="https://github.com/$GH_REPO/releases/download/$RELEASE_TAG"
+          windows_url="$release_base_url/$(basename "$windows_updater")"
+          macos_intel_url="$release_base_url/$(basename "$macos_intel_updater")"
+          macos_arm_url="$release_base_url/$(basename "$macos_arm_updater")"
           jq -n \
             --arg version "$version" \
             --arg notes "$notes" \
@@ -290,9 +278,9 @@ jobs:
             --arg windows_url "$windows_url" \
             --arg macos_intel_url "$macos_intel_url" \
             --arg macos_arm_url "$macos_arm_url" \
-            --rawfile windows_signature "updater-signatures/$windows_signature_name" \
-            --rawfile macos_intel_signature "updater-signatures/$macos_intel_signature_name" \
-            --rawfile macos_arm_signature "updater-signatures/$macos_arm_signature_name" \
+            --rawfile windows_signature "$windows_signature" \
+            --rawfile macos_intel_signature "$macos_intel_signature" \
+            --rawfile macos_arm_signature "$macos_arm_signature" \
             '{
               version: $version,
               notes: $notes,
@@ -314,5 +302,11 @@ jobs:
             }
           done
 
-          gh release upload "$RELEASE_TAG" latest.json "${assets[@]}" --clobber
+          gh release upload "$RELEASE_TAG" latest.json "${assets[@]}" \
+            "$windows_signature" \
+            "$macos_intel_updater" \
+            "$macos_intel_signature" \
+            "$macos_arm_updater" \
+            "$macos_arm_signature" \
+            --clobber
           gh release edit "$RELEASE_TAG" --draft=false --latest
