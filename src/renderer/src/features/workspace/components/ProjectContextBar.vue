@@ -29,8 +29,12 @@ const launchCommands = computed(() => buildLaunchCommands(props.project.command,
 const canSwitchCommand = computed(() => props.status?.status !== 'running' && launchCommands.value.length > 1)
 const projectNodeVersion = computed(() => props.status?.nodeVersion || props.project.nodeVersion || props.globalNodeVersion || '—')
 
+let loadGeneration = 0
+
 async function loadPackageScripts() {
+  const g = ++loadGeneration
   const result = await window.desktopAPI.getPackageScripts(props.project.path)
+  if (g !== loadGeneration) return
   packageScripts.value = result.scripts
 }
 
@@ -143,8 +147,8 @@ watch(() => props.status?.status, () => {
             </div>
           </Teleport>
         </div>
-        <button v-if="status?.status === 'running'" class="context-primary stop" @click="emit('stop')">停止</button>
-        <button v-else class="context-primary" :disabled="launching" @click="emit('start')">{{ launching ? '启动中…' : '启动' }}</button>
+        <button v-if="status?.status === 'running'" type="button" class="context-primary stop" @click="emit('stop')">停止</button>
+        <button v-else type="button" class="context-primary" :disabled="launching" @click="emit('start')">{{ launching ? '启动中…' : '启动' }}</button>
       </div>
     </div>
 
@@ -154,14 +158,14 @@ watch(() => props.status?.status, () => {
         <span class="node-meta">Node {{ projectNodeVersion }}</span>
       </div>
       <div class="project-context-actions secondary-actions">
-        <button class="icon-action" aria-label="打开项目目录" data-tooltip="打开项目目录" @click="emit('open-folder')">
+        <button type="button" class="icon-action" aria-label="打开项目目录" data-tooltip="打开项目目录" @click="emit('open-folder')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v8A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5z"/></svg>
         </button>
-        <button class="icon-action" aria-label="用 VS Code 打开项目" data-tooltip="用 VS Code 打开" @click="emit('open-vscode')">
+        <button type="button" class="icon-action" aria-label="用 VS Code 打开项目" data-tooltip="用 VS Code 打开" @click="emit('open-vscode')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.15 2.587L18.21.21a1.494 1.494 0 0 0-1.705.29l-9.46 8.63-4.12-3.128a.999.999 0 0 0-1.276.057L.327 7.261A1 1 0 0 0 .326 8.74L3.899 12 .326 15.26a1 1 0 0 0 .001 1.479L1.65 17.94a.999.999 0 0 0 1.276.057l4.12-3.128 9.46 8.63a1.492 1.492 0 0 0 1.704.29l4.942-2.377A1.5 1.5 0 0 0 24 20.06V3.939a1.5 1.5 0 0 0-.85-1.352zm-5.146 14.861L10.826 12l7.178-5.448v10.896z"/></svg>
         </button>
-        <button v-if="localUrl" class="button-secondary" :title="localUrl" :disabled="status?.status !== 'running'" @click="emit('open-url', localUrl)">打开页面</button>
-        <button class="button-secondary" @click="emit('edit')">编辑</button>
+        <button v-if="localUrl" type="button" class="button-secondary" :title="localUrl" :disabled="status?.status !== 'running'" @click="emit('open-url', localUrl)">打开页面</button>
+        <button type="button" class="button-secondary" @click="emit('edit')">编辑</button>
       </div>
     </div>
   </header>
@@ -190,7 +194,7 @@ h1 { min-width: 0; margin: 0; overflow: hidden; color: var(--text-primary); font
 .command-picker strong { flex: 1; min-width: 0; overflow: hidden; color: var(--accent-primary); font: 700 14px/1 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
 .command-picker svg { flex: none; margin-left: auto; color: var(--accent-primary); opacity: .85; }
 /* Teleport 到 body，position: fixed + viewport 坐标，脱离一切祖先裁切/堆叠上下文 */
-.command-menu { position: fixed; z-index: 10000; min-width: 220px; max-width: calc(100vw - 24px); max-height: min(360px, calc(100vh - 96px)); overflow-y: auto; overscroll-behavior: contain; padding: 5px; border: 1px solid var(--glass-border); border-radius: 12px; background: color-mix(in srgb, var(--bg-surface) 50%, transparent); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4); animation: glassIn 0.18s cubic-bezier(0.16, 1, 0.3, 1); scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+.command-menu { position: fixed; z-index: 5000; min-width: 220px; max-width: calc(100vw - 24px); max-height: min(360px, calc(100vh - 96px)); overflow-y: auto; overscroll-behavior: contain; padding: 5px; border: 1px solid var(--glass-border); border-radius: 12px; background: color-mix(in srgb, var(--bg-surface) 50%, transparent); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4); animation: glassIn 0.18s cubic-bezier(0.16, 1, 0.3, 1); scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
 .command-option { width: 100%; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 8px; border-radius: 6px; color: var(--text-secondary); background: transparent; font: 700 13px/1 var(--font-mono); text-align: left; }
 .command-option-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .command-option:hover { color: var(--accent-primary); background: var(--bg-hover); }

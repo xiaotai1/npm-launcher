@@ -112,8 +112,8 @@ function getStatusColor(projectId: string) {
         </p>
       </div>
       <div class="overview-actions">
-        <button class="button-secondary" :disabled="!hasRunningProjects" @click="emit('stop-all')">全部停止</button>
-        <button class="button-primary" :disabled="projects.length === 0" @click="emit('start-all')">全部启动</button>
+        <button type="button" class="button-secondary" :disabled="!hasRunningProjects" @click="emit('stop-all')">全部停止</button>
+        <button type="button" class="button-primary" :disabled="projects.length === 0" @click="emit('start-all')">全部启动</button>
       </div>
     </header>
 
@@ -199,7 +199,7 @@ function getStatusColor(projectId: string) {
       <div class="empty-hero">
         <h2>添加第一个 NPM 项目</h2>
         <p>选择一个包含 <code>package.json</code> 的目录，集中管理启动命令、实时日志和终端。</p>
-        <button class="button-primary empty-hero-action" @click="emit('add-project')">
+        <button type="button" class="button-primary empty-hero-action" @click="emit('add-project')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
           添加第一个项目
         </button>

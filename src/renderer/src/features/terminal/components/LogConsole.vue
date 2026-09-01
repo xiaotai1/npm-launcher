@@ -149,6 +149,7 @@ function initTerminal() {
 }
 
 function disposeTerminal() {
+  if (resizeTimer) clearTimeout(resizeTimer)
   resizeObserver?.disconnect()
   cleanupDragRecovery?.()
   terminal?.dispose()
@@ -177,7 +178,10 @@ watch(() => props.projectId, (newId, oldId) => {
 })
 
 watch([searchQuery, logFilter], () => {
-  replayCurrentProjectLogs()
+  if (terminal) {
+    replayCurrentProjectLogs()
+  }
+  // 如果 terminal 未初始化，initTerminal 的回调中会调用 replayCurrentProjectLogs
 })
 
 themeObserver = new MutationObserver(() => {
@@ -285,6 +289,7 @@ async function copyLaunchCommand() {
         </div>
         <button
           v-if="hasError"
+          type="button"
           class="console-toolbar-button console-toolbar-button-danger"
           @click="emit('analyze-errors')"
         >
@@ -293,6 +298,7 @@ async function copyLaunchCommand() {
         </button>
         <button
           v-if="canExport"
+          type="button"
           class="console-toolbar-button"
           :disabled="exporting"
           @click="exportLog"
@@ -302,6 +308,7 @@ async function copyLaunchCommand() {
         </button>
         <button
           v-if="hasSessionLogs"
+          type="button"
           class="console-toolbar-button"
           @click="clear"
         >

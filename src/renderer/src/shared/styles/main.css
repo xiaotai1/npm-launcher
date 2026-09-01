@@ -204,166 +204,6 @@
 	}
 }
 
-/* ===== 浅色主题 ===== */
-:root[data-theme='light'] {
-	--bg-base: #f6f7f9;
-	--bg-surface: #ffffff;
-	--bg-elevated: #f1f3f6;
-	--bg-hover: #eceff3;
-	--bg-active: #e7edf5;
-
-	--text-primary: #223044;
-	--text-secondary: #5c6878;
-	--text-tertiary: #8a95a6;
-
-	--border-default: #d9e0e8;
-	--border-muted: #e7ebf0;
-	--border-subtle: rgba(0, 0, 0, 0.04);
-	--border-strong: rgba(0, 0, 0, 0.1);
-
-	--accent-primary: #2f6fed;
-	--accent-primary-hover: #285fce;
-	--accent-glow: rgba(47, 111, 237, 0.11);
-	--accent-border: rgba(47, 111, 237, 0.2);
-
-	--success: #15946c;
-	--success-bg: rgba(21, 148, 108, 0.08);
-	--success-border: rgba(21, 148, 108, 0.16);
-	--warning: #f59e0b;
-	--warning-bg: rgba(245, 158, 11, 0.08);
-	--error: #ef4444;
-	--error-bg: rgba(239, 68, 68, 0.08);
-
-	--console-bg: #f6f8fa;
-	--console-text: #24292f;
-	--console-info: #0969da;
-	--console-error: #cf222e;
-	--console-warn: #9a6700;
-	--console-success: #1a7f37;
-
-	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-	--shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
-	--shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.1);
-
-	--panel-bg: #f6f7f9;
-	--sidebar-bg: rgba(244, 247, 250, 0.82);
-	--sidebar-border: linear-gradient(
-		180deg,
-		transparent,
-		rgba(59, 130, 246, 0.1),
-		transparent
-	);
-	--header-glow: linear-gradient(
-		90deg,
-		transparent,
-		rgba(59, 130, 246, 0.15),
-		transparent
-	);
-	--divider: linear-gradient(
-		90deg,
-		transparent,
-		rgba(148, 163, 184, 0.15),
-		transparent
-	);
-	--sidebar-nav-bg: rgba(255, 255, 255, 0.68);
-	--nav-active-bg: #ffffff;
-	--nav-active-border: rgba(47, 111, 237, 0.3);
-	--project-active-bg: #f8fafc;
-	--project-active-border: #cbd5e1;
-	--project-active-shadow: 0 8px 18px rgba(34, 48, 68, 0.08);
-	--card-active-bg: var(--project-active-bg);
-	--card-active-border: var(--project-active-border);
-	--indicator: linear-gradient(180deg, #15946c, #0f766e);
-
-	--glass-blur: 20px;
-	--sidebar-glass: rgba(255, 255, 255, 0.52);
-	--sidebar-glass-strong: rgba(255, 255, 255, 0.72);
-	--sidebar-blob-1: rgba(59, 130, 246, 0.05);
-	--sidebar-blob-2: rgba(21, 148, 108, 0.04);
-	--sidebar-blob-3: rgba(147, 51, 234, 0.03);
-	--sidebar-dots: rgba(34, 48, 68, 0.04);
-}
-
-/* ===== 深色主题 ===== */
-:root[data-theme='dark'] {
-	--bg-base: #0b1120;
-	--bg-surface: #0f172a;
-	--bg-elevated: #1e293b;
-	--bg-hover: rgba(148, 163, 184, 0.06);
-	--bg-active: #253352;
-
-	--text-primary: #e2e8f0;
-	--text-secondary: #a0aec0;
-	--text-tertiary: #718096;
-
-	--border-default: rgba(148, 163, 184, 0.1);
-	--border-muted: rgba(148, 163, 184, 0.06);
-	--border-subtle: rgba(255, 255, 255, 0.03);
-	--border-strong: rgba(148, 163, 184, 0.18);
-
-	--accent-primary: #60a5fa;
-	--accent-primary-hover: #3b82f6;
-	--accent-glow: rgba(59, 130, 246, 0.12);
-	--accent-border: rgba(59, 130, 246, 0.18);
-
-	--success: #34d399;
-	--success-bg: rgba(52, 211, 153, 0.06);
-	--success-border: rgba(52, 211, 153, 0.12);
-	--warning: #fbbf24;
-	--warning-bg: rgba(251, 191, 36, 0.08);
-	--error: #f87171;
-	--error-bg: rgba(248, 113, 113, 0.06);
-
-	--console-bg: #080e1a;
-	--console-text: #94a3b8;
-	--console-info: #60a5fa;
-	--console-error: #f87171;
-	--console-warn: #fbbf24;
-	--console-success: #34d399;
-
-	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-	--shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-	--shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
-
-	--panel-bg: #080e1a;
-	--sidebar-bg: rgba(15, 23, 42, 0.72);
-	--glass-blur: 20px;
-	--sidebar-border: linear-gradient(
-		180deg,
-		transparent,
-		rgba(59, 130, 246, 0.15),
-		transparent
-	);
-	--header-glow: linear-gradient(
-		90deg,
-		transparent,
-		rgba(59, 130, 246, 0.3),
-		transparent
-	);
-	--divider: linear-gradient(
-		90deg,
-		transparent,
-		rgba(148, 163, 184, 0.06),
-		transparent
-	);
-	--sidebar-nav-bg: rgba(17, 25, 37, 0.76);
-	--nav-active-bg: #172233;
-	--nav-active-border: rgba(86, 136, 255, 0.34);
-	--project-active-bg: #151f2e;
-	--project-active-border: #334155;
-	--project-active-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
-	--card-active-bg: var(--project-active-bg);
-	--card-active-border: var(--project-active-border);
-	--indicator: linear-gradient(180deg, #47cc8f, #2aa876);
-
-	--sidebar-glass: rgba(17, 25, 37, 0.5);
-	--sidebar-glass-strong: rgba(19, 28, 42, 0.74);
-	--sidebar-blob-1: rgba(59, 130, 246, 0.07);
-	--sidebar-blob-2: rgba(52, 211, 153, 0.05);
-	--sidebar-blob-3: rgba(168, 85, 247, 0.04);
-	--sidebar-dots: rgba(148, 163, 184, 0.05);
-}
-
 /* ===== 基础样式 ===== */
 @layer base {
 	html,
@@ -515,6 +355,10 @@
 	--warning-bg: rgba(216, 180, 95, 0.1);
 	--console-bg: #0b1018;
 	--console-text: #a5b1c2;
+	--console-info: #60a5fa;
+	--console-error: #f87171;
+	--console-warn: #fbbf24;
+	--console-success: #34d399;
 	--panel-bg: #0b1018;
 	--sidebar-bg: var(--bg-sidebar);
 	--scrollbar-thumb: #344154;
@@ -546,6 +390,38 @@
 	--sidebar-blob-2: rgba(52, 211, 153, 0.05);
 	--sidebar-blob-3: rgba(168, 85, 247, 0.04);
 	--sidebar-dots: rgba(148, 163, 184, 0.05);
+
+	/* ===== iOS 液态玻璃 tokens（深色） ===== */
+	--ios-app-bg:
+		radial-gradient(
+			1200px 800px at 8% -10%,
+			rgba(86, 136, 255, 0.2),
+			transparent 55%
+		),
+		radial-gradient(
+			1000px 700px at 108% 10%,
+			rgba(124, 58, 237, 0.13),
+			transparent 50%
+		),
+		radial-gradient(
+			900px 700px at 50% 110%,
+			rgba(71, 204, 143, 0.12),
+			transparent 55%
+		),
+		#101827;
+	--glass-fill: rgba(30, 41, 59, 0.68);
+	--glass-fill-hover: rgba(39, 52, 74, 0.82);
+	--glass-fill-strong: rgba(17, 25, 39, 0.9);
+	--glass-border: rgba(148, 163, 184, 0.18);
+	--glass-edge:
+		inset 1px 1px 0 0 rgba(255, 255, 255, 0.16),
+		inset -1px -1px 0 0 rgba(255, 255, 255, 0.06);
+	--glass-blur: 10px;
+	--glass-saturate: 180%;
+	--glass-radius: 24px;
+	--glass-shadow:
+		0 18px 54px rgba(0, 0, 0, 0.42), 0 2px 8px rgba(0, 0, 0, 0.22),
+		inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 :root[data-theme='light'] {
@@ -577,6 +453,10 @@
 	--warning-bg: #fff7df;
 	--console-bg: #fbfcfe;
 	--console-text: #526176;
+	--console-info: #0969da;
+	--console-error: #cf222e;
+	--console-warn: #9a6700;
+	--console-success: #1a7f37;
 	--panel-bg: #fbfcfe;
 	--sidebar-bg: var(--bg-sidebar);
 	--scrollbar-thumb: #c4cedb;
@@ -633,40 +513,6 @@
 	--glass-shadow:
 		0 22px 70px rgba(30, 45, 65, 0.16), 0 2px 6px rgba(30, 45, 65, 0.06),
 		inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-
-/* ===== iOS 液态玻璃 tokens（深色覆盖） ===== */
-:root[data-theme='dark'] {
-	--ios-app-bg:
-		radial-gradient(
-			1200px 800px at 8% -10%,
-			rgba(86, 136, 255, 0.2),
-			transparent 55%
-		),
-		radial-gradient(
-			1000px 700px at 108% 10%,
-			rgba(124, 58, 237, 0.13),
-			transparent 50%
-		),
-		radial-gradient(
-			900px 700px at 50% 110%,
-			rgba(71, 204, 143, 0.12),
-			transparent 55%
-		),
-		#101827;
-	--glass-fill: rgba(30, 41, 59, 0.68);
-	--glass-fill-hover: rgba(39, 52, 74, 0.82);
-	--glass-fill-strong: rgba(17, 25, 39, 0.9);
-	--glass-border: rgba(148, 163, 184, 0.18);
-	--glass-edge:
-		inset 1px 1px 0 0 rgba(255, 255, 255, 0.16),
-		inset -1px -1px 0 0 rgba(255, 255, 255, 0.06);
-	--glass-blur: 10px;
-	--glass-saturate: 180%;
-	--glass-radius: 24px;
-	--glass-shadow:
-		0 18px 54px rgba(0, 0, 0, 0.42), 0 2px 8px rgba(0, 0, 0, 0.22),
-		inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 /* ===== Collapse 折叠动画（侧边栏分组 / 设置页） ===== */

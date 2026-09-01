@@ -67,6 +67,11 @@ pub fn save_config(path: &Path, config: &AppConfig) -> Result<(), String> {
         return Err(format!("写入临时配置失败：{error}"));
     }
 
+    // 强制落盘，避免系统崩溃时临时文件内容仍在页缓存中
+    if let Ok(file) = fs::File::open(&temp_path) {
+        let _ = file.sync_all();
+    }
+
     if let Err(error) = replace_file(&temp_path, path) {
         let _ = fs::remove_file(&temp_path);
         return Err(format!("保存配置失败：{error}"));

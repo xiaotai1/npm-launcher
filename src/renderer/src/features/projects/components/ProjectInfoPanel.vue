@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Project } from '../../../shared/types'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
 import CustomSelect from '../../../shared/ui/CustomSelect.vue'
@@ -27,6 +27,7 @@ function toDraft(project: Project): ProjectSettingsDraft {
 const editForm = ref<ProjectSettingsDraft>(toDraft(props.project))
 const editScripts = ref<string[]>([])
 const showDeleteConfirm = ref(false)
+const isUnmounted = ref(false)
 
 type SettingsSection = 'basic' | 'environment' | 'danger'
 const activeSection = ref<SettingsSection>('basic')
@@ -82,11 +83,13 @@ watch(() => props.editTrigger, (value) => {
 })
 
 onMounted(() => loadScripts())
+onBeforeUnmount(() => { isUnmounted.value = true })
 
 async function selectFolder() {
   const result = await window.desktopAPI.selectFolder()
   if (result.canceled || !result.path) return
 
+  if (isUnmounted.value) return
   editForm.value.path = result.path
   if (!editForm.value.name.trim()) {
     const parts = result.path.replace(/\\/g, '/').split('/')
@@ -94,6 +97,7 @@ async function selectFolder() {
   }
 
   const scripts = await window.desktopAPI.getPackageScripts(result.path)
+  if (isUnmounted.value) return
   editScripts.value = scripts.scripts
   if (!editForm.value.customCommand.trim()) {
     editForm.value.command = scripts.scripts[0] || ''

@@ -72,6 +72,8 @@ let cleanupErrorAnalysis: (() => void) | null = null
 let cleanupSystemTheme: (() => void) | null = null
 let cleanupDefaultContextMenuGuard: (() => void) | null = null
 let cleanupFirstMouseActivation: (() => void) | null = null
+let cleanupErrorHandler: (() => void) | null = null
+let cleanupRejectionHandler: (() => void) | null = null
 
 const selectedProject = computed(() => {
   if (!selectedProjectId.value || !config.value) return null
@@ -531,7 +533,13 @@ async function restoreSessionLogs() {
     try {
       const logs = await window.desktopAPI.getSessionLogs?.(project.id)
       if (!logs?.length) continue
-      for (const log of logs) appendSessionLogEntry({ ...log, timestamp: 0 })
+      for (const log of logs) {
+        appendSessionLogEntry({ ...log, timestamp: 0 })
+        const urls = findLocalUrls(log.data)
+        if (urls[0]) {
+          projectUrls.value[log.projectId] = urls[0]
+        }
+      }
     } catch {
       // 单个项目取不到日志时跳过，不影响其他项目
     }
@@ -558,6 +566,19 @@ async function restoreProcessStatuses() {
 onMounted(async () => {
   cleanupDefaultContextMenuGuard = installDefaultContextMenuGuard()
   if (isMac) cleanupFirstMouseActivation = installFirstMouseActivation()
+
+  // 全局未捕获异常兜底，避免事件回调中抛异常后无任何反馈
+  const errorHandler = (event: ErrorEvent) => {
+    console.error('[全局未捕获异常]', event.error)
+  }
+  window.addEventListener('error', errorHandler)
+  cleanupErrorHandler = () => window.removeEventListener('error', errorHandler)
+  const rejectionHandler = (event: PromiseRejectionEvent) => {
+    console.error('[全局未处理 Promise 拒绝]', event.reason)
+  }
+  window.addEventListener('unhandledrejection', rejectionHandler)
+  cleanupRejectionHandler = () => window.removeEventListener('unhandledrejection', rejectionHandler)
+
   await Promise.all([loadConfig(), loadNodeVersions()])
   applyTheme(config.value?.theme || 'system')
   cleanupStatus = window.desktopAPI.onProcessStatus(handleStatus)
@@ -579,6 +600,8 @@ onUnmounted(() => {
   cleanupSystemTheme?.()
   cleanupDefaultContextMenuGuard?.()
   cleanupFirstMouseActivation?.()
+  cleanupErrorHandler?.()
+  cleanupRejectionHandler?.()
   window.removeEventListener('keydown', handleGlobalShortcut)
   void disposeUpdater()
 })

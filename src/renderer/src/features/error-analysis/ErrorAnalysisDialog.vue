@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import type { ErrorAnalysis } from '../../shared/types'
 
 const props = defineProps<{
@@ -8,6 +9,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: [] }>()
 
+const dialogRef = ref<HTMLElement | null>(null)
+const cancelButtonRef = ref<HTMLButtonElement | null>(null)
+const instanceId = crypto.randomUUID()
+const titleId = `error-analysis-dialog-title-${instanceId}`
+let previouslyFocused: HTMLElement | null = null
+
 function onClose() {
   emit('close')
 }
@@ -15,6 +22,50 @@ function onClose() {
 function onOverlayClick() {
   onClose()
 }
+
+function restorePreviousFocus() {
+  const target = previouslyFocused
+  previouslyFocused = null
+  if (target?.isConnected) nextTick(() => target.focus())
+}
+
+function handleDialogKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    onClose()
+    return
+  }
+
+  if (event.key !== 'Tab' || !dialogRef.value) return
+
+  const focusable = Array.from(dialogRef.value.querySelectorAll<HTMLElement>(
+    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  ))
+  if (!focusable.length) return
+
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
+}
+
+watch(() => props.visible, visible => {
+  if (visible) {
+    previouslyFocused = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+    nextTick(() => cancelButtonRef.value?.focus())
+  } else {
+    restorePreviousFocus()
+  }
+}, { immediate: true })
+
+onBeforeUnmount(restorePreviousFocus)
 
 function severityLabel(severity: string): string {
   if (severity === 'critical') return '严重'
@@ -31,7 +82,15 @@ function severityClass(severity: string): string {
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="visible && analysis" class="fixed inset-0 z-2000 flex items-center justify-center modal-overlay" @click="onOverlayClick">
-        <div class="min-w-85 max-w-120 rounded-2xl animate-dialog-in modal-dialog" @click.stop>
+        <div
+          ref="dialogRef"
+          class="min-w-85 max-w-120 rounded-2xl animate-dialog-in modal-dialog"
+          role="alertdialog"
+          aria-modal="true"
+          :aria-labelledby="titleId"
+          @click.stop
+          @keydown="handleDialogKeydown"
+        >
           <div class="p-6 px-7 modal-content">
             <div class="flex items-center gap-2.5 mb-4 modal-header">
               <span class="flex items-center justify-center shrink-0 modal-icon danger">
@@ -41,7 +100,7 @@ function severityClass(severity: string): string {
                   <line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
               </span>
-              <h3 class="text-[15px] font-semibold text-tprimary tracking-[-0.2px]">错误分析</h3>
+              <h3 :id="titleId" class="text-[15px] font-semibold text-tprimary tracking-[-0.2px]">错误分析</h3>
               <span class="ml-auto text-[12px] font-mono text-ttertiary">退出代码: {{ analysis.exitCode }}</span>
             </div>
 
@@ -72,7 +131,7 @@ function severityClass(severity: string): string {
             </div>
 
             <div class="flex gap-2.5 justify-end">
-              <button class="px-4 py-2 text-[14px] font-medium rounded-lg transition-all duration-180 ease-out modal-btn cancel" @click="onClose">
+              <button ref="cancelButtonRef" type="button" class="px-4 py-2 text-[14px] font-medium rounded-lg transition-all duration-180 ease-out modal-btn cancel" @click="onClose">
                 关闭
               </button>
             </div>
@@ -87,6 +146,7 @@ function severityClass(severity: string): string {
 .modal-overlay {
   background: var(--modal-backdrop);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   -webkit-app-region: no-drag;
 }
 

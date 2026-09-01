@@ -124,13 +124,19 @@ function onWindowResize() {
   if (open.value) positionMenu()
 }
 
+function onWindowScroll() {
+  if (open.value) positionMenu()
+}
+
 onMounted(() => {
   document.addEventListener('mousedown', onDocumentClick)
   window.addEventListener('resize', onWindowResize)
+  window.addEventListener('scroll', onWindowScroll, true)
 })
 onBeforeUnmount(() => {
   document.removeEventListener('mousedown', onDocumentClick)
   window.removeEventListener('resize', onWindowResize)
+  window.removeEventListener('scroll', onWindowScroll, true)
 })
 
 watch(() => props.modelValue, () => {

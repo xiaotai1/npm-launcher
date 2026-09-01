@@ -391,6 +391,9 @@ pub fn switch_node_version(state: &AppState, version: &str) -> ActionResult {
             clear_shell_env_cache(state);
             #[cfg(not(windows))]
             if let Some(nvm_dir) = nvm_paths(&environment).0 {
+                // 先发送 Ctrl+C 中断终端前台进程，再执行切换命令，避免命令排入队列后
+                // 在当前前台进程退出时突然执行，使用户毫无预期
+                crate::terminal::broadcast_to_all_terminals(state, "\x03");
                 crate::terminal::broadcast_to_all_terminals(
                     state,
                     &format!(

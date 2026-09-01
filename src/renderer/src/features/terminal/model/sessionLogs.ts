@@ -1,6 +1,6 @@
 import type { LogEntry } from '../../../shared/types'
 
-const MAX_HISTORY = 500
+const MAX_HISTORY = 800
 const sessionLogs = new Map<string, LogEntry[]>()
 const listeners = new Set<(log: LogEntry) => void>()
 

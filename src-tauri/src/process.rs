@@ -542,11 +542,14 @@ fn terminate_process_tree(pid: u32, wait_for_exit: bool) {
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
-        let _ = wait_for_exit;
         let _ = Command::new("taskkill")
             .args(["/F", "/T", "/PID", &pid.to_string()])
             .creation_flags(0x08000000)
             .status();
+        if wait_for_exit {
+            // 等待子进程实际终止，避免应用退出后变成孤儿进程
+            thread::sleep(Duration::from_millis(500));
+        }
     }
     #[cfg(unix)]
     {
@@ -585,7 +588,8 @@ pub fn stop_project_process(app: &AppHandle, project_id: &str) -> bool {
     };
 
     emit_log(app, project_id, LogType::Info, "已手动停止");
-    finish_log_session(&state, project_id, None);
+    // 不调用 finish_log_session，由后台 consume_process_messages
+    // 在进程退出时统一写入，避免产生重复的日志结束记录。
     emit_status(app, project_id, ProcessState::Stopped, None, None, None);
     terminate_process_tree(handle.pid, false);
     true
@@ -620,16 +624,14 @@ pub fn stop_all_processes_for_exit(app: &AppHandle) {
 }
 
 pub fn get_process_status(state: &AppState, project_id: &str) -> ProcessStatus {
-    let pid = state
+    let (pid, node_version) = state
         .processes
         .lock()
         .ok()
-        .and_then(|processes| processes.get(project_id).map(|handle| handle.pid));
-    let node_version = state
-        .processes
-        .lock()
-        .ok()
-        .and_then(|processes| processes.get(project_id).and_then(|handle| handle.node_version.clone()));
+        .and_then(|processes| {
+            processes.get(project_id).map(|handle| (Some(handle.pid), handle.node_version.clone()))
+        })
+        .unwrap_or((None, None));
     ProcessStatus {
         project_id: project_id.to_string(),
         status: if pid.is_some() {

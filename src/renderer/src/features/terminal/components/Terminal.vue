@@ -259,6 +259,7 @@ watch(() => [props.cwd, props.nodeVersion] as const, async ([newCwd, newNodeVers
 
 // 主题切换时更新终端配色
 const themeObserver = new MutationObserver(() => {
+  if (isUnmounted) return
   const next = currentTerminalTheme()
   if (terminal) {
     terminal.options.theme = next
@@ -279,6 +280,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  isUnmounted = true
   themeObserver.disconnect()
   void dispose()
 })

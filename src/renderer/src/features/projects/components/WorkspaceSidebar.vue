@@ -199,7 +199,9 @@ function removeDragPreview(immediate = false) {
     return
   }
   preview.classList.add('leaving')
-  window.setTimeout(() => preview.remove(), 100)
+  window.setTimeout(() => {
+    if (preview?.isConnected) preview.remove()
+  }, 100)
 }
 
 function resetDragState(immediatePreview = false) {
@@ -486,7 +488,7 @@ onUnmounted(() => {
           <span class="sidebar-brand-sub">项目启动器</span>
         </div>
       </div>
-      <button ref="createButtonRef" class="create-button" @click="openAddForm">
+      <button ref="createButtonRef" type="button" class="create-button" @click="openAddForm">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         新建
       </button>
@@ -503,7 +505,7 @@ onUnmounted(() => {
         placeholder="搜索项目..."
         class="search-input w-full py-1.75 px-7 text-[13px] rounded-[7px] transition-all duration-200 ease-in-out box-border"
       />
-      <button v-if="searchQuery" class="search-clear absolute right-1.5 top-1/2 -translate-y-1/2 w-5.5 h-5.5 flex items-center justify-center rounded text-ttertiary" aria-label="清空搜索" @click="searchQuery = ''">
+      <button v-if="searchQuery" type="button" class="search-clear absolute right-1.5 top-1/2 -translate-y-1/2 w-5.5 h-5.5 flex items-center justify-center rounded text-ttertiary" aria-label="清空搜索" @click="searchQuery = ''">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
@@ -512,6 +514,7 @@ onUnmounted(() => {
 
     <div class="sidebar-list-block">
       <button
+        type="button"
         class="overview-nav"
         :class="{ active: activeView === 'overview' }"
         @click="emit('select-overview')"
@@ -578,7 +581,7 @@ onUnmounted(() => {
               <span class="text-[10px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
             </div>
           </div>
-          <button class="shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn active" @click="onToggleFavorite(project.id, $event)" title="取消收藏" aria-label="取消收藏">
+          <button type="button" class="shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn active" @click="onToggleFavorite(project.id, $event)" title="取消收藏" aria-label="取消收藏">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
           </button>
         </div>
@@ -606,7 +609,7 @@ onUnmounted(() => {
             />
           </template>
           <template v-else>
-            <button class="w-5.5 h-5.5 flex items-center justify-center rounded text-ttertiary folder-toggle" :aria-label="isCollapsed(folder.id) ? `展开${folder.name}` : `收起${folder.name}`" @click="toggleCollapse(folder)">
+            <button type="button" class="w-5.5 h-5.5 flex items-center justify-center rounded text-ttertiary folder-toggle" :aria-label="isCollapsed(folder.id) ? `展开${folder.name}` : `收起${folder.name}`" @click="toggleCollapse(folder)">
               <svg :class="['chevron', { collapsed: isCollapsed(folder.id) }]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <polyline points="9 18 15 12 9 6"/>
               </svg>
@@ -659,7 +662,7 @@ onUnmounted(() => {
                 <span class="text-[10px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
               </div>
             </div>
-            <button :class="['shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn', { active: project.favorite }]" @click="onToggleFavorite(project.id, $event)" :title="project.favorite ? '取消收藏' : '收藏'" :aria-label="project.favorite ? '取消收藏' : '收藏'">
+            <button type="button" :class="['shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn', { active: project.favorite }]" @click="onToggleFavorite(project.id, $event)" :title="project.favorite ? '取消收藏' : '收藏'" :aria-label="project.favorite ? '取消收藏' : '收藏'">
               <svg v-if="project.favorite" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
               <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
             </button>
@@ -706,7 +709,7 @@ onUnmounted(() => {
             <span class="text-[10px] font-semibold shrink-0 tracking-[0.5px] px-1.5 py-px rounded-full" :style="{ color: getStatusInfo(project.id).color }">{{ getStatusInfo(project.id).text }}</span>
           </div>
         </div>
-        <button :class="['shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn', { active: project.favorite }]" @click="onToggleFavorite(project.id, $event)" :title="project.favorite ? '取消收藏' : '收藏'" :aria-label="project.favorite ? '取消收藏' : '收藏'">
+        <button type="button" :class="['shrink-0 w-6 h-6 flex items-center justify-center text-ttertiary opacity-0 transition-all duration-150 ease-out rounded-md star-btn', { active: project.favorite }]" @click="onToggleFavorite(project.id, $event)" :title="project.favorite ? '取消收藏' : '收藏'" :aria-label="project.favorite ? '取消收藏' : '收藏'">
           <svg v-if="project.favorite" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
           <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
         </button>

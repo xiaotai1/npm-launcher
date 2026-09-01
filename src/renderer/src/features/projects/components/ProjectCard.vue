@@ -40,8 +40,7 @@ const contextLabel = computed(() => {
   return label.startsWith(':') ? `localhost${label}` : label
 })
 const nodeLabel = computed(() => {
-  if (props.project.nodeVersion) return `Node ${props.project.nodeVersion}`
-  return props.globalNodeVersion ? `跟随全局 ${props.globalNodeVersion}` : '跟随全局'
+  return `Node ${props.project.nodeVersion || '—'}`
 })
 
 function compactProjectPath(path: string) {
@@ -108,15 +107,17 @@ function formatLocalUrl(url: string) {
 
     <p v-if="launchFailure && status?.status !== 'running'" class="project-card-failure" :title="launchFailure.message">{{ launchFailure.message }}</p>
     <footer class="project-card-actions">
-      <button class="card-action" :aria-label="`进入 ${project.name} 工作区`" @click.stop="emit('select', project.id)">进入工作区</button>
+      <button type="button" class="card-action" :aria-label="`进入 ${project.name} 工作区`" @click.stop="emit('select', project.id)">进入工作区</button>
       <button
         v-if="status?.status === 'running'"
+        type="button"
         class="card-action danger"
         :aria-label="`停止 ${project.name}`"
         @click.stop="emit('stop', project.id)"
       >停止</button>
       <button
         v-else
+        type="button"
         class="card-action primary"
         :disabled="launching"
         :aria-label="launching ? `正在启动 ${project.name}` : `启动 ${project.name}`"
@@ -152,7 +153,7 @@ function formatLocalUrl(url: string) {
 .project-local-button:hover:not(:disabled) { color: var(--accent-primary); border-color: var(--accent-border); background: var(--bg-hover); }
 .project-local-button span,.project-local-button code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .project-local-button span { font-size: 11px; font-weight: 700; }
-.project-local-button code { color: var(--text-tertiary); font: 11px/1 var(--font-mono); }
+.project-local-button code { color: var(--text-tertiary); font-family: var(--font-mono); font-size: 11px; line-height: 1.4; }
 .project-local-button svg { flex: none; }
 .project-local-empty { min-height: 40px; display: flex; align-items: center; justify-content: center; padding: 0 12px; border: 1px dashed var(--border-default); border-radius: 8px; color: var(--text-tertiary); background: var(--bg-subtle); font-size: 11px; text-align: center; }
 .project-meta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 12px; margin: 0; }

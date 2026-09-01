@@ -261,6 +261,8 @@ pub fn kill_terminal(state: &AppState, id: &str) -> bool {
     let Some(session) = session else {
         return false;
     };
+    // 杀掉子进程；session 在此之后被丢弃，portable-pty 的 MasterPty 在 drop 时
+    // 会关闭底层文件描述符，从而让 read_terminal 线程的 reader.read() 返回 EOF 并退出
     session
         .child
         .lock()

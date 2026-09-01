@@ -35,11 +35,17 @@ impl PackageManager {
 /// 检测指定包管理器在当前系统中是否可用
 fn is_package_manager_available(mgr: PackageManager) -> bool {
     let program = mgr.command();
-    Command::new(&program)
+    let mut command = Command::new(&program);
+    command
         .arg("--version")
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+    command.status()
         .map(|status| status.success())
         .unwrap_or(false)
 }
