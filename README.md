@@ -131,7 +131,7 @@ Tag 发布还会生成 Tauri Updater 使用的签名更新包、`.sig` 和 `late
 npx tauri signer generate -w ~/.tauri/npm-launcher.key
 ```
 
-在 GitHub 仓库中配置以下 Actions Secrets：
+在 GitHub 仓库的 `release` Environment 中配置以下 Secrets：
 
 - `TAURI_SIGNING_PRIVATE_KEY`：`~/.tauri/npm-launcher.key` 的完整内容
 - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`：生成密钥时设置的密码
