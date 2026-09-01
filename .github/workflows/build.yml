@@ -112,11 +112,11 @@ jobs:
           - name: macos-intel
             os: macos-15-intel
             target: x86_64-apple-darwin
-            bundles: dmg
+            bundles: app,dmg
           - name: macos-apple-silicon
             os: macos-15
             target: aarch64-apple-darwin
-            bundles: dmg
+            bundles: app,dmg
 
     name: 发布 ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
