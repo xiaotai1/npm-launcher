@@ -51,6 +51,12 @@
 - 支持输入、复制粘贴、窗口缩放和终端退出事件
 - 自动进入项目目录并使用项目指定的 Node.js 版本
 
+### 应用更新
+
+- 启动后静默检查 GitHub Releases，也可从顶部工具栏手动检查
+- 展示新版本说明、下载进度，并在签名校验通过后安装和重启
+- 支持 Windows x64 NSIS、macOS Intel 与 macOS Apple Silicon
+
 ## 技术栈
 
 | 技术 | 用途 |
@@ -115,9 +121,36 @@ GitHub Actions 会分别在 Windows x64、macOS Intel 和 macOS Apple Silicon ru
 - macOS Intel DMG
 - macOS Apple Silicon DMG
 
+Tag 发布还会生成 Tauri Updater 使用的签名更新包、`.sig` 和 `latest.json`。Windows 便携版不参与自动更新。
+
+### 应用内更新发布
+
+首次配置时生成专用更新密钥：
+
+```bash
+npx tauri signer generate -w ~/.tauri/npm-launcher.key
+```
+
+在 GitHub 仓库的 `release` Environment 中配置以下 Secrets：
+
+- `TAURI_SIGNING_PRIVATE_KEY`：`~/.tauri/npm-launcher.key` 的完整内容
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`：生成密钥时设置的密码
+
+私钥不得写入仓库，且必须离线备份。丢失私钥后，已经安装的客户端将无法验证使用新密钥签发的更新。
+
+发布时先同步三个版本文件，再推送相同版本的 Tag：
+
+```bash
+node scripts/bump-version.js --ask
+git tag v1.0.9
+git push origin v1.0.9
+```
+
+工作流会先创建 Draft Release；Windows x64、macOS Intel、macOS Apple Silicon 的更新元数据全部生成后，才会自动公开 Release。尚未集成 Updater 的旧版本需要手动安装一次新版，此后才能使用应用内更新。
+
 ### 发布签名
 
-仓库默认工作流可以生成未签名安装包，适合内部测试。对外分发前需要在对应平台配置证书：
+Updater 密钥只负责验证更新包没有被替换，不等同于操作系统代码签名。对外分发前仍建议在对应平台配置证书：
 
 - macOS：Apple Developer ID Application 证书、签名身份、Apple ID 或 App Store Connect API 凭据，并完成 notarization 与 staple。
 - Windows：受信任的代码签名证书，并在上传产物前使用 `signtool` 对安装版和便携版签名。

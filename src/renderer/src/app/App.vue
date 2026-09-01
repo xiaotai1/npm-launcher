@@ -6,6 +6,7 @@ import WorkspaceSidebar from '../features/projects/components/WorkspaceSidebar.v
 import ProjectWorkspace from '../features/workspace/components/ProjectWorkspace.vue'
 import { activityFromStatus, appendActivity, clearActivities } from '../features/workspace/model/workspaceState'
 import Toast from '../shared/ui/Toast.vue'
+import UpdateDialog from '../shared/ui/UpdateDialog.vue'
 import CommandPalette from '../shared/ui/CommandPalette.vue'
 import AppHeader from '../shared/window/AppHeader.vue'
 import type { ActiveView, ActivityItem, AppConfig, ErrorAnalysis, Folder, LogEntry, ProcessStatus, Project } from '../shared/types'
@@ -15,6 +16,7 @@ import { appendSessionLogEntry, getSessionLogs } from '../features/terminal/mode
 import { clearLaunchFailure, mergeLaunchFailures, setLaunchFailure, type LaunchFailureState } from '../features/workspace/model/launchFailures'
 import { installDefaultContextMenuGuard } from '../shared/window/defaultContextMenuGuard'
 import { installFirstMouseActivation } from '../shared/window/firstMouseActivation'
+import { useAppUpdater } from './useAppUpdater'
 
 type WorkspaceTab = 'logs' | 'terminal' | 'info'
 
@@ -41,6 +43,23 @@ const toastSequence = ref(0)
 const errorAnalysis = ref<ErrorAnalysis | null>(null)
 const showErrorAnalysis = ref(false)
 const showCommandPalette = ref(false)
+
+const {
+  status: updaterStatus,
+  dialogVisible: updateDialogVisible,
+  currentVersion: appCurrentVersion,
+  nextVersion: appNextVersion,
+  notes: updateNotes,
+  errorMessage: updaterErrorMessage,
+  checking: checkingUpdate,
+  updateAvailable,
+  progressPercent: updateProgressPercent,
+  checkForUpdates,
+  openDialog: openUpdateDialog,
+  closeDialog: closeUpdateDialog,
+  installUpdate,
+  dispose: disposeUpdater,
+} = useAppUpdater()
 
 const sidebarCollapsed = ref(false)
 const sidebarWidth = ref(parseInt(localStorage.getItem('sidebarWidth') || '272', 10))
@@ -74,6 +93,9 @@ const shortcutProjectId = computed(() => {
   if (selectedProjectId.value && projects.some(project => project.id === selectedProjectId.value)) return selectedProjectId.value
   return null
 })
+
+const runningProjectCount = computed(() => Object.values(processStatuses.value)
+  .filter(status => status.status === 'running').length)
 
 async function loadConfig() {
   const nextConfig = await window.desktopAPI.getConfig()
@@ -286,6 +308,28 @@ function showToast(message: string, type: 'success' | 'error' | 'warning') {
   toastType.value = type
   toastSequence.value += 1
 }
+
+async function handleCheckUpdate() {
+  if (updateAvailable.value) {
+    openUpdateDialog()
+    return
+  }
+
+  const result = await checkForUpdates()
+  if (result === 'current') showToast('当前已是最新版本', 'success')
+  else if (result === 'development') showToast('开发模式下不检查应用更新', 'warning')
+  else if (result === 'error') showToast(`检查更新失败：${updaterErrorMessage.value}`, 'error')
+}
+
+async function handleInstallUpdate() {
+  try {
+    await installUpdate()
+  } catch (error) {
+    console.error('安装更新失败:', error)
+    showToast(`更新失败：${updaterErrorMessage.value}`, 'error')
+  }
+}
+
 function handleExportResult(success: boolean, message: string) { showToast(message, success ? 'success' : 'error') }
 
 async function exportConfig() {
@@ -523,15 +567,39 @@ onMounted(async () => {
   window.addEventListener('keydown', handleGlobalShortcut)
   await restoreProcessStatuses()
   await restoreSessionLogs()
+  void checkForUpdates().then(result => {
+    if (result === 'error') console.warn('启动时检查更新失败:', updaterErrorMessage.value)
+  })
 })
 
-onUnmounted(() => { cleanupStatus?.(); cleanupLogs?.(); cleanupErrorAnalysis?.(); cleanupSystemTheme?.(); cleanupDefaultContextMenuGuard?.(); cleanupFirstMouseActivation?.(); window.removeEventListener('keydown', handleGlobalShortcut) })
+onUnmounted(() => {
+  cleanupStatus?.()
+  cleanupLogs?.()
+  cleanupErrorAnalysis?.()
+  cleanupSystemTheme?.()
+  cleanupDefaultContextMenuGuard?.()
+  cleanupFirstMouseActivation?.()
+  window.removeEventListener('keydown', handleGlobalShortcut)
+  void disposeUpdater()
+})
 watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
 </script>
 
 <template>
   <div class="app-shell">
-        <Toast :message="toastMessage" :type="toastType" :sequence="toastSequence" />
+    <Toast :message="toastMessage" :type="toastType" :sequence="toastSequence" />
+    <UpdateDialog
+      :visible="updateDialogVisible"
+      :current-version="appCurrentVersion"
+      :next-version="appNextVersion"
+      :notes="updateNotes"
+      :status="updaterStatus"
+      :progress-percent="updateProgressPercent"
+      :running-count="runningProjectCount"
+      :error-message="updaterErrorMessage"
+      @close="closeUpdateDialog"
+      @install="handleInstallUpdate"
+    />
     <ErrorAnalysisDialog :visible="showErrorAnalysis" :analysis="errorAnalysis" @close="closeErrorAnalysis" />
     <CommandPalette
       :visible="showCommandPalette"
@@ -549,8 +617,9 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
     <AppHeader
       :node-version="nodeVersion" :available-versions="nodeVersions" :current-version="currentNodeVersion"
       :switching="switchingVersion" :refreshing="refreshingVersions" :theme="config?.theme || 'system'"
+      :checking-update="checkingUpdate" :update-available="updateAvailable"
       @toggle-theme="toggleTheme" @switch-version="switchNodeVersion" @refresh-versions="refreshVersions"
-      @export-config="exportConfig" @import-config="importConfig"
+      @export-config="exportConfig" @import-config="importConfig" @check-update="handleCheckUpdate"
     />
     <main class="app-main">
       <aside class="app-sidebar" :class="{ collapsed: sidebarCollapsed, resizing: isResizing }" :style="{ width: sidebarCollapsed ? '48px' : `${sidebarWidth}px` }">

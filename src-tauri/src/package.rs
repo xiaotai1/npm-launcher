@@ -14,6 +14,8 @@ pub enum PackageManager {
     Bun,
 }
 
+type PackageManagerDetector = fn(&Path) -> bool;
+
 impl PackageManager {
     pub fn as_str(self) -> &'static str {
         match self {
@@ -44,7 +46,7 @@ fn is_package_manager_available(mgr: PackageManager) -> bool {
 
 pub fn detect_package_manager(project_path: &Path) -> PackageManager {
     // 按照锁定文件推断候选管理器，取第一个可用的
-    let candidates: &[(fn(&Path) -> bool, PackageManager)] = &[
+    let candidates: &[(PackageManagerDetector, PackageManager)] = &[
         (|p| p.join("pnpm-lock.yaml").exists(), PackageManager::Pnpm),
         (|p| p.join("yarn.lock").exists(), PackageManager::Yarn),
         (|p| p.join("bun.lockb").exists() || p.join("bun.lock").exists(), PackageManager::Bun),

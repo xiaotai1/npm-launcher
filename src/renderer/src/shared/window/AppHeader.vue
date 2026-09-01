@@ -8,6 +8,8 @@ const props = defineProps<{
   currentVersion: string | null
   switching: boolean
   refreshing: boolean
+  checkingUpdate: boolean
+  updateAvailable: boolean
   theme: 'light' | 'dark' | 'system'
 }>()
 
@@ -17,6 +19,7 @@ const emit = defineEmits<{
   'refresh-versions': []
   'export-config': []
   'import-config': []
+  'check-update': []
 }>()
 
 const isMac = window.desktopAPI.platform === 'darwin'
@@ -154,6 +157,23 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
           </div>
         </Transition>
       </div>
+      <button
+        type="button"
+        class="relative w-8 h-8 flex items-center justify-center rounded-lg text-ttertiary transition-all duration-200 ease-out update-btn"
+        :class="{ checking: checkingUpdate, available: updateAvailable }"
+        :disabled="checkingUpdate"
+        :title="updateAvailable ? '有新版本可用' : checkingUpdate ? '正在检查更新' : '检查更新'"
+        :aria-label="updateAvailable ? '有新版本可用，打开更新窗口' : checkingUpdate ? '正在检查更新' : '检查更新'"
+        :aria-busy="checkingUpdate"
+        @click="emit('check-update')"
+      >
+        <svg class="update-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3v12"/>
+          <path d="m7 10 5 5 5-5"/>
+          <path d="M5 20h14"/>
+        </svg>
+        <span v-if="updateAvailable" class="update-dot" aria-hidden="true"></span>
+      </button>
       <a
         class="w-8 h-8 flex items-center justify-center rounded-lg text-ttertiary transition-all duration-200 ease-out github-btn"
         href="https://github.com/xiaotai1/npm-launcher"
@@ -290,9 +310,39 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .theme-btn:hover,
 .config-btn:hover,
 .config-btn.open,
+.update-btn:hover:not(:disabled),
 .github-btn:hover {
   background: var(--bg-hover);
   color: var(--accent-primary);
+}
+
+.update-btn:disabled {
+  cursor: wait;
+  opacity: .72;
+}
+
+.update-btn.available {
+  color: var(--accent-primary);
+}
+
+.update-btn.checking .update-icon {
+  animation: update-spin .8s linear infinite;
+}
+
+.update-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  border: 1.5px solid var(--bg-surface);
+  border-radius: 50%;
+  box-sizing: content-box;
+  background: var(--accent-primary);
+}
+
+@keyframes update-spin {
+  to { transform: rotate(360deg); }
 }
 
 .config-menu {
@@ -319,5 +369,11 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 .config-menu-divider {
   background: var(--border-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .update-btn.checking .update-icon {
+    animation-duration: 0s;
+  }
 }
 </style>
