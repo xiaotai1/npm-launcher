@@ -173,6 +173,8 @@ jobs:
           releaseName: NPM Launcher ${{ github.ref_name }}
           releaseDraft: true
           generateReleaseNotes: true
+          uploadUpdaterJson: false
+          uploadUpdaterSignatures: true
           updaterJsonPreferNsis: true
           args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
 
@@ -219,6 +221,8 @@ jobs:
       contents: write
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: 下载构建产物
         uses: actions/download-artifact@v4
         with:
@@ -238,14 +242,77 @@ jobs:
             exit 1
           fi
 
-          mkdir -p updater-metadata
-          gh release download "$RELEASE_TAG" --pattern latest.json --dir updater-metadata
+          gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" > release.json
+
+          find_asset_name() {
+            local pattern="$1"
+            local matches
+            local count
+            matches=$(jq -c --arg pattern "$pattern" '[.assets[] | select(.name | test($pattern))]' release.json)
+            count=$(jq 'length' <<<"$matches")
+            if [[ "$count" -ne 1 ]]; then
+              printf '更新签名匹配异常，规则 %s 找到 %s 个文件：\n' "$pattern" "$count" >&2
+              jq -r '.[].name' <<<"$matches" >&2
+              return 1
+            fi
+            jq -r '.[0].name' <<<"$matches"
+          }
+
+          asset_url() {
+            local name="$1"
+            jq -er --arg name "$name" '.assets[] | select(.name == $name) | .browser_download_url' release.json
+          }
+
+          windows_signature_name=$(find_asset_name '\.exe\.sig$')
+          macos_intel_signature_name=$(find_asset_name '_(x64|x86_64)\.app\.tar\.gz\.sig$')
+          macos_arm_signature_name=$(find_asset_name '_(aarch64|arm64)\.app\.tar\.gz\.sig$')
+
+          windows_updater_name=${windows_signature_name%.sig}
+          macos_intel_updater_name=${macos_intel_signature_name%.sig}
+          macos_arm_updater_name=${macos_arm_signature_name%.sig}
+
+          windows_url=$(asset_url "$windows_updater_name")
+          macos_intel_url=$(asset_url "$macos_intel_updater_name")
+          macos_arm_url=$(asset_url "$macos_arm_updater_name")
+
+          mkdir -p updater-signatures
+          gh release download "$RELEASE_TAG" --pattern "$windows_signature_name" --dir updater-signatures
+          gh release download "$RELEASE_TAG" --pattern "$macos_intel_signature_name" --dir updater-signatures
+          gh release download "$RELEASE_TAG" --pattern "$macos_arm_signature_name" --dir updater-signatures
+
+          version=${RELEASE_TAG#v}
+          notes=$(jq -r '.body // ""' release.json)
+          pub_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          jq -n \
+            --arg version "$version" \
+            --arg notes "$notes" \
+            --arg pub_date "$pub_date" \
+            --arg windows_url "$windows_url" \
+            --arg macos_intel_url "$macos_intel_url" \
+            --arg macos_arm_url "$macos_arm_url" \
+            --rawfile windows_signature "updater-signatures/$windows_signature_name" \
+            --rawfile macos_intel_signature "updater-signatures/$macos_intel_signature_name" \
+            --rawfile macos_arm_signature "updater-signatures/$macos_arm_signature_name" \
+            '{
+              version: $version,
+              notes: $notes,
+              pub_date: $pub_date,
+              platforms: {
+                "windows-x86_64": { url: $windows_url, signature: $windows_signature },
+                "windows-x86_64-nsis": { url: $windows_url, signature: $windows_signature },
+                "darwin-x86_64": { url: $macos_intel_url, signature: $macos_intel_signature },
+                "darwin-x86_64-app": { url: $macos_intel_url, signature: $macos_intel_signature },
+                "darwin-aarch64": { url: $macos_arm_url, signature: $macos_arm_signature },
+                "darwin-aarch64-app": { url: $macos_arm_url, signature: $macos_arm_signature }
+              }
+            }' > latest.json
+
           for target in windows-x86_64 darwin-x86_64 darwin-aarch64; do
-            jq -e --arg target "$target" '.platforms[$target].url and .platforms[$target].signature' updater-metadata/latest.json >/dev/null || {
+            jq -e --arg target "$target" '.platforms[$target].url and .platforms[$target].signature' latest.json >/dev/null || {
               printf 'latest.json 缺少更新目标：%s\n' "$target"
               exit 1
             }
           done
 
-          gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber
+          gh release upload "$RELEASE_TAG" latest.json "${assets[@]}" --clobber
           gh release edit "$RELEASE_TAG" --draft=false --latest
