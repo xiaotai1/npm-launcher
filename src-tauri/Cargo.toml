@@ -1,6 +1,6 @@
 [package]
 name = "npm-launcher"
-version = "1.0.8"
+version = "1.0.9"
 description = "可视化管理多个 NPM 项目的桌面工作台"
 authors = ["xiaotai"]
 edition = "2021"
