@@ -66,6 +66,12 @@ function selectConfigAction(action: 'export' | 'import') {
   else emit('import-config')
 }
 
+function handleCheckUpdateFromMenu() {
+  if (props.checkingUpdate) return
+  showConfigMenu.value = false
+  emit('check-update')
+}
+
 async function openGithubRepo() {
   await window.desktopAPI.openExternal('https://github.com/xiaotai1/npm-launcher')
 }
@@ -142,38 +148,6 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
         <svg v-else-if="theme === 'dark'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20.5 14.1A8.5 8.5 0 0 1 9.9 3.5 8.5 8.5 0 1 0 20.5 14.1z"/></svg>
         <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v2"/><path d="M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715"/><path d="M16 12a4 4 0 0 0-4-4"/><path d="m19 5-1.256 1.256"/><path d="M20 12h2"/></svg>
       </button>
-      <div ref="configMenuRef" class="relative">
-        <button class="w-8 h-8 flex items-center justify-center rounded-lg text-ttertiary text-sm transition-all duration-200 ease-out config-btn" :class="{ open: showConfigMenu }" title="配置导入导出" aria-label="配置导入导出" :aria-expanded="showConfigMenu" aria-haspopup="menu" @click="showConfigMenu = !showConfigMenu">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M3 12h9"/><path d="m9 9 3 3-3 3"/></svg>
-        </button>
-        <Transition name="dropdown">
-          <div v-if="showConfigMenu" class="absolute top-full mt-2 right-0 w-42 bg-surface border border-border rounded-xl p-1 z-100 animate-scale-in config-menu" role="menu">
-            <button class="config-menu-item" type="button" role="menuitem" @click="selectConfigAction('export')">
-              <span>导出配置</span>
-            </button>
-            <button class="config-menu-item" type="button" role="menuitem" @click="selectConfigAction('import')">
-              <span>导入配置</span>
-            </button>
-          </div>
-        </Transition>
-      </div>
-      <button
-        type="button"
-        class="relative w-8 h-8 flex items-center justify-center rounded-lg text-ttertiary transition-all duration-200 ease-out update-btn"
-        :class="{ checking: checkingUpdate, available: updateAvailable }"
-        :disabled="checkingUpdate"
-        :title="updateAvailable ? '有新版本可用' : checkingUpdate ? '正在检查更新' : '检查更新'"
-        :aria-label="updateAvailable ? '有新版本可用，打开更新窗口' : checkingUpdate ? '正在检查更新' : '检查更新'"
-        :aria-busy="checkingUpdate"
-        @click="emit('check-update')"
-      >
-        <svg class="update-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 3v12"/>
-          <path d="m7 10 5 5 5-5"/>
-          <path d="M5 20h14"/>
-        </svg>
-        <span v-if="updateAvailable" class="update-dot" aria-hidden="true"></span>
-      </button>
       <a
         class="w-8 h-8 flex items-center justify-center rounded-lg text-ttertiary transition-all duration-200 ease-out github-btn"
         href="https://github.com/xiaotai1/npm-launcher"
@@ -183,6 +157,55 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.85c-3.03.66-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.03 11.03 0 015.8 0c2.21-1.49 3.18-1.18 3.18-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.41-2.69 5.38-5.25 5.66.41.35.77 1.04.77 2.1v3.1c0 .27.18.65.73.55A11 11 0 0012 1.27z"/></svg>
       </a>
+      <div ref="configMenuRef" class="relative">
+        <button
+          class="w-8 h-8 flex items-center justify-center rounded-lg text-ttertiary text-sm transition-all duration-200 ease-out config-btn"
+          :class="{ open: showConfigMenu, available: updateAvailable }"
+          title="更多操作"
+          aria-label="更多操作"
+          :aria-expanded="showConfigMenu"
+          aria-haspopup="menu"
+          @click="showConfigMenu = !showConfigMenu"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span v-if="updateAvailable || checkingUpdate" class="config-btn-dot" :class="{ pulsing: checkingUpdate }" aria-hidden="true"></span>
+        </button>
+        <Transition name="dropdown">
+          <div v-if="showConfigMenu" class="absolute top-full mt-2 right-0 w-44 bg-surface border border-border rounded-xl p-1 z-100 animate-scale-in config-menu" role="menu">
+            <button class="config-menu-item" type="button" role="menuitem" @click="selectConfigAction('export')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              <span>导出配置</span>
+            </button>
+            <button class="config-menu-item" type="button" role="menuitem" @click="selectConfigAction('import')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+              <span>导入配置</span>
+            </button>
+            <div class="config-menu-divider" aria-hidden="true"></div>
+            <button
+              class="config-menu-item"
+              type="button"
+              role="menuitem"
+              :disabled="checkingUpdate"
+              @click="handleCheckUpdateFromMenu"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <template v-if="checkingUpdate">
+                  <circle cx="12" cy="12" r="9" stroke-dasharray="36" stroke-dashoffset="18" stroke-linecap="round"/>
+                </template>
+                <template v-else>
+                  <path d="M21 12a9 9 0 1 1-3-6.7"/>
+                  <path d="M21 3v6h-6"/>
+                </template>
+              </svg>
+              <span>{{ checkingUpdate ? '正在检查更新' : '检查更新' }}</span>
+              <span v-if="updateAvailable" class="config-menu-badge" aria-hidden="true"></span>
+            </button>
+          </div>
+        </Transition>
+      </div>
       </div>
       <WindowControls v-if="!isMac" />
     </div>
@@ -310,26 +333,16 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .theme-btn:hover,
 .config-btn:hover,
 .config-btn.open,
-.update-btn:hover:not(:disabled),
 .github-btn:hover {
   background: var(--bg-hover);
   color: var(--accent-primary);
 }
 
-.update-btn:disabled {
-  cursor: wait;
-  opacity: .72;
-}
-
-.update-btn.available {
+.config-btn.available {
   color: var(--accent-primary);
 }
 
-.update-btn.checking .update-icon {
-  animation: update-spin .8s linear infinite;
-}
-
-.update-dot {
+.config-btn-dot {
   position: absolute;
   top: 5px;
   right: 5px;
@@ -341,8 +354,14 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   background: var(--accent-primary);
 }
 
-@keyframes update-spin {
-  to { transform: rotate(360deg); }
+.config-btn-dot.pulsing {
+  background: var(--text-tertiary);
+  animation: config-dot-pulse 1s ease-in-out infinite;
+}
+
+@keyframes config-dot-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50%      { opacity: 1;    transform: scale(1.15); }
 }
 
 .config-menu {
@@ -351,29 +370,49 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 .config-menu-item {
   width: 100%;
-  min-height: 30px;
+  min-height: 32px;
   display: flex;
   align-items: center;
+  gap: 9px;
   padding: 0 10px;
   border-radius: 8px;
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 650;
   text-align: left;
+  transition: color 160ms ease, background 160ms ease;
 }
 
-.config-menu-item:hover {
+.config-menu-item:hover:not(:disabled) {
   color: var(--text-primary);
   background: var(--bg-hover);
 }
 
-.config-menu-divider {
-  background: var(--border-muted);
+.config-menu-item:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .update-btn.checking .update-icon {
-    animation-duration: 0s;
-  }
+.config-menu-item svg {
+  color: var(--text-tertiary);
+  flex: none;
+}
+
+.config-menu-item:hover:not(:disabled) svg {
+  color: var(--accent-primary);
+}
+
+.config-menu-badge {
+  margin-left: auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+}
+
+.config-menu-divider {
+  height: 1px;
+  margin: 4px 4px;
+  background: var(--border-muted);
 }
 </style>
