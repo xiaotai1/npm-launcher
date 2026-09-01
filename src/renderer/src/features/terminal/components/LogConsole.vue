@@ -576,15 +576,6 @@ async function copyLaunchCommand() {
   height: 100%;
 }
 
-:deep(.xterm-viewport::-webkit-scrollbar) {
-  width: 6px;
-}
-
-:deep(.xterm-viewport::-webkit-scrollbar-thumb) {
-  background: var(--scrollbar-thumb);
-  border-radius: 3px;
-}
-
 .terminal-region { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--console-bg); }
 .terminal-canvas { flex: 1; min-height: 0; border: none; outline: none; }
 .terminal-canvas.hidden { visibility: hidden; }

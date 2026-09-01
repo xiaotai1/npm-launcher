@@ -137,4 +137,23 @@ function selectTab(tab: 'logs' | 'terminal' | 'info') {
 .workspace-panel.hidden { visibility: hidden; pointer-events: none; }
 .info-panel { overflow-y: auto; background: transparent; }
 .info-panel :deep(.settings-page) { flex: none; width: 100%; min-height: 100%; }
+
+/* 和全局滚动条保持一致 */
+.workspace-panels ::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.workspace-panels ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.workspace-panels ::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 10px;
+}
+
+.workspace-panels ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
 </style>

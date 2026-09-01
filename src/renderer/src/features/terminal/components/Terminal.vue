@@ -443,24 +443,4 @@ onBeforeUnmount(() => {
 :deep(.xterm-screen) {
   height: 100%;
 }
-
-:deep(.xterm-viewport::-webkit-scrollbar) {
-  width: 10px;
-}
-
-:deep(.xterm-viewport::-webkit-scrollbar-track) {
-  background: transparent;
-}
-
-:deep(.xterm-viewport::-webkit-scrollbar-thumb) {
-  background: var(--scrollbar-thumb);
-  border-radius: 5px;
-  border: 3px solid transparent;
-  background-clip: content-box;
-}
-
-:deep(.xterm-viewport::-webkit-scrollbar-thumb:hover) {
-  background: var(--text-tertiary);
-  background-clip: content-box;
-}
 </style>

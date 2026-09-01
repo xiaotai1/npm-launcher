@@ -447,6 +447,27 @@
 	background: var(--text-tertiary);
 }
 
+/* xterm 6 使用 VS Code 风格的自定义滚动条（.xterm-scrollable-element > .scrollbar > .slider），
+   原生 ::-webkit-scrollbar 不再生效，这里把滑块覆盖成与全局一致的细滚动条样式 */
+/* xterm 6 会给滚动区域容器写入内联背景色（终端主题 background），与控制台底色存在色差，
+   会从透明滚动条容器下透出一条色带，这里强制透明让父级背景透出 */
+.xterm .xterm-scrollable-element {
+	background: transparent !important;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider {
+	width: 5px !important;
+	left: auto !important;
+	right: 0 !important;
+	background: var(--border-default) !important;
+	border-radius: 10px;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider:hover,
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider.active {
+	background: var(--text-tertiary) !important;
+}
+
 /* ===== Workspace redesign tokens ===== */
 :root {
 	--font-ui:
