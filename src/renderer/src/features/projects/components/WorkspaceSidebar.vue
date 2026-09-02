@@ -1343,10 +1343,16 @@ onUnmounted(() => {
 /* 星标 — 父子选择器 + CSS 变量 */
 .project-card:hover .star-btn {
   opacity: 0.5;
+  pointer-events: auto;
+}
+
+.star-btn {
+  pointer-events: none;
 }
 
 .star-btn:hover {
   opacity: 1 !important;
+  pointer-events: auto;
   background: var(--bg-hover);
   transform: scale(1.1);
 }

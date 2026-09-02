@@ -61,6 +61,7 @@ let terminal: Terminal | null = null
 let fitAddon: FitAddon | null = null
 let cleanupSessionLogs: (() => void) | null = null
 let resizeObserver: ResizeObserver | null = null
+let resizeTimer: ReturnType<typeof setTimeout> | null = null
 let themeObserver: MutationObserver | null = null
 let cleanupDragRecovery: (() => void) | null = null
 
@@ -131,7 +132,6 @@ function initTerminal() {
 
   replayCurrentProjectLogs()
 
-  let resizeTimer: ReturnType<typeof setTimeout> | null = null
   resizeObserver = new ResizeObserver(() => {
     if (resizeTimer) clearTimeout(resizeTimer)
     resizeTimer = setTimeout(() => {
@@ -150,6 +150,7 @@ function initTerminal() {
 
 function disposeTerminal() {
   if (resizeTimer) clearTimeout(resizeTimer)
+  resizeTimer = null
   resizeObserver?.disconnect()
   cleanupDragRecovery?.()
   terminal?.dispose()

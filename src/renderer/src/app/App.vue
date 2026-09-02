@@ -102,12 +102,6 @@ const runningProjectCount = computed(() => Object.values(processStatuses.value)
 async function loadConfig() {
   const nextConfig = await window.desktopAPI.getConfig()
   config.value = nextConfig
-  if (!selectedProjectId.value || !nextConfig.projects.some(project => project.id === selectedProjectId.value)) {
-    selectedProjectId.value = nextConfig.projects[0]?.id || null
-    // 自动选中第一个项目时，切到项目视图，避免侧边栏同时高亮"项目总览"和该项目
-    if (selectedProjectId.value) activeView.value = 'project'
-  }
-  if (!selectedProjectId.value) activeView.value = 'overview'
 }
 
 async function loadNodeVersions() {
@@ -580,6 +574,13 @@ onMounted(async () => {
   cleanupRejectionHandler = () => window.removeEventListener('unhandledrejection', rejectionHandler)
 
   await Promise.all([loadConfig(), loadNodeVersions()])
+  // 仅在应用启动时初始化默认选中项目，避免后续 loadConfig（如 persistConfigChange）误覆盖用户当前选择
+  if (!selectedProjectId.value || !(config.value?.projects || []).some(project => project.id === selectedProjectId.value)) {
+    selectedProjectId.value = config.value?.projects?.[0]?.id || null
+    // 自动选中第一个项目时，切到项目视图，避免侧边栏同时高亮"项目总览"和该项目
+    if (selectedProjectId.value) activeView.value = 'project'
+  }
+  if (!selectedProjectId.value) activeView.value = 'overview'
   applyTheme(config.value?.theme || 'system')
   cleanupStatus = window.desktopAPI.onProcessStatus(handleStatus)
   cleanupLogs = window.desktopAPI.onLogData(handleLogData)
