@@ -368,13 +368,10 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   padding: 5px;
   border: 1px solid var(--glass-border);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--bg-surface) 50%, transparent);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: var(--bg-surface);
   box-shadow:
     0 12px 32px rgba(15, 23, 42, 0.18),
-    0 2px 6px rgba(15, 23, 42, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    0 2px 8px rgba(15, 23, 42, 0.08);
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
 }
