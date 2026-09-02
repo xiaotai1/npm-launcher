@@ -104,7 +104,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
           <span class="text-ttertiary text-[10px] transition-transform duration-250 ease-in-out dropdown-arrow" :class="{ open: showDropdown }">▾</span>
         </button>
         <Transition name="dropdown">
-          <div v-if="showDropdown" class="absolute top-full mt-2 right-0 w-65 bg-surface border border-border rounded-xl p-1 z-100 animate-scale-in version-dropdown">
+          <div v-if="showDropdown" class="absolute top-full mt-2 right-0 w-65 z-100 glassIn version-dropdown">
             <div class="flex items-center justify-between px-1 pt-1">
               <span class="px-2.5 pt-1.75 pb-1.25 text-[12px] font-semibold text-ttertiary tracking-[0.3px]">已安装版本</span>
               <span class="text-[11px] text-blue-500 font-medium mr-2">仅识别 nvm</span>
@@ -127,7 +127,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
               <button
                 v-for="ver in availableVersions"
                 :key="ver"
-                class="flex items-center justify-between w-full py-1.75 px-2.5 rounded-lg font-mono text-xs text-tsecondary text-left transition-all duration-150 ease-out version-item"
+                class="flex items-center justify-between w-full version-item"
                 :class="{ active: ver === currentVersion }"
                 @click="selectVersion(ver)"
                 :disabled="switching"
@@ -139,7 +139,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
                 暂无已安装版本
               </div>
             </div>
-            <div class="px-3 py-2 text-[12px] text-ttertiary border-t border-border mt-1">使用终端输入 <code class="font-mono text-accent bg-accent-glow px-1 rounded-sm text-[11px]">{{ nvmListCommand }}</code> 查看更多版本</div>
+            <div class="px-3 py-2 text-[12px] text-ttertiary border-t border-border-muted mt-1">使用终端输入 <code class="font-mono text-accent bg-accent-glow px-1 rounded-sm text-[11px]">{{ nvmListCommand }}</code> 查看更多版本</div>
           </div>
         </Transition>
       </div>
@@ -291,7 +291,15 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .version-dropdown {
-  box-shadow: var(--shadow-lg), 0 0 0 1px var(--accent-glow);
+  padding: 5px;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  background: var(--bg-surface);
+  box-shadow:
+    0 12px 32px rgba(15, 23, 42, 0.18),
+    0 2px 8px rgba(15, 23, 42, 0.08);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
 }
 
 .refresh-btn:hover:not(:disabled) {
@@ -310,6 +318,18 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 @keyframes refresh-spin {
   to { transform: rotate(360deg); }
+}
+
+.version-item {
+  min-height: 32px;
+  gap: 9px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 650;
+  text-align: left;
+  transition: color 150ms ease, background 150ms ease;
 }
 
 .version-item:hover {
