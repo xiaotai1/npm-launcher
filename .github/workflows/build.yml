@@ -222,6 +222,10 @@ jobs:
       contents: write
 
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: 下载构建产物
         uses: actions/download-artifact@v4
         with:
@@ -259,8 +263,20 @@ jobs:
           macos_arm_updater=$(require_asset 'NPM-Launcher-Updater-macOS-Apple-Silicon.app.tar.gz')
           macos_arm_signature=$(require_asset 'NPM-Launcher-Updater-macOS-Apple-Silicon.app.tar.gz.sig')
 
+          git for-each-ref --format='%(contents)' "refs/tags/$RELEASE_TAG" > tag-notes.md
+          has_tag_notes=false
+          if [[ -s tag-notes.md ]] && grep -q '[^[:space:]]' tag-notes.md; then
+            has_tag_notes=true
+          fi
+
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "NPM Launcher $RELEASE_TAG"
+            if [[ "$has_tag_notes" == true ]]; then
+              gh release create "$RELEASE_TAG" --verify-tag --notes-file tag-notes.md --title "NPM Launcher $RELEASE_TAG"
+            else
+              gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "NPM Launcher $RELEASE_TAG"
+            fi
+          elif [[ "$has_tag_notes" == true ]]; then
+            gh release edit "$RELEASE_TAG" --notes-file tag-notes.md --title "NPM Launcher $RELEASE_TAG"
           fi
           gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" > release.json
 

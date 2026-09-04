@@ -111,6 +111,7 @@ npm run dist:mac  # 在 macOS 上按当前版本生成 DMG
 版本脚本会同步更新以下文件：
 
 - `package.json`
+- `package-lock.json`
 - `src-tauri/Cargo.toml`
 - `src-tauri/tauri.conf.json`
 
@@ -138,15 +139,28 @@ npx tauri signer generate -w ~/.tauri/npm-launcher.key
 
 私钥不得写入仓库，且必须离线备份。丢失私钥后，已经安装的客户端将无法验证使用新密钥签发的更新。
 
-发布时先同步三个版本文件，再推送相同版本的 Tag：
+发布流程（在当前开发分支执行，不需要切换到其他分支）：
 
 ```bash
+# 1. 同步版本号，按提示输入目标版本，例如 1.0.11
 node scripts/bump-version.js --ask
-git tag v1.0.9
-git push origin v1.0.9
+
+# 2. 检查版本文件是否都与 Tag 一致
+node scripts/check-release-version.js v1.0.11
+
+# 3. 提交版本变更，并推送当前分支
+git add package.json package-lock.json src-tauri/Cargo.toml src-tauri/tauri.conf.json
+git commit -m "chore: 发布 v1.0.11"
+git push origin HEAD
+
+# 4. 创建带说明的 annotated Tag，并推送 Tag 触发发布工作流
+git tag -a v1.0.11 -m "Release v1.0.11: 修复已知问题，优化 UI 交互"
+git push origin v1.0.11
 ```
 
-只需推送 Tag，不要提前在 GitHub 页面发布 Release。工作流会在 Windows x64、macOS Intel、macOS Apple Silicon 全部构建完成后创建 Release；如果同 Tag 的 Release 已存在，则会复用并补齐产物。尚未集成 Updater 的旧版本需要手动安装一次新版，此后才能使用应用内更新。
+其中 `v1.0.11` 和提交说明请替换为本次实际版本与更新内容。`git tag -a -m` 会把说明写入 Tag，工作流会读取该说明作为 GitHub Release 正文，并显示在应用更新弹窗中。
+
+只需推送 Tag，不要提前在 GitHub 页面手动创建或发布 Release。推送 Tag 后，工作流会在 Windows x64、macOS Intel、macOS Apple Silicon 全部构建完成后创建 Release；如果同 Tag 的 Release 已存在，则会复用并更新说明、补齐产物。没有 Tag 说明时会自动生成变更日志。尚未集成 Updater 的旧版本需要手动安装一次新版，此后才能使用应用内更新。
 
 ### 发布签名
 
