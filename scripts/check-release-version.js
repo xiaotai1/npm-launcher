@@ -7,14 +7,22 @@ if (!/^v\d+\.\d+\.\d+$/.test(tag)) {
 
 const expected = tag.slice(1)
 const packageVersion = require('../package.json').version
+const packageLock = require('../package-lock.json')
 const tauriVersion = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8')).version
 const cargoContent = fs.readFileSync('src-tauri/Cargo.toml', 'utf8')
 const cargoVersion = cargoContent.match(/^version\s*=\s*"([^"]+)"/m)?.[1]
+const cargoLockContent = fs.readFileSync('src-tauri/Cargo.lock', 'utf8')
+const cargoLockVersion = cargoLockContent.match(
+  /\[\[package\]\]\s*\nname = "npm-launcher"\s*\nversion = "([^"]+)"/
+)?.[1]
 
 for (const [name, version] of [
   ['package.json', packageVersion],
+  ['package-lock.json', packageLock.version],
+  ['package-lock.json 根包', packageLock.packages?.['']?.version],
   ['src-tauri/tauri.conf.json', tauriVersion],
   ['src-tauri/Cargo.toml', cargoVersion],
+  ['src-tauri/Cargo.lock', cargoLockVersion],
 ]) {
   if (version !== expected) throw new Error(`${name} 版本为 ${version || '未找到'}，与 Tag ${tag} 不一致`)
 }

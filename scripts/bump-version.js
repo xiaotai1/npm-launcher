@@ -5,8 +5,10 @@ const readline = require('readline')
 const pkgPath = path.join(__dirname, '..', 'package.json')
 const lockPath = path.join(__dirname, '..', 'package-lock.json')
 const cargoPath = path.join(__dirname, '..', 'src-tauri', 'Cargo.toml')
+const cargoLockPath = path.join(__dirname, '..', 'src-tauri', 'Cargo.lock')
 const tauriPath = path.join(__dirname, '..', 'src-tauri', 'tauri.conf.json')
 const args = process.argv.slice(2)
+const explicitVersion = args.find(arg => !arg.startsWith('--'))
 
 function assertVersion(version) {
   if (!/^\d+\.\d+\.\d+$/.test(version)) {
@@ -20,22 +22,31 @@ function syncVersion(version) {
   const lock = JSON.parse(fs.readFileSync(lockPath, 'utf-8'))
   const tauri = JSON.parse(fs.readFileSync(tauriPath, 'utf-8'))
   const cargo = fs.readFileSync(cargoPath, 'utf-8')
-  const nextCargo = cargo.replace(
-    /^(\[package\][\s\S]*?^version\s*=\s*)"[^"]+"/m,
-    `$1"${version}"`
-  )
-  if (nextCargo === cargo && !cargo.includes(`version = "${version}"`)) {
+  const cargoLock = fs.readFileSync(cargoLockPath, 'utf-8')
+  const cargoVersionPattern = /^(\[package\][\s\S]*?^version\s*=\s*)"[^"]+"/m
+  const cargoLockVersionPattern = /(\[\[package\]\]\r?\nname = "npm-launcher"\r?\nversion = ")[^"]+(")/
+  if (!cargoVersionPattern.test(cargo)) {
     throw new Error('无法更新 Cargo.toml 中的 package.version')
   }
+  if (!cargoLockVersionPattern.test(cargoLock)) {
+    throw new Error('无法更新 Cargo.lock 中的 npm-launcher 版本')
+  }
+  const nextCargo = cargo.replace(
+    cargoVersionPattern,
+    `$1"${version}"`
+  )
+  const nextCargoLock = cargoLock.replace(cargoLockVersionPattern, `$1${version}$2`)
 
   pkg.version = version
   lock.version = version
-  if (lock.packages?.['']) lock.packages[''].version = version
+  if (!lock.packages?.['']) throw new Error('无法更新 package-lock.json 中的根包版本')
+  lock.packages[''].version = version
   tauri.version = version
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf-8')
   fs.writeFileSync(lockPath, JSON.stringify(lock, null, 2) + '\n', 'utf-8')
   fs.writeFileSync(tauriPath, JSON.stringify(tauri, null, 2) + '\n', 'utf-8')
   fs.writeFileSync(cargoPath, nextCargo, 'utf-8')
+  fs.writeFileSync(cargoLockPath, nextCargoLock, 'utf-8')
 }
 
 function bumpVersion(version, type) {
@@ -84,7 +95,9 @@ async function main() {
 
   let newVersion
 
-  if (args.includes('--ask')) {
+  if (explicitVersion) {
+    newVersion = explicitVersion
+  } else if (args.includes('--ask')) {
     newVersion = await askVersion(current)
   } else if (args.includes('--major')) {
     newVersion = bumpVersion(current, 'major')

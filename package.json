@@ -11,6 +11,7 @@
     "build:frontend": "vite build --config vite.config.mts",
     "preview": "vite preview --config vite.config.mts",
     "start": "tauri dev",
+    "release": "node scripts/release.js",
     "test:updater": "node --test scripts/update-helpers.test.cjs",
     "dist": "node scripts/bump-version.js && tauri build",
     "dist:all": "node scripts/bump-version.js && tauri build",
