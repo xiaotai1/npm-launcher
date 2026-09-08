@@ -26,6 +26,7 @@ let resizeObserver: ResizeObserver | null = null
 let contextMenuHandler: ((e: MouseEvent) => void) | null = null
 let cleanupDragRecovery: (() => void) | null = null
 let terminalGeneration = 0
+let isUnmounted = false
 
 function waitForLayout() {
   return new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
