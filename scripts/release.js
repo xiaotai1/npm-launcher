@@ -94,9 +94,11 @@ function remoteTagExists(tag) {
 }
 
 function changedFiles() {
-  const status = git(['status', '--porcelain', '--untracked-files=all'])
-  if (!status) return []
-  return status.split('\n').map(line => line.slice(3))
+  const result = commandResult('git', ['status', '--porcelain=v1', '-z', '--untracked-files=all'])
+  if (result.error || result.status !== 0) {
+    throw new Error(resultMessage(result, '无法读取工作区状态'))
+  }
+  return (result.stdout || '').split('\0').filter(Boolean).map(entry => entry.slice(3))
 }
 
 function assertOnlyVersionFilesChanged() {
