@@ -43,6 +43,30 @@ function ask(rl, prompt) {
   return new Promise(resolve => rl.question(prompt, answer => resolve(answer.trim())))
 }
 
+function askReleaseNotes(rl, defaultNotes) {
+  console.log('请输入发布说明：')
+  console.log('- 按回车继续输入下一行')
+  console.log('- 单独输入一行 . 并回车结束')
+  console.log('- 不输入内容，直接输入 . 使用以上提交列表')
+
+  return new Promise(resolve => {
+    const lines = []
+    const onLine = line => {
+      if (line === '.') {
+        rl.off('line', onLine)
+        const notes = lines.join('\n')
+        resolve(notes.trim() ? notes : defaultNotes)
+        return
+      }
+      lines.push(line)
+      process.stdout.write('> ')
+    }
+
+    rl.on('line', onLine)
+    process.stdout.write('> ')
+  })
+}
+
 function parseVersion(version) {
   if (!/^\d+\.\d+\.\d+$/.test(version)) {
     throw new Error(`版本号格式错误：${version}，应为 X.Y.Z`)
@@ -152,7 +176,7 @@ async function main() {
     if (localTagExists(tag)) throw new Error(`本地已存在 Tag ${tag}`)
     if (remoteTagExists(tag)) throw new Error(`远端已存在 Tag ${tag}`)
 
-    notes = await ask(rl, '请输入发布说明 (回车使用以上提交列表): ') || defaultNotes
+    notes = await askReleaseNotes(rl, defaultNotes)
     console.log('\n发布摘要')
     console.log(`远端: ${remote}`)
     console.log(`分支: ${branch}`)

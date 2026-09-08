@@ -60,6 +60,7 @@ jobs:
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 
       - name: 构建普通安装包
+        shell: bash
         run: npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --config '{"bundle":{"createUpdaterArtifacts":false}}'
 
       - name: 整理 Windows 产物
@@ -263,25 +264,26 @@ jobs:
           macos_arm_updater=$(require_asset 'NPM-Launcher-Updater-macOS-Apple-Silicon.app.tar.gz')
           macos_arm_signature=$(require_asset 'NPM-Launcher-Updater-macOS-Apple-Silicon.app.tar.gz.sig')
 
-          git for-each-ref --format='%(contents)' "refs/tags/$RELEASE_TAG" > tag-notes.md
-          has_tag_notes=false
-          if [[ -s tag-notes.md ]] && grep -q '[^[:space:]]' tag-notes.md; then
-            has_tag_notes=true
+          tag_ref=$(gh api "repos/$GH_REPO/git/ref/tags/$RELEASE_TAG")
+          tag_type=$(jq -r '.object.type' <<<"$tag_ref")
+          tag_sha=$(jq -r '.object.sha' <<<"$tag_ref")
+          if [[ "$tag_type" != "tag" ]]; then
+            printf 'Tag %s 不是 annotated tag，无法读取发布说明\n' "$RELEASE_TAG"
+            exit 1
+          fi
+          gh api "repos/$GH_REPO/git/tags/$tag_sha" --jq '.message' > tag-notes.md
+          if [[ ! -s tag-notes.md ]] || ! grep -q '[^[:space:]]' tag-notes.md; then
+            printf 'Tag %s 的发布说明为空\n' "$RELEASE_TAG"
+            exit 1
           fi
 
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            if [[ "$has_tag_notes" == true ]]; then
-              gh release create "$RELEASE_TAG" --verify-tag --notes-file tag-notes.md --title "NPM Launcher $RELEASE_TAG"
-            else
-              gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "NPM Launcher $RELEASE_TAG"
-            fi
-          elif [[ "$has_tag_notes" == true ]]; then
+            gh release create "$RELEASE_TAG" --verify-tag --notes-file tag-notes.md --title "NPM Launcher $RELEASE_TAG"
+          else
             gh release edit "$RELEASE_TAG" --notes-file tag-notes.md --title "NPM Launcher $RELEASE_TAG"
           fi
-          gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" > release.json
 
           version=${RELEASE_TAG#v}
-          notes=$(jq -r '.body // ""' release.json)
           pub_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
           release_base_url="https://github.com/$GH_REPO/releases/download/$RELEASE_TAG"
           windows_url="$release_base_url/$(basename "$windows_updater")"
@@ -289,7 +291,6 @@ jobs:
           macos_arm_url="$release_base_url/$(basename "$macos_arm_updater")"
           jq -n \
             --arg version "$version" \
-            --arg notes "$notes" \
             --arg pub_date "$pub_date" \
             --arg windows_url "$windows_url" \
             --arg macos_intel_url "$macos_intel_url" \
@@ -297,6 +298,7 @@ jobs:
             --rawfile windows_signature "$windows_signature" \
             --rawfile macos_intel_signature "$macos_intel_signature" \
             --rawfile macos_arm_signature "$macos_arm_signature" \
+            --rawfile notes tag-notes.md \
             '{
               version: $version,
               notes: $notes,
