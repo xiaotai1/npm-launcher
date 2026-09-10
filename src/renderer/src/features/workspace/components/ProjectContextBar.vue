@@ -206,7 +206,8 @@ h1 { min-width: 0; margin: 0; overflow: hidden; color: var(--text-primary); font
 .icon-action { position: relative; width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--border-default); border-radius: 10px; color: var(--text-secondary); background: linear-gradient(180deg, var(--bg-surface) 0%, color-mix(in srgb, var(--bg-subtle) 80%, transparent) 100%); transition: transform 160ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease; }
 .icon-action:hover { transform: translateY(-1px); color: var(--accent-primary); border-color: var(--accent-border); background: var(--bg-hover); box-shadow: var(--shadow-md); }
 .icon-action::after { content: attr(data-tooltip); position: absolute; right: 50%; bottom: -40px; z-index: 200; transform: translateX(50%) translateY(-2px); padding: 6px 9px; border: 1px solid var(--border-default); border-radius: 7px; color: var(--text-primary); background: var(--bg-surface); box-shadow: var(--shadow-md); font-size: 12px; font-weight: 650; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 140ms ease, transform 140ms ease; }
-.icon-action:hover::after { opacity: 1; transform: translateX(50%) translateY(0); }
+.icon-action:hover::after,
+.icon-action:focus-visible::after { opacity: 1; transform: translateX(50%) translateY(0); }
 .context-primary { min-width: 76px; min-height: 36px; padding: 0 16px; border-radius: 10px; color: #fff; background: var(--accent-primary); box-shadow: 0 4px 12px var(--accent-glow); font-size: 13px; font-weight: 700; transition: transform 160ms ease, box-shadow 180ms ease, background 180ms ease; }
 .context-primary:hover { transform: translateY(-1px); background: var(--accent-primary-hover); box-shadow: 0 8px 18px var(--accent-glow); }
 .context-primary.stop { background: var(--error); box-shadow: 0 3px 10px color-mix(in srgb, var(--error) 30%, transparent); }

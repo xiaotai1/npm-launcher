@@ -162,10 +162,10 @@ function formatLocalUrl(url: string) {
 .project-meta-grid dd { min-width: 0; margin: 3px 0 0; overflow: hidden; color: var(--text-secondary); font-size: 12px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .project-card-failure { margin: -4px 0 0; overflow: hidden; color: var(--error); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .project-card-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: 7px; min-width: 0; margin-top: auto; }
-.card-action { min-height: 30px; min-width: 54px; padding: 0 11px; border: 1px solid var(--border-default); border-radius: 7px; color: var(--text-secondary); background: var(--bg-surface); font-size: 13px; font-weight: 700; transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease; }
+.card-action { min-height: 30px; min-width: 54px; padding: 0 11px; border: 1px solid var(--border-default); border-radius: 10px; color: var(--text-secondary); background: var(--bg-surface); font-size: 13px; font-weight: 700; transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 180ms ease; }
 .card-action:hover { transform: translateY(-1px); }
-.card-action.primary { color: var(--accent-primary); border-color: var(--accent-border); background: var(--accent-glow); }
-.card-action.primary:hover { color: #fff; border-color: var(--accent-primary); background: var(--accent-primary); }
+.card-action.primary { color: #fff; border-color: transparent; background: var(--accent-primary); box-shadow: 0 4px 12px var(--accent-glow); }
+.card-action.primary:hover:not(:disabled) { border-color: var(--accent-primary); background: var(--accent-primary-hover); box-shadow: 0 8px 18px var(--accent-glow); }
 .card-action.danger { color: var(--error); border-color: color-mix(in srgb, var(--error) 22%, var(--border-default)); background: color-mix(in srgb, var(--error-bg) 58%, var(--bg-surface)); }
 @media (prefers-reduced-motion: reduce) {
   .project-overview-card,.card-action { transition: none; }

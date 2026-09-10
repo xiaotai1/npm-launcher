@@ -546,19 +546,22 @@ select:focus-visible,
 .button-secondary {
 	min-height: 34px;
 	padding: 0 14px;
-	border-radius: 8px;
+	border-radius: 10px;
 	font-size: 13px;
 	font-weight: 700;
+	transition: transform 160ms ease, background 180ms ease, border-color 180ms ease,
+		color 180ms ease, box-shadow 180ms ease;
 }
 
 .button-primary {
 	color: #fff;
 	background: var(--accent-primary);
-	box-shadow: 0 3px 10px var(--accent-glow);
+	box-shadow: 0 4px 12px var(--accent-glow);
 }
 .button-primary:hover:not(:disabled) {
-	background: var(--accent-primary-hover);
 	transform: translateY(-1px);
+	background: var(--accent-primary-hover);
+	box-shadow: 0 8px 18px var(--accent-glow);
 }
 .button-secondary {
 	color: var(--text-secondary);

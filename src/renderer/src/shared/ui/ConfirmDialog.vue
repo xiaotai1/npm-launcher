@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { ref } from 'vue'
+import BaseDialog from './BaseDialog.vue'
 
 const props = defineProps<{
   visible: boolean
@@ -15,12 +16,8 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-const dialogRef = ref<HTMLElement | null>(null)
 const cancelButtonRef = ref<HTMLButtonElement | null>(null)
-const instanceId = crypto.randomUUID()
-const titleId = `confirm-dialog-title-${instanceId}`
-const messageId = `confirm-dialog-message-${instanceId}`
-let previouslyFocused: HTMLElement | null = null
+const confirmButtonRef = ref<HTMLButtonElement | null>(null)
 
 function onConfirm() {
   emit('confirm')
@@ -30,189 +27,68 @@ function onCancel() {
   emit('cancel')
 }
 
-function restorePreviousFocus() {
-  const target = previouslyFocused
-  previouslyFocused = null
-  if (target?.isConnected) nextTick(() => target.focus())
-}
-
-function handleDialogKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') {
+function handleFooterKeydown(event: KeyboardEvent) {
+  // 两个相邻按钮之间用方向键快速选择
+  if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return
+  if (event.target === cancelButtonRef.value) {
     event.preventDefault()
-    onCancel()
-    return
-  }
-
-  if (event.key !== 'Tab' || !dialogRef.value) return
-
-  const focusable = Array.from(dialogRef.value.querySelectorAll<HTMLElement>(
-    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-  ))
-  if (!focusable.length) return
-
-  const first = focusable[0]
-  const last = focusable[focusable.length - 1]
-  if (event.shiftKey && document.activeElement === first) {
+    confirmButtonRef.value?.focus()
+  } else if (event.target === confirmButtonRef.value) {
     event.preventDefault()
-    last.focus()
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault()
-    first.focus()
+    cancelButtonRef.value?.focus()
   }
 }
-
-watch(() => props.visible, visible => {
-  if (visible) {
-    previouslyFocused = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null
-    nextTick(() => cancelButtonRef.value?.focus())
-  } else {
-    restorePreviousFocus()
-  }
-}, { immediate: true })
-
-onBeforeUnmount(restorePreviousFocus)
 </script>
 
 <template>
-  <Teleport to="body">
-    <Transition name="confirm-dialog">
-      <div v-if="visible" class="confirm-dialog-backdrop" @mousedown.self="onCancel">
-        <section
-          ref="dialogRef"
-          class="confirm-dialog"
-          :class="{ danger }"
-          role="alertdialog"
-          aria-modal="true"
-          :aria-labelledby="titleId"
-          :aria-describedby="messageId"
-          @keydown="handleDialogKeydown"
-        >
-          <header class="dialog-header">
-            <div>
-              <p>{{ danger ? '危险操作' : '请确认操作' }}</p>
-              <h2 :id="titleId">{{ title }}</h2>
-            </div>
-            <button class="dialog-close" type="button" aria-label="关闭确认窗口" @click="onCancel">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="m6 6 12 12M18 6 6 18"/>
-              </svg>
-            </button>
-          </header>
-
-          <div class="dialog-body">
-            <div class="dialog-icon" aria-hidden="true">
-              <svg v-if="danger" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M10.3 3.6 2.7 17a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0Z"/>
-                <path d="M12 9v4M12 17h.01"/>
-              </svg>
-              <svg v-else width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="9"/>
-                <path d="M12 8v4M12 16h.01"/>
-              </svg>
-            </div>
-            <div class="dialog-copy">
-              <p :id="messageId">{{ message }}</p>
-            </div>
-          </div>
-
-          <footer class="dialog-actions">
-            <button ref="cancelButtonRef" type="button" class="cancel-button" @click="onCancel">
-              {{ cancelText || '取消' }}
-            </button>
-            <button type="button" class="confirm-button" :class="{ danger }" @click="onConfirm">
-              {{ confirmText || '确认' }}
-            </button>
-          </footer>
-        </section>
+  <BaseDialog
+    :visible="visible"
+    :title="title"
+    eyebrow="请确认操作"
+    autofocus="first"
+    @close="onCancel"
+  >
+    <div class="dialog-body" :class="{ danger: props.danger }">
+      <div class="dialog-icon" :class="{ danger: props.danger }" aria-hidden="true">
+        <svg v-if="danger" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.3 3.6 2.7 17a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0Z"/>
+          <path d="M12 9v4M12 17h.01"/>
+        </svg>
+        <svg v-else width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 8v4M12 16h.01"/>
+        </svg>
       </div>
-    </Transition>
-  </Teleport>
+      <div class="dialog-copy">
+        <p>{{ message }}</p>
+      </div>
+    </div>
+
+    <template #footer>
+      <button
+        ref="cancelButtonRef"
+        type="button"
+        class="dialog-button cancel"
+        @click="onCancel"
+        @keydown="handleFooterKeydown"
+      >
+        {{ cancelText || '取消' }}
+      </button>
+      <button
+        ref="confirmButtonRef"
+        type="button"
+        class="dialog-button confirm"
+        :class="{ danger: props.danger }"
+        @click="onConfirm"
+        @keydown="handleFooterKeydown"
+      >
+        {{ confirmText || '确认' }}
+      </button>
+    </template>
+  </BaseDialog>
 </template>
 
 <style scoped>
-.confirm-dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
-  display: grid;
-  place-items: center;
-  padding: 28px;
-  background: var(--modal-backdrop);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  -webkit-app-region: no-drag;
-}
-
-.confirm-dialog {
-  position: relative;
-  width: min(420px, calc(100vw - 40px));
-  overflow: hidden;
-  color: var(--text-primary);
-  border: 1px solid var(--glass-border);
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--bg-surface) 94%, transparent);
-  backdrop-filter: blur(28px) saturate(170%);
-  -webkit-backdrop-filter: blur(28px) saturate(170%);
-  box-shadow: var(--glass-shadow);
-}
-
-.confirm-dialog::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--glass-edge);
-  pointer-events: none;
-}
-
-.dialog-header {
-  position: relative;
-  z-index: 1;
-  min-height: 72px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-muted);
-  background: color-mix(in srgb, var(--bg-surface) 88%, transparent);
-}
-
-.dialog-header p {
-  margin: 0 0 4px;
-  color: var(--text-tertiary);
-  font: 700 10px/1 var(--font-mono);
-  letter-spacing: .14em;
-}
-
-.confirm-dialog.danger .dialog-header p {
-  color: var(--error);
-}
-
-.dialog-header h2 {
-  margin: 0;
-  font-size: 17px;
-  line-height: 1.35;
-  letter-spacing: -.025em;
-}
-
-.dialog-close {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  flex: none;
-  border-radius: 8px;
-  color: var(--text-tertiary);
-}
-
-.dialog-close:hover {
-  color: var(--text-primary);
-  background: var(--bg-hover);
-}
-
 .dialog-body {
   position: relative;
   z-index: 1;
@@ -220,7 +96,6 @@ onBeforeUnmount(restorePreviousFocus)
   grid-template-columns: 42px minmax(0, 1fr);
   gap: 13px;
   padding: 20px;
-  background: color-mix(in srgb, var(--bg-surface) 82%, var(--bg-subtle));
 }
 
 .dialog-icon {
@@ -234,7 +109,7 @@ onBeforeUnmount(restorePreviousFocus)
   background: var(--accent-glow);
 }
 
-.confirm-dialog.danger .dialog-icon {
+.dialog-icon.danger {
   color: var(--error);
   border-color: color-mix(in srgb, var(--error) 24%, transparent);
   background: var(--error-bg);
@@ -253,95 +128,52 @@ onBeforeUnmount(restorePreviousFocus)
   overflow-wrap: anywhere;
 }
 
-.dialog-actions {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 14px 20px;
-  border-top: 1px solid var(--border-muted);
-  background: color-mix(in srgb, var(--bg-surface) 92%, var(--bg-subtle));
-}
-
-:global(:root[data-theme='dark']) .confirm-dialog {
-  background: rgba(15, 23, 42, 0.94);
-  border-color: rgba(148, 163, 184, 0.18);
-}
-
-:global(:root[data-theme='dark']) .dialog-header,
-:global(:root[data-theme='dark']) .dialog-body,
-:global(:root[data-theme='dark']) .dialog-actions {
-  background: rgba(15, 23, 42, 0.86);
-}
-
-.cancel-button,
-.confirm-button {
+.dialog-button {
   min-height: 36px;
   padding: 0 15px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 12px;
   font-weight: 700;
 }
 
-.cancel-button {
+.dialog-button.cancel {
   color: var(--text-secondary);
   border: 1px solid var(--border-default);
   background: var(--bg-surface);
 }
 
-.cancel-button:hover {
+.dialog-button.cancel:hover {
   color: var(--text-primary);
   background: var(--bg-hover);
 }
 
-.confirm-button {
+.dialog-button.confirm {
   min-width: 82px;
   color: #fff;
   background: var(--accent-primary);
-  box-shadow: 0 3px 10px var(--accent-glow);
+  box-shadow: 0 4px 12px var(--accent-glow);
+  transition: transform 160ms ease, background 180ms ease, box-shadow 180ms ease;
 }
 
-.confirm-button:hover {
+.dialog-button.confirm:hover {
+  transform: translateY(-1px);
   background: var(--accent-primary-hover);
+  box-shadow: 0 8px 18px var(--accent-glow);
 }
 
-.confirm-button.danger {
+.dialog-button.confirm.danger {
   background: var(--error);
-  box-shadow: 0 3px 10px var(--error-bg);
+  box-shadow: 0 4px 12px var(--error-bg);
 }
 
-.confirm-button.danger:hover {
+.dialog-button.confirm.danger:hover {
+  transform: translateY(-1px);
   filter: brightness(1.08);
+  box-shadow: 0 8px 18px var(--error-bg);
 }
 
-.confirm-dialog-enter-active,
-.confirm-dialog-leave-active {
-  transition: opacity 180ms ease;
-}
-
-.confirm-dialog-enter-active .confirm-dialog,
-.confirm-dialog-leave-active .confirm-dialog {
-  transition: transform 180ms ease, opacity 180ms ease;
-}
-
-.confirm-dialog-enter-from,
-.confirm-dialog-leave-to {
-  opacity: 0;
-}
-
-.confirm-dialog-enter-from .confirm-dialog,
-.confirm-dialog-leave-to .confirm-dialog {
-  opacity: 0;
-  transform: translateY(6px) scale(.985);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .confirm-dialog-enter-active,
-  .confirm-dialog-leave-active,
-  .confirm-dialog-enter-active .confirm-dialog,
-  .confirm-dialog-leave-active .confirm-dialog {
-    transition-duration: 0s;
-  }
+.dialog-button:disabled {
+  cursor: wait;
+  opacity: 0.62;
 }
 </style>

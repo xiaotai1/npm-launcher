@@ -154,10 +154,16 @@ function handleSubmitKeydown(event: KeyboardEvent) {
   submit()
 }
 
+const nameInputRef = ref<HTMLInputElement | null>(null)
+
 watch(() => props.visible, visible => {
   if (visible) {
     resetState()
-    nextTick(() => dialogRef.value?.focus())
+    nextTick(() => {
+      // 聚焦模式开关/首个输入框，方便键盘用户直接开始输入
+      if (mode.value === 'project') nameInputRef.value?.focus()
+      else if (dialogRef.value) dialogRef.value.focus()
+    })
   } else {
     resetState()
   }
@@ -202,7 +208,7 @@ watch(() => props.visible, visible => {
             <template v-if="mode === 'project'">
               <div class="field-group">
                 <label for="create-project-name">项目名称</label>
-                <input id="create-project-name" v-model="projectDraft.name" autocomplete="off" placeholder="例如 admin-console" />
+                <input id="create-project-name" ref="nameInputRef" v-model="projectDraft.name" autocomplete="off" placeholder="例如 admin-console" />
               </div>
 
               <div class="field-group">
@@ -275,6 +281,6 @@ watch(() => props.visible, visible => {
 .select-control:focus-within .select-arrow { color: var(--accent-primary); }
 .select-control:has(select:disabled) .select-arrow { color: var(--text-tertiary); opacity: 0.72; }
 .folder-intro { display: flex; align-items: center; gap: 12px; margin-bottom: 17px; padding: 12px; border: 1px solid var(--border-muted); border-radius: 10px; background: var(--bg-subtle); }.folder-mark { width: 38px; height: 38px; display: grid; place-items: center; flex: none; border-radius: 9px; color: var(--accent-primary); background: var(--accent-glow); }.folder-intro strong,.folder-intro span { display: block; }.folder-intro strong { color: var(--text-primary); font-size: 12px; }.folder-intro span { margin-top: 3px; color: var(--text-secondary); font-size: 11px; }
-.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin: 4px -20px 0; padding: 14px 20px; border-top: 1px solid var(--border-muted); background: color-mix(in srgb, var(--bg-subtle) 55%, var(--bg-surface)); }.cancel-button,.submit-button { min-height: 36px; padding: 0 15px; border-radius: 8px; font-size: 12px; font-weight: 700; }.cancel-button { color: var(--text-secondary); border: 1px solid var(--border-default); background: var(--bg-surface); }.cancel-button:hover { color: var(--text-primary); background: var(--bg-hover); }.submit-button { min-width: 94px; color: #fff; background: var(--accent-primary); box-shadow: 0 3px 10px var(--accent-glow); }.submit-button:hover:not(:disabled) { background: var(--accent-primary-hover); }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin: 4px -20px 0; padding: 14px 20px; border-top: 1px solid var(--border-muted); background: color-mix(in srgb, var(--bg-subtle) 55%, var(--bg-surface)); }.cancel-button,.submit-button { min-height: 36px; padding: 0 15px; border-radius: 10px; font-size: 12px; font-weight: 700; }.cancel-button { color: var(--text-secondary); border: 1px solid var(--border-default); background: var(--bg-surface); }.cancel-button:hover { color: var(--text-primary); background: var(--bg-hover); }.submit-button { min-width: 94px; color: #fff; background: var(--accent-primary); box-shadow: 0 4px 12px var(--accent-glow); transition: transform 160ms ease, background 180ms ease, box-shadow 180ms ease; }.submit-button:hover:not(:disabled) { transform: translateY(-1px); background: var(--accent-primary-hover); box-shadow: 0 8px 18px var(--accent-glow); }
 .create-dialog-enter-active,.create-dialog-leave-active { transition: opacity 180ms ease; }.create-dialog-enter-active .create-dialog,.create-dialog-leave-active .create-dialog { transition: transform 180ms ease, opacity 180ms ease; }.create-dialog-enter-from,.create-dialog-leave-to { opacity: 0; }.create-dialog-enter-from .create-dialog,.create-dialog-leave-to .create-dialog { opacity: 0; transform: translateY(6px) scale(.985); }
 </style>
