@@ -950,24 +950,20 @@ onUnmounted(() => {
   align-items: center;
   gap: 5px;
   padding: 0 11px;
-  border: 1px solid color-mix(in srgb, var(--accent-primary) 76%, transparent);
-  border-radius: 9px;
+  border: none;
+  border-radius: 10px;
   color: #fff;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-primary) 92%, #fff), var(--accent-primary));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.24),
-    0 8px 16px color-mix(in srgb, var(--accent-primary) 18%, transparent);
+  background: var(--accent-primary);
+  box-shadow: 0 4px 12px var(--accent-glow);
   font-size: 12px;
   font-weight: 700;
-  transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease;
+  transition: transform 160ms ease, background 180ms ease, box-shadow 180ms ease;
 }
 
 .create-button:hover {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-primary-hover) 92%, #fff), var(--accent-primary-hover));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    0 10px 20px color-mix(in srgb, var(--accent-primary) 24%, transparent);
   transform: translateY(-1px);
+  background: var(--accent-primary-hover);
+  box-shadow: 0 8px 18px var(--accent-glow);
 }
 
 /* 搜索框 — 素净样式，参考图风格 */
