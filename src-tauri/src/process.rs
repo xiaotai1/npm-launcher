@@ -35,6 +35,50 @@ fn timestamp_millis() -> u64 {
         .as_millis() as u64
 }
 
+#[cfg(unix)]
+fn pid_is_alive(pid: u32) -> bool {
+    use nix::{errno::Errno, sys::signal::kill, unistd::Pid};
+
+    match kill(Pid::from_raw(pid as i32), None) {
+        Ok(()) | Err(Errno::EPERM) => true,
+        Err(_) => false,
+    }
+}
+
+#[cfg(windows)]
+fn pid_is_alive(pid: u32) -> bool {
+    use windows_sys::Win32::{
+        Foundation::CloseHandle,
+        System::Threading::{GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION},
+    };
+
+    let handle = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };
+    if handle.is_null() {
+        return false;
+    }
+    let mut exit_code = 0;
+    let result = unsafe { GetExitCodeProcess(handle, &mut exit_code) } != 0 && exit_code == 259;
+    unsafe { CloseHandle(handle) };
+    result
+}
+
+#[cfg(not(any(unix, windows)))]
+fn pid_is_alive(_pid: u32) -> bool {
+    true
+}
+
+fn refresh_process_entry(state: &AppState, project_id: &str) {
+    let Ok(mut processes) = state.processes.lock() else {
+        return;
+    };
+    let Some(handle) = processes.get(project_id) else {
+        return;
+    };
+    if !pid_is_alive(handle.pid) {
+        processes.remove(project_id);
+    }
+}
+
 fn decode_output(bytes: &[u8]) -> String {
     if let Ok(value) = std::str::from_utf8(bytes) {
         return value.to_string();
@@ -404,8 +448,9 @@ pub fn start_project_process(
         node_version,
         Some(std::path::Path::new(project_path)),
     );
-    let probe_environment = environment.clone();
     let configured_node_version = node_version.map(ToOwned::to_owned);
+    let should_probe_node_version = configured_node_version.is_none();
+    let probe_environment = should_probe_node_version.then(|| environment.clone());
     environment.insert(
         "FORCE_COLOR".to_string(),
         if cfg!(windows) { "0" } else { "1" }.to_string(),
@@ -501,28 +546,32 @@ pub fn start_project_process(
         configured_node_version,
     );
 
-    let probe_app = app.clone();
-    let probe_project_id = project_id.to_string();
-    thread::spawn(move || {
-        let NodeVersionResult { version, .. } = get_node_version_for_environment(&probe_environment);
-        let state = probe_app.state::<AppState>();
-        let is_current = state
-            .processes
-            .lock()
-            .ok()
-            .and_then(|processes| processes.get(&probe_project_id).map(|handle| handle.generation == generation))
-            .unwrap_or(false);
-        if is_current {
-            emit_status(
-                &probe_app,
-                &probe_project_id,
-                ProcessState::Running,
-                Some(pid),
-                None,
-                version,
-            );
+    if should_probe_node_version {
+        if let Some(probe_environment) = probe_environment {
+            let probe_app = app.clone();
+            let probe_project_id = project_id.to_string();
+            thread::spawn(move || {
+                let NodeVersionResult { version, .. } = get_node_version_for_environment(&probe_environment);
+                let state = probe_app.state::<AppState>();
+                let is_current = state
+                    .processes
+                    .lock()
+                    .ok()
+                    .and_then(|processes| processes.get(&probe_project_id).map(|handle| handle.generation == generation))
+                    .unwrap_or(false);
+                if is_current {
+                    emit_status(
+                        &probe_app,
+                        &probe_project_id,
+                        ProcessState::Running,
+                        Some(pid),
+                        None,
+                        version,
+                    );
+                }
+            });
         }
-    });
+    }
     emit_log(
         app,
         project_id,
@@ -624,6 +673,7 @@ pub fn stop_all_processes_for_exit(app: &AppHandle) {
 }
 
 pub fn get_process_status(state: &AppState, project_id: &str) -> ProcessStatus {
+    refresh_process_entry(state, project_id);
     let (pid, node_version) = state
         .processes
         .lock()
@@ -648,6 +698,9 @@ pub fn get_process_status(state: &AppState, project_id: &str) -> ProcessStatus {
 /// 批量查询进程状态。页面刷新后前端依赖此快照恢复运行状态，
 /// 因为事件推送只覆盖状态变化，不会回放当前状态。
 pub fn get_process_statuses(state: &AppState, project_ids: &[String]) -> Vec<ProcessStatus> {
+    for project_id in project_ids {
+        refresh_process_entry(state, project_id);
+    }
     let processes = state.processes.lock().ok();
     project_ids
         .iter()
@@ -674,6 +727,7 @@ pub fn get_process_statuses(state: &AppState, project_ids: &[String]) -> Vec<Pro
 }
 
 pub fn is_process_running(state: &AppState, project_id: &str) -> bool {
+    refresh_process_entry(state, project_id);
     state
         .processes
         .lock()

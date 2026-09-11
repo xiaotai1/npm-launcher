@@ -1,6 +1,7 @@
 use std::{
     fs,
     path::{Path, PathBuf},
+    sync::{Mutex, OnceLock},
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -16,6 +17,31 @@ fn timestamp_millis() -> u128 {
         .as_millis()
 }
 
+static CONFIG_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+fn config_lock() -> &'static Mutex<()> {
+    CONFIG_LOCK.get_or_init(|| Mutex::new(()))
+}
+
+fn prune_backups(path: &Path, reason: &str, keep: usize) {
+    let Some(parent) = path.parent() else { return };
+    let prefix = format!("{}.{}-", path.file_name().and_then(|name| name.to_str()).unwrap_or("config.json"), reason);
+    let Ok(mut backups) = fs::read_dir(parent).map(|entries| {
+        entries
+            .filter_map(Result::ok)
+            .filter_map(|entry| {
+                let name = entry.file_name();
+                let name = name.to_str()?;
+                name.starts_with(&prefix).then(|| (name.to_string(), entry.path()))
+            })
+            .collect::<Vec<_>>()
+    }) else { return };
+    backups.sort_by(|a, b| b.0.cmp(&a.0));
+    for (_, backup) in backups.into_iter().skip(keep) {
+        let _ = fs::remove_file(backup);
+    }
+}
+
 pub fn resolve_config_path(app: &AppHandle) -> Result<PathBuf, String> {
     let config_root = app
         .path()
@@ -25,9 +51,14 @@ pub fn resolve_config_path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 pub fn load_config(path: &Path) -> AppConfig {
+    let _guard = config_lock().lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    load_config_unlocked(path)
+}
+
+fn load_config_unlocked(path: &Path) -> AppConfig {
     if !path.exists() {
         let config = AppConfig::default();
-        let _ = save_config(path, &config);
+        let _ = save_config_unlocked(path, &config);
         return config;
     }
 
@@ -41,8 +72,9 @@ pub fn load_config(path: &Path) -> AppConfig {
             eprintln!("读取配置失败：{error}");
             let backup = path.with_file_name(format!("config.json.corrupt-{}", timestamp_millis()));
             if fs::rename(path, backup).is_ok() {
+                prune_backups(path, "corrupt", 5);
                 let config = AppConfig::default();
-                let _ = save_config(path, &config);
+                let _ = save_config_unlocked(path, &config);
                 config
             } else {
                 AppConfig::default()
@@ -52,6 +84,11 @@ pub fn load_config(path: &Path) -> AppConfig {
 }
 
 pub fn save_config(path: &Path, config: &AppConfig) -> Result<(), String> {
+    let _guard = config_lock().lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    save_config_unlocked(path, config)
+}
+
+fn save_config_unlocked(path: &Path, config: &AppConfig) -> Result<(), String> {
     let parent = path.parent().ok_or_else(|| "配置路径无效".to_string())?;
     fs::create_dir_all(parent).map_err(|error| format!("创建配置目录失败：{error}"))?;
 
@@ -123,21 +160,74 @@ pub fn normalize_imported_config(value: Value) -> Result<AppConfig, String> {
     {
         return Err("配置文件格式不正确".to_string());
     }
-    serde_json::from_value(value).map_err(|_| "配置文件格式不正确".to_string())
+    let config: AppConfig = serde_json::from_value(value)
+        .map_err(|_| "配置文件格式不正确".to_string())?;
+    validate_config(&config)?;
+    Ok(config)
 }
 
-pub fn backup_config(path: &Path, reason: &str) -> Result<Option<PathBuf>, String> {
+fn validate_config(config: &AppConfig) -> Result<(), String> {
+    let mut project_ids = std::collections::HashSet::new();
+    for project in &config.projects {
+        if project.id.trim().is_empty() || !project_ids.insert(project.id.as_str()) {
+            return Err("配置中存在重复或空的项目 ID".to_string());
+        }
+        if project.name.trim().is_empty() || project.path.trim().is_empty() {
+            return Err(format!("项目 {} 的名称或路径为空", project.id));
+        }
+        if project.command.trim().is_empty()
+            && project.custom_command.as_deref().is_none_or(|command| command.trim().is_empty())
+        {
+            return Err(format!("项目 {} 未配置启动命令", project.name));
+        }
+        if project
+            .custom_command
+            .as_deref()
+            .is_some_and(|command| command.trim().is_empty())
+        {
+            return Err(format!("项目 {} 的自定义命令为空", project.name));
+        }
+    }
+
+    let mut folder_ids = std::collections::HashSet::new();
+    for folder in &config.folders {
+        if folder.id.trim().is_empty() || !folder_ids.insert(folder.id.as_str()) {
+            return Err("配置中存在重复或空的文件夹 ID".to_string());
+        }
+        if folder.name.trim().is_empty() {
+            return Err(format!("文件夹 {} 的名称为空", folder.id));
+        }
+    }
+    for project in &config.projects {
+        if let Some(folder_id) = project.folder_id.as_deref() {
+            if !folder_ids.contains(folder_id) {
+                return Err(format!("项目 {} 引用了不存在的文件夹", project.name));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn backup_config_unlocked(path: &Path, reason: &str) -> Result<Option<PathBuf>, String> {
     if !path.exists() {
         return Ok(None);
     }
     let backup = path.with_file_name(format!("config.json.{reason}-{}", timestamp_millis()));
     fs::copy(path, &backup).map_err(|error| format!("备份现有配置失败：{error}"))?;
+    prune_backups(path, reason, 5);
     Ok(Some(backup))
 }
 
+pub fn backup_and_save_config(path: &Path, config: &AppConfig) -> Result<(), String> {
+    let _guard = config_lock().lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    backup_config_unlocked(path, "import-backup")?;
+    save_config_unlocked(path, config)
+}
+
 fn change_config(path: &Path, update: impl FnOnce(&mut AppConfig) -> bool) -> bool {
-    let mut config = load_config(path);
-    update(&mut config) && save_config(path, &config).is_ok()
+    let _guard = config_lock().lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut config = load_config_unlocked(path);
+    update(&mut config) && save_config_unlocked(path, &config).is_ok()
 }
 
 pub fn add_project(path: &Path, project: Project) -> bool {
@@ -274,4 +364,40 @@ pub fn move_project_to_folder(path: &Path, project_id: &str, folder_id: Option<S
         project.folder_id = folder_id;
         true
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_imported_config;
+    use serde_json::json;
+
+    #[test]
+    fn 导入配置拒绝重复项目_id和悬空文件夹引用() {
+        let duplicate = json!({
+            "projects": [
+                {"id": "p1", "name": "A", "path": "C:/a", "command": "dev"},
+                {"id": "p1", "name": "B", "path": "C:/b", "command": "dev"}
+            ],
+            "folders": [],
+            "theme": "system"
+        });
+        assert!(normalize_imported_config(duplicate).is_err());
+
+        let dangling_folder = json!({
+            "projects": [{"id": "p1", "name": "A", "path": "C:/a", "command": "dev", "folderId": "missing"}],
+            "folders": [],
+            "theme": "system"
+        });
+        assert!(normalize_imported_config(dangling_folder).is_err());
+    }
+
+    #[test]
+    fn 导入配置接受有效的自定义命令项目() {
+        let valid = json!({
+            "projects": [{"id": "p1", "name": "A", "path": "C:/a", "command": "", "customCommand": "npm run dev"}],
+            "folders": [],
+            "theme": "dark"
+        });
+        assert!(normalize_imported_config(valid).is_ok());
+    }
 }

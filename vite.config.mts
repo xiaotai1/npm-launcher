@@ -7,7 +7,14 @@ export default defineConfig({
   root: resolve(__dirname, 'src/renderer'),
   build: {
     outDir: resolve(__dirname, 'out/renderer'),
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          xterm: ['@xterm/xterm', '@xterm/addon-fit']
+        }
+      }
+    }
   },
   plugins: [vue(), tailwindcss()],
   resolve: {

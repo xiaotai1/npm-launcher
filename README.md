@@ -201,7 +201,7 @@ src/renderer/
 
 - 沿用系统配置目录中的 `npm-launcher/config.json`，现有配置可直接读取
 - Tauri capability 只开放主窗口基础权限，文件对话框和打开路径由 Rust 后端调用
-- 外部 URL 仅允许打开 `http/https` 的 `localhost`、IPv4 回环/监听地址或 IPv6 回环地址 `[::1]`
+- 项目运行地址仅允许打开 `http/https` 的 `localhost`、IPv4 回环/监听地址或 IPv6 回环地址 `[::1]`；外部链接仅允许受信任的 HTTPS GitHub 仓库地址
 - 前端不直接访问 Node.js、文件系统或子进程 API
 - Windows 默认使用系统 WebView2，不随安装包内置固定运行时
 

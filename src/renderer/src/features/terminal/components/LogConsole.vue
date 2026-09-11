@@ -11,6 +11,7 @@ import { installTerminalDragRecovery } from '../terminalDragState'
 import CustomSelect from '../../../shared/ui/CustomSelect.vue'
 
 const props = defineProps<{
+  visible?: boolean
   isRunning: boolean
   projectId: string
   hasError: boolean
@@ -174,8 +175,12 @@ watch(() => props.projectId, (newId, oldId) => {
   if (newId !== oldId) {
     updateLogState()
     disposeTerminal()
-    nextTick(() => initTerminal())
+    if (props.visible !== false) nextTick(() => initTerminal())
   }
+})
+
+watch(() => props.visible, visible => {
+  if (visible && !terminal) nextTick(() => initTerminal())
 })
 
 watch([searchQuery, logFilter], () => {
@@ -198,7 +203,7 @@ onMounted(() => {
   })
   setupSessionLogListener()
   updateLogState()
-  nextTick(() => initTerminal())
+  if (props.visible !== false) nextTick(() => initTerminal())
 })
 
 onBeforeUnmount(() => {

@@ -13,6 +13,7 @@ const props = defineProps<{
   projectUrls: Record<string, string>
   launchFailures: LaunchFailureState
   launchingProjects: Record<string, boolean>
+  startingAll: boolean
 }>()
 
 const emit = defineEmits<{
@@ -113,7 +114,7 @@ function getStatusColor(projectId: string) {
       </div>
       <div class="overview-actions">
         <button type="button" class="button-secondary" :disabled="!hasRunningProjects" @click="emit('stop-all')">全部停止</button>
-        <button type="button" class="button-primary" :disabled="projects.length === 0" @click="emit('start-all')">全部启动</button>
+        <button type="button" class="button-primary" :disabled="projects.length === 0 || startingAll" @click="emit('start-all')">{{ startingAll ? '批量启动中…' : '全部启动' }}</button>
       </div>
     </header>
 

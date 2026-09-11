@@ -77,6 +77,7 @@ function selectTab(tab: 'logs' | 'terminal' | 'info') {
     <div class="workspace-panels">
       <div id="logs-workspace-panel" v-show="activeTab === 'logs'" class="workspace-panel" role="tabpanel" aria-labelledby="logs-workspace-tab">
         <LogConsole
+          :visible="visible && activeTab === 'logs'"
           :is-running="status?.status === 'running'"
           :project-id="project.id"
           :has-error="status?.status === 'error'"

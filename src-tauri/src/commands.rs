@@ -136,10 +136,7 @@ pub async fn import_config(app: AppHandle) -> ConfigTransferResult {
             serde_json::from_str(&content).map_err(|error| format!("解析配置失败：{error}"))
         })
         .and_then(config::normalize_imported_config)
-        .and_then(|value| {
-            config::backup_config(&state.config_path, "import-backup")?;
-            config::save_config(&state.config_path, &value)
-        });
+        .and_then(|value| config::backup_and_save_config(&state.config_path, &value));
     match result {
         Ok(()) => {
             process::stop_all_processes(&app);
@@ -383,12 +380,21 @@ pub fn open_local_url(app: AppHandle, url: String) -> ActionResult {
 }
 
 #[tauri::command]
+fn is_allowed_external_url(value: &str) -> bool {
+    let Ok(parsed) = url::Url::parse(value) else {
+        return false;
+    };
+    matches!(parsed.scheme(), "https")
+        && matches!(parsed.host(), Some(url::Host::Domain(host)) if host.eq_ignore_ascii_case("github.com"))
+}
+
+#[tauri::command]
 pub fn open_external_url(app: AppHandle, url: String) -> ActionResult {
     let Ok(parsed) = url::Url::parse(&url) else {
         return ActionResult::failure("链接无效");
     };
-    if !matches!(parsed.scheme(), "http" | "https") {
-        return ActionResult::failure("仅支持 http/https 链接");
+    if !is_allowed_external_url(&url) {
+        return ActionResult::failure("仅支持打开受信任的 GitHub 链接");
     }
     match app.opener().open_url(parsed.as_str(), None::<&str>) {
         Ok(()) => ActionResult::success(),
@@ -419,33 +425,37 @@ fn project_start_error(state: &AppState, project: &Project) -> Option<String> {
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub fn start_project(
+pub async fn start_project(
     app: AppHandle,
-    state: State<'_, AppState>,
     project_id: String,
 ) -> ActionResult {
-    let app_config = config::load_config(&state.config_path);
-    let Some(project) = app_config
-        .projects
-        .iter()
-        .find(|project| project.id == project_id)
-    else {
-        return ActionResult::failure("项目配置不存在");
-    };
-    if let Some(error) = project_start_error(&state, project) {
-        return ActionResult::failure(error);
-    }
-    match process::start_project_process(
-        &app,
-        &project.id,
-        &project.path,
-        &project.command,
-        project.custom_command.as_deref(),
-        project.node_version.as_deref(),
-    ) {
-        Ok(()) => ActionResult::success(),
-        Err(error) => ActionResult::failure(error),
-    }
+    tauri::async_runtime::spawn_blocking(move || {
+        let state = app.state::<AppState>();
+        let app_config = config::load_config(&state.config_path);
+        let Some(project) = app_config
+            .projects
+            .iter()
+            .find(|project| project.id == project_id)
+        else {
+            return ActionResult::failure("项目配置不存在");
+        };
+        if let Some(error) = project_start_error(&state, project) {
+            return ActionResult::failure(error);
+        }
+        match process::start_project_process(
+            &app,
+            &project.id,
+            &project.path,
+            &project.command,
+            project.custom_command.as_deref(),
+            project.node_version.as_deref(),
+        ) {
+            Ok(()) => ActionResult::success(),
+            Err(error) => ActionResult::failure(error),
+        }
+    })
+    .await
+    .unwrap_or_else(|error| ActionResult::failure(format!("启动项目任务异常：{error}")))
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -724,7 +734,7 @@ pub fn pty_kill(state: State<'_, AppState>, id: String) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::is_allowed_local_url;
+    use super::{is_allowed_external_url, is_allowed_local_url};
 
     #[test]
     fn 本地地址校验支持_ipv4_和_ipv6_回环() {
@@ -733,5 +743,12 @@ mod tests {
         assert!(is_allowed_local_url("http://[::1]:3000"));
         assert!(!is_allowed_local_url("https://example.com"));
         assert!(!is_allowed_local_url("file:///tmp/index.html"));
+    }
+
+    #[test]
+    fn 外部地址仅允许_https_github() {
+        assert!(is_allowed_external_url("https://github.com/xiaotai1/npm-launcher"));
+        assert!(!is_allowed_external_url("http://github.com/xiaotai1/npm-launcher"));
+        assert!(!is_allowed_external_url("https://example.com"));
     }
 }

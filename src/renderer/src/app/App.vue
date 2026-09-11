@@ -30,6 +30,7 @@ const refreshingVersions = ref(false)
 const selectedProjectId = ref<string | null>(null)
 const processStatuses = ref<Record<string, ProcessStatus>>({})
 const launchingProjects = ref<Record<string, boolean>>({})
+const startingAllProjects = ref(false)
 const projectUrls = ref<Record<string, string>>({})
 const launchFailures = ref<LaunchFailureState>({})
 const activities = ref<ActivityItem[]>([])
@@ -40,6 +41,7 @@ const editTrigger = ref(0)
 const toastMessage = ref('')
 const toastType = ref<'success' | 'error' | 'warning'>('error')
 const toastSequence = ref(0)
+const startupError = ref<string | null>(null)
 const errorAnalysis = ref<ErrorAnalysis | null>(null)
 const showErrorAnalysis = ref(false)
 const showCommandPalette = ref(false)
@@ -98,6 +100,7 @@ const shortcutProjectId = computed(() => {
 
 const runningProjectCount = computed(() => Object.values(processStatuses.value)
   .filter(status => status.status === 'running').length)
+const anyProjectLaunching = computed(() => Object.values(launchingProjects.value).some(Boolean))
 
 async function loadConfig() {
   const nextConfig = await window.desktopAPI.getConfig()
@@ -109,6 +112,7 @@ async function loadNodeVersions() {
   nodeVersions.value = result.versions
   currentNodeVersion.value = result.current
   nodeVersion.value = result.current
+  if (result.error) throw new Error(result.error)
 }
 
 function showOverview() {
@@ -236,7 +240,13 @@ async function startProjectById(projectId: string) {
 }
 
 async function stopProjectById(projectId: string) {
-  await window.desktopAPI.stopProject(projectId)
+  try {
+    const stopped = await window.desktopAPI.stopProject(projectId)
+    if (!stopped) showToast('停止项目失败，请稍后重试', 'error')
+  } catch (error) {
+    console.error('停止项目失败:', error)
+    showToast('停止项目失败，请稍后重试', 'error')
+  }
 }
 
 function startSelectedProject() { if (selectedProjectId.value) return startProjectById(selectedProjectId.value) }
@@ -364,14 +374,35 @@ async function switchNodeVersion(version: string) {
 }
 
 async function startAllProjects() {
-  if (!config.value) return
+  if (!config.value || startingAllProjects.value || anyProjectLaunching.value) return
   const projectIds = config.value.projects.map(project => project.id)
-  const result = await window.desktopAPI.startAllProjects(projectIds)
-  launchFailures.value = mergeLaunchFailures(launchFailures.value, result.failures, projectIds)
-  showToast(result.failed ? `已启动 ${result.success} 个项目，${result.failed} 个失败` : `已启动 ${result.success} 个项目`, result.failed ? 'warning' : 'success')
+  startingAllProjects.value = true
+  launchingProjects.value = { ...launchingProjects.value, ...Object.fromEntries(projectIds.map(id => [id, true])) }
+  try {
+    const result = await window.desktopAPI.startAllProjects(projectIds)
+    launchFailures.value = mergeLaunchFailures(launchFailures.value, result.failures, projectIds)
+    showToast(result.failed ? `已启动 ${result.success} 个项目，${result.failed} 个失败` : `已启动 ${result.success} 个项目`, result.failed ? 'warning' : 'success')
+  } catch (error) {
+    console.error('批量启动项目失败:', error)
+    showToast('批量启动失败，请稍后重试', 'error')
+  } finally {
+    const nextLaunching = { ...launchingProjects.value }
+    for (const projectId of projectIds) nextLaunching[projectId] = false
+    launchingProjects.value = nextLaunching
+    startingAllProjects.value = false
+  }
 }
 
-async function stopAllProjects() { await window.desktopAPI.stopAllProjects(); showToast('已停止所有项目', 'success') }
+async function stopAllProjects() {
+  try {
+    const stopped = await window.desktopAPI.stopAllProjects()
+    if (stopped) showToast('已停止所有项目', 'success')
+    else showToast('停止所有项目失败，请稍后重试', 'error')
+  } catch (error) {
+    console.error('停止所有项目失败:', error)
+    showToast('停止所有项目失败，请稍后重试', 'error')
+  }
+}
 
 async function setProjectNodeVersion(projectId: string, version: string | null) {
   const project = config.value?.projects.find(item => item.id === projectId)
@@ -557,6 +588,10 @@ async function restoreProcessStatuses() {
   }
 }
 
+function retryStartup() {
+  window.location.reload()
+}
+
 onMounted(async () => {
   cleanupDefaultContextMenuGuard = installDefaultContextMenuGuard()
   if (isMac) cleanupFirstMouseActivation = installFirstMouseActivation()
@@ -573,7 +608,17 @@ onMounted(async () => {
   window.addEventListener('unhandledrejection', rejectionHandler)
   cleanupRejectionHandler = () => window.removeEventListener('unhandledrejection', rejectionHandler)
 
-  await Promise.all([loadConfig(), loadNodeVersions()])
+  const [configResult, nodeResult] = await Promise.allSettled([loadConfig(), loadNodeVersions()])
+  if (configResult.status === 'rejected') {
+    console.error('配置加载失败:', configResult.reason)
+    startupError.value = '配置加载失败，请重试或检查配置文件'
+    showToast(startupError.value, 'error')
+    return
+  }
+  if (nodeResult.status === 'rejected') {
+    console.warn('Node 版本信息加载失败:', nodeResult.reason)
+    showToast('Node 版本信息加载失败，项目管理仍可继续使用', 'warning')
+  }
   // 仅在应用启动时初始化默认选中项目，避免后续 loadConfig（如 persistConfigChange）误覆盖用户当前选择
   if (!selectedProjectId.value || !(config.value?.projects || []).some(project => project.id === selectedProjectId.value)) {
     selectedProjectId.value = config.value?.projects?.[0]?.id || null
@@ -638,6 +683,10 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
       @start-project="(id) => handlePaletteAction(() => startProjectById(id))"
       @stop-project="(id) => handlePaletteAction(() => stopProjectById(id))"
     />
+    <div v-if="startupError" class="startup-error" role="alert">
+      <p>{{ startupError }}</p>
+      <button type="button" @click="retryStartup">重新加载</button>
+    </div>
     <AppHeader
       :node-version="nodeVersion" :available-versions="nodeVersions" :current-version="currentNodeVersion"
       :switching="switchingVersion" :refreshing="refreshingVersions" :theme="config?.theme || 'system'"
@@ -681,6 +730,7 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
         <ProjectOverview
           v-show="activeView === 'overview'" :projects="config?.projects || []" :statuses="processStatuses" :activities="activities" :node-version="nodeVersion"
           :project-urls="projectUrls" :launch-failures="launchFailures" :launching-projects="launchingProjects"
+          :starting-all="startingAllProjects || anyProjectLaunching"
           @select="selectProject" @start="startProjectById" @stop="stopProjectById" @start-all="startAllProjects" @stop-all="stopAllProjects" @add-project="openAddProject"
           @clear-activities="clearRecentActivities" @open-url="openProjectUrl" @edit-project="startEditProject" @open-folder="openProjectFolderById"
           @import-config="importConfig"
@@ -700,6 +750,9 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
 
 <style scoped>
 .app-shell { height: 100vh; display: flex; flex-direction: column; overflow: hidden; color: var(--text-primary); background: var(--ios-app-bg); background-attachment: fixed; }
+.startup-error { position: fixed; inset: 0; z-index: 3000; display: grid; place-content: center; gap: 14px; padding: 24px; color: var(--text-primary); background: var(--ios-app-bg); text-align: center; }
+.startup-error p { margin: 0; color: var(--text-secondary); }
+.startup-error button { justify-self: center; min-height: 34px; padding: 0 16px; border-radius: 8px; color: #fff; background: var(--accent-primary); font-weight: 650; }
 .app-main { flex: 1; display: flex; min-height: 0; overflow: visible; }.app-sidebar { position: relative; z-index: 2; flex: none; min-width: 0; border-right: 1px solid var(--glass-border); background: var(--glass-fill-strong); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); transition: width 250ms cubic-bezier(0.16, 1, 0.3, 1); }.app-sidebar.resizing { transition: none; }.app-content { flex: 1; min-width: 0; overflow: hidden; }
 .sidebar-resizer { position: relative; width: 4px; margin-left: -2px; z-index: 4; cursor: col-resize; }.sidebar-resizer:hover { background: linear-gradient(180deg, transparent 4%, var(--accent-border) 22%, var(--accent-border) 78%, transparent 96%); }.sidebar-resizer.active { background: linear-gradient(180deg, transparent 3%, color-mix(in srgb, var(--accent-primary) 34%, transparent) 20%, color-mix(in srgb, var(--accent-primary) 34%, transparent) 80%, transparent 97%); }
 .sidebar-toggle { position: absolute; top: 50%; right: 0; transform: translate(50%, -50%); z-index: 12; width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid var(--border-default); border-radius: 50%; color: var(--text-secondary); background: var(--bg-elevated); box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18), 0 1px 2px rgba(15, 23, 42, 0.08); transition: color 150ms ease, border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease; }:root[data-theme='dark'] .sidebar-toggle { background: rgba(255, 255, 255, 0.06); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.42), 0 1px 2px rgba(0, 0, 0, 0.24); }.sidebar-toggle:hover { color: var(--accent-primary); border-color: var(--accent-border); box-shadow: 0 4px 10px rgba(15, 23, 42, 0.22), 0 1px 3px rgba(15, 23, 42, 0.12); transform: translate(50%, -50%) scale(1.06); }

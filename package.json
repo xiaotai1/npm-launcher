@@ -18,7 +18,7 @@
     "dist:win": "node scripts/bump-version.js --skip && tauri build --bundles nsis",
     "dist:mac": "node scripts/bump-version.js --skip && tauri build --bundles dmg",
     "dist:ask": "node scripts/bump-version.js --ask && tauri build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
@@ -39,6 +39,7 @@
     "sharp": "^0.34.5",
     "tailwindcss": "^4.2.4",
     "typescript": "^5.3.3",
-    "vite": "^5.1.4"
+    "vite": "^5.1.4",
+    "vue-tsc": "^2.2.0"
   }
 }
