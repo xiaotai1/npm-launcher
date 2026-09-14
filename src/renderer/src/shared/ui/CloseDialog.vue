@@ -23,9 +23,8 @@ const emit = defineEmits<{
     <div class="close-dialog-body">
       <div class="close-icon" aria-hidden="true">
         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M6 19V8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v11"/>
-          <path d="M9 3h6"/>
-          <path d="M9 14v-4M15 14v-4"/>
+          <path d="M12 2v9"/>
+          <path d="M18.36 6.64a9 9 0 1 1-12.72 0"/>
         </svg>
       </div>
       <div class="close-copy">
