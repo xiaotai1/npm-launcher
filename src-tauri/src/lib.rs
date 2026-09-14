@@ -7,6 +7,8 @@ mod package;
 mod process;
 mod state;
 mod terminal;
+#[cfg(target_os = "windows")]
+mod tray;
 
 use tauri::Manager;
 
@@ -69,6 +71,8 @@ pub fn run() {
         .setup(|app| {
             let state = state::AppState::new(app.handle()).map_err(std::io::Error::other)?;
             app.manage(state);
+            #[cfg(target_os = "windows")]
+            tray::setup_tray(app).map_err(std::io::Error::other)?;
             #[cfg(target_os = "macos")]
             {
                 install_macos_menu(app)?;
@@ -126,6 +130,7 @@ pub fn run() {
             commands::window_minimize,
             commands::window_maximize,
             commands::window_close,
+            commands::window_hide_to_tray,
             commands::window_is_maximized,
             commands::pty_spawn,
             commands::pty_write,

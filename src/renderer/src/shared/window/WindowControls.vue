@@ -3,6 +3,8 @@ import { ref, onMounted, onUnmounted } from 'vue'
 
 const isMaximized = ref(false)
 const isHovering = ref(false)
+// 仅 Windows 关闭按钮弹出「退出 / 最小化到托盘」确认；其它平台保持原来的直接关闭
+const isWin = typeof window !== 'undefined' && window.desktopAPI?.platform === 'win32'
 
 async function handleMinimize() {
   await window.desktopAPI.minimize()
@@ -13,8 +15,13 @@ async function handleMaximize() {
   isMaximized.value = await window.desktopAPI.isMaximized()
 }
 
-async function handleClose() {
-  await window.desktopAPI.close()
+function handleClose() {
+  if (isWin) {
+    // 交给 App 层弹窗选择「退出 / 最小化到托盘」
+    window.dispatchEvent(new CustomEvent('app-close-request'))
+    return
+  }
+  void window.desktopAPI.close()
 }
 
 async function checkMaximized() {

@@ -7,6 +7,7 @@ import ProjectWorkspace from '../features/workspace/components/ProjectWorkspace.
 import { activityFromStatus, appendActivity, clearActivities } from '../features/workspace/model/workspaceState'
 import Toast from '../shared/ui/Toast.vue'
 import UpdateDialog from '../shared/ui/UpdateDialog.vue'
+import CloseDialog from '../shared/ui/CloseDialog.vue'
 import CommandPalette from '../shared/ui/CommandPalette.vue'
 import AppHeader from '../shared/window/AppHeader.vue'
 import type { ActiveView, ActivityItem, AppConfig, ErrorAnalysis, Folder, LogEntry, ProcessStatus, Project } from '../shared/types'
@@ -45,6 +46,8 @@ const startupError = ref<string | null>(null)
 const errorAnalysis = ref<ErrorAnalysis | null>(null)
 const showErrorAnalysis = ref(false)
 const showCommandPalette = ref(false)
+const showCloseDialog = ref(false)
+const isWindows = window.desktopAPI?.platform === 'win32'
 
 const {
   status: updaterStatus,
@@ -136,6 +139,29 @@ function openCommandPalette() {
 
 function closeCommandPalette() {
   showCommandPalette.value = false
+}
+
+function handleCloseRequest() {
+  // 仅 Windows 弹出选择；非 Windows 已在按钮层走直接关闭，此处兜底直接关闭
+  if (!isWindows) {
+    void window.desktopAPI.close()
+    return
+  }
+  showCloseDialog.value = true
+}
+
+function handleCloseQuit() {
+  showCloseDialog.value = false
+  void window.desktopAPI.close()
+}
+
+function handleCloseHideToTray() {
+  showCloseDialog.value = false
+  void window.desktopAPI.hideToTray()
+}
+
+function cancelCloseDialog() {
+  showCloseDialog.value = false
 }
 
 function handlePaletteAction(action: () => void) {
@@ -632,6 +658,8 @@ onMounted(async () => {
   cleanupErrorAnalysis = window.desktopAPI.onErrorAnalysis?.(handleErrorAnalysis) || null
   cleanupSystemTheme = installSystemThemeListener(() => config.value?.theme || 'system')
   window.addEventListener('keydown', handleGlobalShortcut)
+  // Windows：关闭按钮弹窗确认「退出 / 最小化到托盘」
+  window.addEventListener('app-close-request', handleCloseRequest)
   await restoreProcessStatuses()
   await restoreSessionLogs()
   void checkForUpdates().then(result => {
@@ -649,6 +677,7 @@ onUnmounted(() => {
   cleanupErrorHandler?.()
   cleanupRejectionHandler?.()
   window.removeEventListener('keydown', handleGlobalShortcut)
+  window.removeEventListener('app-close-request', handleCloseRequest)
   void disposeUpdater()
 })
 watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
@@ -668,6 +697,12 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
       :error-message="updaterErrorMessage"
       @close="closeUpdateDialog"
       @install="handleInstallUpdate"
+    />
+    <CloseDialog
+      :visible="showCloseDialog"
+      @quit="handleCloseQuit"
+      @hide-to-tray="handleCloseHideToTray"
+      @cancel="cancelCloseDialog"
     />
     <ErrorAnalysisDialog :visible="showErrorAnalysis" :analysis="errorAnalysis" @close="closeErrorAnalysis" />
     <CommandPalette

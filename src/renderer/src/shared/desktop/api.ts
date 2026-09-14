@@ -80,6 +80,7 @@ export const desktopAPI: DesktopAPI = {
   minimize: () => invoke<void>('window_minimize'),
   maximize: () => invoke<void>('window_maximize'),
   close: () => invoke<void>('window_close'),
+  hideToTray: () => invoke<void>('window_hide_to_tray'),
   isMaximized: () => invoke<boolean>('window_is_maximized'),
   readClipboardText: () => invoke<string>('plugin:clipboard-manager|read_text'),
   writeClipboardText: text => invoke<void>('plugin:clipboard-manager|write_text', { text }),

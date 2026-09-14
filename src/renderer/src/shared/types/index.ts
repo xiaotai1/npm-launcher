@@ -126,6 +126,7 @@ export interface DesktopAPI {
   minimize: () => Promise<void>
   maximize: () => Promise<void>
   close: () => Promise<void>
+  hideToTray: () => Promise<void>
   isMaximized: () => Promise<boolean>
   readClipboardText: () => Promise<string>
   writeClipboardText: (text: string) => Promise<void>

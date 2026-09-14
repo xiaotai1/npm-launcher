@@ -689,6 +689,26 @@ pub fn window_close(app: AppHandle) -> Result<(), String> {
         .map_err(|error| error.to_string())
 }
 
+/// 最小化到系统托盘（仅 Windows）。
+/// 只隐藏窗口，不停止任何项目进程，也不退出应用；
+/// 用户可通过托盘图标重新显示主窗口。
+#[cfg(target_os = "windows")]
+#[tauri::command]
+pub fn window_hide_to_tray(app: AppHandle) -> Result<(), String> {
+    let window = main_window(&app)?;
+    let _ = window.hide();
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+pub fn window_hide_to_tray(app: AppHandle) -> Result<(), String> {
+    // 非 Windows 平台暂不提供托盘最小化：隐藏窗口会导致无法呼回的困境，故直接退出
+    main_window(&app)?
+        .close()
+        .map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 pub fn window_is_maximized(app: AppHandle) -> Result<bool, String> {
     main_window(&app)?
