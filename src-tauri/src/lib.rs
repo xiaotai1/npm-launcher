@@ -5,6 +5,7 @@ mod log;
 mod models;
 mod package;
 mod process;
+mod single_instance;
 mod state;
 mod terminal;
 #[cfg(target_os = "windows")]
@@ -69,6 +70,10 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            // 单实例限制：若已有实例在运行，本进程直接退出
+            if !single_instance::ensure(app.handle()) {
+                std::process::exit(0);
+            }
             let state = state::AppState::new(app.handle()).map_err(std::io::Error::other)?;
             app.manage(state);
             #[cfg(target_os = "windows")]
