@@ -110,16 +110,11 @@ mod unix_impl {
     use tauri::{AppHandle, Manager};
     use nix::fcntl::{Flock, FlockArg};
 
-    /// 托管在 App 内的文件锁守卫：持有 `Flock<File>` 即持续占用独占锁。
-    /// `Flock<File>` 内部是 `std::fs::File`（`Send + Sync`），因此该结构可安全共享。
-    pub struct FileLockState {
-        flock: Flock<std::fs::File>,
-    }
-
     pub fn ensure(app: &AppHandle) -> bool {
         let path = super::lock_path(app);
         let file = match std::fs::OpenOptions::new()
             .create(true)
+            .truncate(false)
             .write(true)
             .open(&path)
         {
@@ -130,7 +125,7 @@ mod unix_impl {
         // 申请非阻塞独占锁；拿不到说明已有实例占用
         match Flock::lock(file, FlockArg::LockExclusiveNonblock) {
             Ok(flock) => {
-                app.manage(FileLockState { flock });
+                app.manage(flock);
                 true
             }
             Err((_file, _errno)) => {
