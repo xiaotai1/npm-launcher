@@ -108,15 +108,13 @@ pub fn ensure(app: &AppHandle) -> bool {
 #[cfg(all(unix, not(target_os = "windows")))]
 mod unix_impl {
     use tauri::{AppHandle, Manager};
-    use nix::fcntl::{flock, FlockArg};
-    use std::os::unix::io::AsRawFd;
+    use nix::fcntl::{Flock, FlockArg};
 
+    /// 托管在 App 内的文件锁守卫：持有 `Flock<File>` 即持续占用独占锁。
+    /// `Flock<File>` 内部是 `std::fs::File`（`Send + Sync`），因此该结构可安全共享。
     pub struct FileLockState {
-        file: std::fs::File,
+        flock: Flock<std::fs::File>,
     }
-
-    unsafe impl Send for FileLockState {}
-    unsafe impl Sync for FileLockState {}
 
     pub fn ensure(app: &AppHandle) -> bool {
         let path = super::lock_path(app);
@@ -129,12 +127,13 @@ mod unix_impl {
             Err(_) => return true, // 保守放行
         };
 
-        match flock(file.as_raw_fd(), FlockArg::LockExclusiveNonBlock) {
-            Ok(()) => {
-                app.manage(FileLockState { file });
+        // 申请非阻塞独占锁；拿不到说明已有实例占用
+        match Flock::lock(file, FlockArg::LockExclusiveNonblock) {
+            Ok(flock) => {
+                app.manage(FileLockState { flock });
                 true
             }
-            Err(_) => {
+            Err((_file, _errno)) => {
                 // 已有实例：touch 唤醒标记并退出
                 let _ = std::fs::write(super::wake_path(app), b"");
                 false
