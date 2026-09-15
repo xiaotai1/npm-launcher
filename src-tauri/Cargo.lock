@@ -2391,7 +2391,7 @@ dependencies = [
 
 [[package]]
 name = "npm-launcher"
-version = "1.0.13"
+version = "1.0.14"
 dependencies = [
  "chrono",
  "encoding_rs",
