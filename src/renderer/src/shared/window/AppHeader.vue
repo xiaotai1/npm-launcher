@@ -171,7 +171,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
-          <span v-if="updateAvailable || checkingUpdate" class="config-btn-dot" :class="{ pulsing: checkingUpdate }" aria-hidden="true"></span>
+          <span v-if="updateAvailable || checkingUpdate" class="config-btn-dot" :class="{ checking: checkingUpdate }" aria-hidden="true"></span>
         </button>
         <Transition name="dropdown">
           <div v-if="showConfigMenu" class="absolute top-full mt-2 right-0 w-44 z-100 glassIn config-menu" role="menu">
@@ -374,14 +374,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   background: var(--accent-primary);
 }
 
-.config-btn-dot.pulsing {
+.config-btn-dot.checking {
   background: var(--text-tertiary);
-  animation: config-dot-pulse 1s ease-in-out infinite;
-}
-
-@keyframes config-dot-pulse {
-  0%, 100% { opacity: 0.35; transform: scale(0.85); }
-  50%      { opacity: 1;    transform: scale(1.15); }
 }
 
 .config-menu {

@@ -28,7 +28,7 @@ function close() {
 
 <template>
   <Transition name="toast">
-    <div v-if="visible" role="status" aria-live="polite" data-first-mouse-target class="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-2.5 rounded-[10px] text-[14px] font-medium z-9999 cursor-pointer shadow-lg backdrop-blur-xs border border-solid max-w-[90vw]" :class="type || 'error'" @click="close">
+    <div v-if="visible" role="status" aria-live="polite" data-first-mouse-target class="fixed top-15 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-2.5 rounded-[10px] text-[14px] font-medium z-9999 cursor-pointer shadow-lg backdrop-blur-xs border border-solid max-w-[90vw]" :class="type || 'error'" @click="close">
       <span class="w-4.5 h-4.5 flex items-center justify-center rounded-full text-[12px] font-bold shrink-0 toast-icon">{{ type === 'success' ? '✓' : type === 'warning' ? '!' : '✕' }}</span>
       <span class="leading-snug toast-msg">{{ message }}</span>
     </div>
@@ -75,22 +75,13 @@ function close() {
   color: #fff;
 }
 
-.toast-enter-active {
-  animation: toastInBottom 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
+.toast-enter-active,
 .toast-leave-active {
-  animation: toastInBottom 0.2s cubic-bezier(0.4, 0, 1, 1) reverse;
+  transition: opacity 160ms ease;
 }
 
-@keyframes toastInBottom {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
 }
 </style>
