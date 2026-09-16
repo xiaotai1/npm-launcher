@@ -22,6 +22,8 @@ const props = defineProps<{
   statuses: Record<string, ProcessStatus>
   projectUrls: Record<string, string>
   activeView: ActiveView
+  nodeVersions: string[]
+  globalNodeVersion: string | null
 }>()
 
 const emit = defineEmits<{
@@ -804,6 +806,8 @@ onUnmounted(() => {
     <CreateProjectDialog
       :visible="createDialogVisible"
       :existing-projects="projects"
+      :node-versions="nodeVersions"
+      :global-node-version="globalNodeVersion"
       @close="closeCreateDialog"
       @add="emit('add', $event)"
       @add-folder="emit('add-folder', $event)"

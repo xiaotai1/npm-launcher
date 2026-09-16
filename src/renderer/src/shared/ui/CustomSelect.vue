@@ -153,6 +153,7 @@ watch(() => props.modelValue, () => {
       :disabled="disabled"
       aria-haspopup="listbox"
       :aria-expanded="open"
+      data-first-mouse-immediate
       @click="toggle"
     >
       <span class="custom-select-value" :class="{ placeholder: !selected }">

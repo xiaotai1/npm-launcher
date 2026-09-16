@@ -6,6 +6,8 @@ export interface ProjectDraft {
   name: string
   path: string
   command: string
+  customCommand: string
+  nodeVersion: string
 }
 
 export interface PackageScriptsDiscovery {
@@ -32,7 +34,11 @@ export function packageScriptsMessage(result: PackageScriptsDiscovery): string {
 }
 
 export function canCreateProject(draft: ProjectDraft): boolean {
-  return Boolean(draft.name.trim() && draft.path.trim() && draft.command.trim())
+  return Boolean(
+    draft.name.trim()
+    && draft.path.trim()
+    && (draft.command.trim() || draft.customCommand.trim())
+  )
 }
 
 export function canCreateFolder(name: string): boolean {
@@ -40,11 +46,16 @@ export function canCreateFolder(name: string): boolean {
 }
 
 export function buildProject(draft: ProjectDraft, id: string): Project {
+  const customCommand = draft.customCommand.trim()
+  const nodeVersion = draft.nodeVersion.trim()
+
   return {
     id,
     name: draft.name.trim(),
     path: draft.path.trim(),
-    command: draft.command.trim()
+    command: draft.command.trim(),
+    ...(customCommand ? { customCommand } : {}),
+    ...(nodeVersion ? { nodeVersion } : {})
   }
 }
 

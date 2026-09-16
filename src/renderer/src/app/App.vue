@@ -734,7 +734,7 @@ watch(() => config.value?.theme, theme => { if (theme) applyTheme(theme) })
         <WorkspaceSidebar
           ref="workspaceSidebarRef" v-show="!sidebarCollapsed" :active-view="activeView"
           :projects="config?.projects || []" :folders="config?.folders || []" :selected-id="activeView === 'project' ? selectedProjectId : null" :statuses="processStatuses"
-          :project-urls="projectUrls"
+          :project-urls="projectUrls" :node-versions="nodeVersions" :global-node-version="nodeVersion"
           @select-overview="showOverview" @select="selectProject" @add="addProject" @reorder="reorderProjects"
           @edit="startEditProject" @delete="deleteProject" @toggle-favorite="toggleFavorite" @add-folder="addFolder"
           @reorder-folders="reorderFolders" @delete-folder="deleteFolder" @rename-folder="updateFolder" @update-folder="updateFolder" @move-to-folder="moveToFolder"

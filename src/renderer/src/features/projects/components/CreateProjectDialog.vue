@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import type { Folder, Project } from '../../../shared/types'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
+import CustomSelect from '../../../shared/ui/CustomSelect.vue'
 import {
   buildFolder,
   buildProject,
@@ -17,6 +18,8 @@ const props = withDefaults(defineProps<{
   visible: boolean
   initialMode?: CreateMode
   existingProjects?: Project[]
+  nodeVersions: string[]
+  globalNodeVersion: string | null
 }>(), {
   initialMode: 'project',
   existingProjects: () => []
@@ -29,7 +32,13 @@ const emit = defineEmits<{
 }>()
 
 const mode = ref<CreateMode>('project')
-const projectDraft = ref<ProjectDraft>({ name: '', path: '', command: '' })
+const projectDraft = ref<ProjectDraft>({
+  name: '',
+  path: '',
+  command: '',
+  customCommand: '',
+  nodeVersion: ''
+})
 const folderName = ref('')
 const availableScripts = ref<string[]>([])
 const loadingScripts = ref(false)
@@ -41,12 +50,24 @@ const pendingDuplicateDraft = ref<Project | null>(null)
 const canSubmit = computed(() => mode.value === 'project'
   ? canCreateProject(projectDraft.value)
   : canCreateFolder(folderName.value))
+const useCustomCommand = computed(() => Boolean(projectDraft.value.customCommand.trim()))
+const systemNodeVersionLabel = computed(() => `跟随系统${props.globalNodeVersion ? ` (${props.globalNodeVersion})` : ''}`)
+const nodeVersionOptions = computed(() => [
+  { label: systemNodeVersionLabel.value, value: '' },
+  ...props.nodeVersions
+])
 
 const submitLabel = computed(() => mode.value === 'project' ? '创建项目' : '创建文件夹')
 
 function resetState() {
   mode.value = props.initialMode
-  projectDraft.value = { name: '', path: '', command: '' }
+  projectDraft.value = {
+    name: '',
+    path: '',
+    command: '',
+    customCommand: '',
+    nodeVersion: ''
+  }
   folderName.value = ''
   availableScripts.value = []
   loadingScripts.value = false
@@ -223,7 +244,7 @@ watch(() => props.visible, visible => {
               <div class="field-group">
                 <label for="create-project-command">启动命令</label>
                 <div class="select-control">
-                  <select id="create-project-command" v-model="projectDraft.command" :disabled="loadingScripts || availableScripts.length === 0">
+                  <select id="create-project-command" v-model="projectDraft.command" :disabled="loadingScripts || availableScripts.length === 0 || useCustomCommand">
                     <option value="" disabled>{{ loadingScripts ? '正在加载…' : availableScripts.length ? '选择启动命令' : '请先选择项目目录' }}</option>
                     <option v-for="script in availableScripts" :key="script" :value="script">npm run {{ script }}</option>
                   </select>
@@ -231,6 +252,28 @@ watch(() => props.visible, visible => {
                     <path d="m7 10 5 5 5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </div>
+                <span v-if="useCustomCommand" class="field-hint">已启用自定义启动命令，上面的脚本不会参与启动。</span>
+              </div>
+
+              <div class="field-group">
+                <label for="create-project-custom-command">自定义启动命令</label>
+                <input
+                  id="create-project-custom-command"
+                  v-model="projectDraft.customCommand"
+                  autocomplete="off"
+                  placeholder="例如：node server.js 或 pnpm --filter web dev"
+                />
+                <span class="field-hint">留空时执行上面的脚本；填写后将直接在项目目录中执行该命令。</span>
+              </div>
+
+              <div class="field-group">
+                <label>Node 版本</label>
+                <CustomSelect
+                  v-model="projectDraft.nodeVersion"
+                  :options="nodeVersionOptions"
+                  :placeholder="systemNodeVersionLabel"
+                />
+                <span class="field-hint">仅显示 nvm 管理的版本；跟随系统时使用顶部当前版本。</span>
               </div>
             </template>
 
@@ -269,11 +312,11 @@ watch(() => props.visible, visible => {
 
 <style scoped>
 .create-dialog-backdrop { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 28px; background: var(--modal-backdrop); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); -webkit-app-region: no-drag; }
-.create-dialog { width: min(460px, calc(100vw - 40px)); overflow: hidden; border: 1px solid var(--glass-border); border-radius: 18px; color: var(--text-primary); background: var(--glass-fill-strong); backdrop-filter: blur(28px) saturate(170%); -webkit-backdrop-filter: blur(28px) saturate(170%); box-shadow: var(--glass-shadow); }
+.create-dialog { position: relative; width: min(460px, calc(100vw - 40px)); max-height: calc(100vh - 56px); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--glass-border); border-radius: 18px; color: var(--text-primary); background: var(--glass-fill-strong); backdrop-filter: blur(28px) saturate(170%); -webkit-backdrop-filter: blur(28px) saturate(170%); box-shadow: var(--glass-shadow); }
 .create-dialog::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--glass-edge); pointer-events: none; }
-.dialog-header { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 20px; border-bottom: 1px solid var(--border-muted); }.dialog-header p { margin: 0 0 4px; color: var(--text-tertiary); font: 700 10px/1 var(--font-mono); letter-spacing: .14em; }.dialog-header h2 { margin: 0; font-size: 17px; letter-spacing: -.025em; }.dialog-close { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; color: var(--text-tertiary); }.dialog-close:hover { color: var(--text-primary); background: var(--bg-hover); }
-.mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 16px 20px 0; padding: 4px; border-radius: 10px; background: var(--bg-subtle); }.mode-switch button { min-height: 34px; display: flex; align-items: center; justify-content: center; gap: 7px; border-radius: 7px; color: var(--text-tertiary); font-size: 13px; font-weight: 650; }.mode-switch button:hover { color: var(--text-primary); }.mode-switch button.active { color: var(--accent-primary); background: var(--bg-surface); box-shadow: var(--shadow-sm); }
-.dialog-form { padding: 18px 20px 0; }.field-group { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }.field-group label { color: var(--text-secondary); font-size: 12px; font-weight: 650; }.field-group input,.field-group select { width: 100%; min-height: 40px; border-radius: 12px; font-size: 13px; }.field-group input[readonly] { color: var(--text-secondary); cursor: pointer; }.field-group input:focus,.field-group select:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--accent-glow), 0 0 12px color-mix(in srgb, var(--accent-glow) 80%, transparent); outline: none; }.path-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }.browse-button { min-width: 68px; border: 1px solid var(--accent-border); border-radius: 10px; color: var(--accent-primary); background: var(--bg-surface); font-size: 12px; font-weight: 700; }.browse-button:hover:not(:disabled) { background: var(--accent-glow); }.field-hint { min-height: 16px; color: var(--text-secondary); font-size: 11px; }
+.dialog-header { min-height: 72px; display: flex; align-items: center; justify-content: space-between; flex: none; gap: 18px; padding: 16px 20px; border-bottom: 1px solid var(--border-muted); }.dialog-header p { margin: 0 0 4px; color: var(--text-tertiary); font: 700 10px/1 var(--font-mono); letter-spacing: .14em; }.dialog-header h2 { margin: 0; font-size: 17px; letter-spacing: -.025em; }.dialog-close { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; color: var(--text-tertiary); }.dialog-close:hover { color: var(--text-primary); background: var(--bg-hover); }
+.mode-switch { display: grid; grid-template-columns: 1fr 1fr; flex: none; gap: 4px; margin: 16px 20px 0; padding: 4px; border-radius: 10px; background: var(--bg-subtle); }.mode-switch button { min-height: 34px; display: flex; align-items: center; justify-content: center; gap: 7px; border-radius: 7px; color: var(--text-tertiary); font-size: 13px; font-weight: 650; }.mode-switch button:hover { color: var(--text-primary); }.mode-switch button.active { color: var(--accent-primary); background: var(--bg-surface); box-shadow: var(--shadow-sm); }
+.dialog-form { min-height: 0; overflow-y: auto; padding: 18px 20px 0; }.field-group { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }.field-group label { color: var(--text-secondary); font-size: 12px; font-weight: 650; }.field-group input,.field-group select { width: 100%; min-height: 40px; border-radius: 12px; font-size: 13px; }.field-group input[readonly] { color: var(--text-secondary); cursor: pointer; }.field-group input:focus,.field-group select:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--accent-glow), 0 0 12px color-mix(in srgb, var(--accent-glow) 80%, transparent); outline: none; }.path-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }.browse-button { min-width: 68px; border: 1px solid var(--accent-border); border-radius: 10px; color: var(--accent-primary); background: var(--bg-surface); font-size: 12px; font-weight: 700; }.browse-button:hover:not(:disabled) { background: var(--accent-glow); }.field-hint { min-height: 16px; color: var(--text-secondary); font-size: 11px; }
 .select-control { position: relative; }
 .select-control select { appearance: none; -webkit-appearance: none; padding-right: 42px; color: var(--text-primary); background: var(--bg-elevated); cursor: pointer; }
 .select-control select:disabled { color: var(--text-secondary); cursor: not-allowed; opacity: 1; }
@@ -281,6 +324,6 @@ watch(() => props.visible, visible => {
 .select-control:focus-within .select-arrow { color: var(--accent-primary); }
 .select-control:has(select:disabled) .select-arrow { color: var(--text-tertiary); opacity: 0.72; }
 .folder-intro { display: flex; align-items: center; gap: 12px; margin-bottom: 17px; padding: 12px; border: 1px solid var(--border-muted); border-radius: 10px; background: var(--bg-subtle); }.folder-mark { width: 38px; height: 38px; display: grid; place-items: center; flex: none; border-radius: 9px; color: var(--accent-primary); background: var(--accent-glow); }.folder-intro strong,.folder-intro span { display: block; }.folder-intro strong { color: var(--text-primary); font-size: 12px; }.folder-intro span { margin-top: 3px; color: var(--text-secondary); font-size: 11px; }
-.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin: 4px -20px 0; padding: 14px 20px; border-top: 1px solid var(--border-muted); background: color-mix(in srgb, var(--bg-subtle) 55%, var(--bg-surface)); }.cancel-button,.submit-button { min-height: 36px; padding: 0 15px; border-radius: 10px; font-size: 12px; font-weight: 700; }.cancel-button { color: var(--text-secondary); border: 1px solid var(--border-default); background: var(--bg-surface); }.cancel-button:hover { color: var(--text-primary); background: var(--bg-hover); }.submit-button { min-width: 94px; color: #fff; background: var(--accent-primary); box-shadow: 0 4px 12px var(--accent-glow); transition: transform 160ms ease, background 180ms ease, box-shadow 180ms ease; }.submit-button:hover:not(:disabled) { transform: translateY(-1px); background: var(--accent-primary-hover); box-shadow: 0 8px 18px var(--accent-glow); }
+.dialog-actions { position: sticky; bottom: 0; z-index: 2; display: flex; justify-content: flex-end; gap: 8px; margin: 4px -20px 0; padding: 14px 20px; border-top: 1px solid var(--border-muted); background: color-mix(in srgb, var(--bg-subtle) 55%, var(--bg-surface)); }.cancel-button,.submit-button { min-height: 36px; padding: 0 15px; border-radius: 10px; font-size: 12px; font-weight: 700; }.cancel-button { color: var(--text-secondary); border: 1px solid var(--border-default); background: var(--bg-surface); }.cancel-button:hover { color: var(--text-primary); background: var(--bg-hover); }.submit-button { min-width: 94px; color: #fff; background: var(--accent-primary); box-shadow: 0 4px 12px var(--accent-glow); transition: transform 160ms ease, background 180ms ease, box-shadow 180ms ease; }.submit-button:hover:not(:disabled) { transform: translateY(-1px); background: var(--accent-primary-hover); box-shadow: 0 8px 18px var(--accent-glow); }
 .create-dialog-enter-active,.create-dialog-leave-active { transition: opacity 180ms ease; }.create-dialog-enter-active .create-dialog,.create-dialog-leave-active .create-dialog { transition: transform 180ms ease, opacity 180ms ease; }.create-dialog-enter-from,.create-dialog-leave-to { opacity: 0; }.create-dialog-enter-from .create-dialog,.create-dialog-leave-to .create-dialog { opacity: 0; transform: translateY(6px) scale(.985); }
 </style>
