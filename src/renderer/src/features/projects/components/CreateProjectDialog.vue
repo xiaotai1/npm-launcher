@@ -225,7 +225,7 @@ watch(() => props.visible, visible => {
             </button>
           </div>
 
-          <form class="dialog-form" :aria-busy="loadingScripts" @submit.prevent="submit" @keydown.enter="handleSubmitKeydown">
+          <form id="create-work-item-form" class="dialog-form" :aria-busy="loadingScripts" @submit.prevent="submit" @keydown.enter="handleSubmitKeydown">
             <template v-if="mode === 'project'">
               <div class="field-group">
                 <label for="create-project-name">项目名称</label>
@@ -290,11 +290,11 @@ watch(() => props.visible, visible => {
               </div>
             </template>
 
-            <footer class="dialog-actions">
-              <button type="button" class="cancel-button" data-first-mouse-immediate @click="requestClose">取消</button>
-              <button type="submit" class="submit-button" :disabled="!canSubmit" data-first-mouse-immediate>{{ submitLabel }}</button>
-            </footer>
           </form>
+          <footer class="dialog-actions">
+            <button type="button" class="cancel-button" data-first-mouse-immediate @click="requestClose">取消</button>
+            <button type="submit" form="create-work-item-form" class="submit-button" :disabled="!canSubmit" data-first-mouse-immediate>{{ submitLabel }}</button>
+          </footer>
         </section>
         <ConfirmDialog
           :visible="duplicateConfirmVisible"
@@ -316,7 +316,7 @@ watch(() => props.visible, visible => {
 .create-dialog::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--glass-edge); pointer-events: none; }
 .dialog-header { min-height: 72px; display: flex; align-items: center; justify-content: space-between; flex: none; gap: 18px; padding: 16px 20px; border-bottom: 1px solid var(--border-muted); }.dialog-header p { margin: 0 0 4px; color: var(--text-tertiary); font: 700 10px/1 var(--font-mono); letter-spacing: .14em; }.dialog-header h2 { margin: 0; font-size: 17px; letter-spacing: -.025em; }.dialog-close { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; color: var(--text-tertiary); }.dialog-close:hover { color: var(--text-primary); background: var(--bg-hover); }
 .mode-switch { display: grid; grid-template-columns: 1fr 1fr; flex: none; gap: 4px; margin: 16px 20px 0; padding: 4px; border-radius: 10px; background: var(--bg-subtle); }.mode-switch button { min-height: 34px; display: flex; align-items: center; justify-content: center; gap: 7px; border-radius: 7px; color: var(--text-tertiary); font-size: 13px; font-weight: 650; }.mode-switch button:hover { color: var(--text-primary); }.mode-switch button.active { color: var(--accent-primary); background: var(--bg-surface); box-shadow: var(--shadow-sm); }
-.dialog-form { min-height: 0; overflow-y: auto; padding: 18px 20px 0; }.field-group { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }.field-group label { color: var(--text-secondary); font-size: 12px; font-weight: 650; }.field-group input,.field-group select { width: 100%; min-height: 40px; border-radius: 12px; font-size: 13px; }.field-group input[readonly] { color: var(--text-secondary); cursor: pointer; }.field-group input:focus,.field-group select:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--accent-glow), 0 0 12px color-mix(in srgb, var(--accent-glow) 80%, transparent); outline: none; }.path-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }.browse-button { min-width: 68px; border: 1px solid var(--accent-border); border-radius: 10px; color: var(--accent-primary); background: var(--bg-surface); font-size: 12px; font-weight: 700; }.browse-button:hover:not(:disabled) { background: var(--accent-glow); }.field-hint { min-height: 16px; color: var(--text-secondary); font-size: 11px; }
+.dialog-form { min-height: 0; flex: 1 1 auto; overflow-y: auto; padding: 18px 20px 0; }.field-group { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }.field-group label { color: var(--text-secondary); font-size: 12px; font-weight: 650; }.field-group input,.field-group select { width: 100%; min-height: 40px; border-radius: 12px; font-size: 13px; }.field-group input[readonly] { color: var(--text-secondary); cursor: pointer; }.field-group input:focus,.field-group select:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--accent-glow), 0 0 12px color-mix(in srgb, var(--accent-glow) 80%, transparent); outline: none; }.path-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }.browse-button { min-width: 68px; border: 1px solid var(--accent-border); border-radius: 10px; color: var(--accent-primary); background: var(--bg-surface); font-size: 12px; font-weight: 700; }.browse-button:hover:not(:disabled) { background: var(--accent-glow); }.field-hint { min-height: 16px; color: var(--text-secondary); font-size: 11px; }
 .select-control { position: relative; }
 .select-control select { appearance: none; -webkit-appearance: none; padding-right: 42px; color: var(--text-primary); background: var(--bg-elevated); cursor: pointer; }
 .select-control select:disabled { color: var(--text-secondary); cursor: not-allowed; opacity: 1; }
@@ -324,6 +324,6 @@ watch(() => props.visible, visible => {
 .select-control:focus-within .select-arrow { color: var(--accent-primary); }
 .select-control:has(select:disabled) .select-arrow { color: var(--text-tertiary); opacity: 0.72; }
 .folder-intro { display: flex; align-items: center; gap: 12px; margin-bottom: 17px; padding: 12px; border: 1px solid var(--border-muted); border-radius: 10px; background: var(--bg-subtle); }.folder-mark { width: 38px; height: 38px; display: grid; place-items: center; flex: none; border-radius: 9px; color: var(--accent-primary); background: var(--accent-glow); }.folder-intro strong,.folder-intro span { display: block; }.folder-intro strong { color: var(--text-primary); font-size: 12px; }.folder-intro span { margin-top: 3px; color: var(--text-secondary); font-size: 11px; }
-.dialog-actions { position: sticky; bottom: 0; z-index: 2; display: flex; justify-content: flex-end; gap: 8px; margin: 4px -20px 0; padding: 14px 20px; border-top: 1px solid var(--border-muted); background: color-mix(in srgb, var(--bg-subtle) 55%, var(--bg-surface)); }.cancel-button,.submit-button { min-height: 36px; padding: 0 15px; border-radius: 10px; font-size: 12px; font-weight: 700; }.cancel-button { color: var(--text-secondary); border: 1px solid var(--border-default); background: var(--bg-surface); }.cancel-button:hover { color: var(--text-primary); background: var(--bg-hover); }.submit-button { min-width: 94px; color: #fff; background: var(--accent-primary); box-shadow: 0 4px 12px var(--accent-glow); transition: transform 160ms ease, background 180ms ease, box-shadow 180ms ease; }.submit-button:hover:not(:disabled) { transform: translateY(-1px); background: var(--accent-primary-hover); box-shadow: 0 8px 18px var(--accent-glow); }
+.dialog-actions { display: flex; justify-content: flex-end; flex: none; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--border-muted); background: color-mix(in srgb, var(--bg-subtle) 55%, var(--bg-surface)); }.cancel-button,.submit-button { min-height: 36px; padding: 0 15px; border-radius: 10px; font-size: 12px; font-weight: 700; }.cancel-button { color: var(--text-secondary); border: 1px solid var(--border-default); background: var(--bg-surface); }.cancel-button:hover { color: var(--text-primary); background: var(--bg-hover); }.submit-button { min-width: 94px; color: #fff; background: var(--accent-primary); box-shadow: 0 4px 12px var(--accent-glow); transition: transform 160ms ease, background 180ms ease, box-shadow 180ms ease; }.submit-button:hover:not(:disabled) { transform: translateY(-1px); background: var(--accent-primary-hover); box-shadow: 0 8px 18px var(--accent-glow); }
 .create-dialog-enter-active,.create-dialog-leave-active { transition: opacity 180ms ease; }.create-dialog-enter-active .create-dialog,.create-dialog-leave-active .create-dialog { transition: transform 180ms ease, opacity 180ms ease; }.create-dialog-enter-from,.create-dialog-leave-to { opacity: 0; }.create-dialog-enter-from .create-dialog,.create-dialog-leave-to .create-dialog { opacity: 0; transform: translateY(6px) scale(.985); }
 </style>
